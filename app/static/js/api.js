@@ -24,7 +24,7 @@ export class ApiError extends Error {
 
 export async function api(method, path, body) {
   const s = session.get();
-  const res = await fetch(path, {
+  const res = await fetch((window.PROPERM_API || "") + path, {
     method,
     headers: { "Content-Type": "application/json", ...(s ? { Authorization: `Bearer ${s.token}` } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),

@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: properm
+    runtime: docker
+    plan: free
+    envVars:
+      - key: PROPERM_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:////tmp/properm.db      # demo only: wiped on every restart. Use Postgres for real data.
+      - key: PROPERM_DEMO
+        value: "1"
+      - key: PROPERM_DEMO_PASSWORD
+        generateValue: true
+      - key: PROPERM_DEMO_LOGIN             # one-click role buttons on the login page. Demo only.
+        value: "1"
+      - key: PROPERM_CORS_ORIGINS           # your Netlify address, e.g. https://xyz.netlify.app (leave empty if not using Netlify)
+        sync: false

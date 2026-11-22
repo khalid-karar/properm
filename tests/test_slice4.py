@@ -55,3 +55,16 @@ def test_demo_login_off_by_default_and_on_with_flag(c, world, monkeypatch):
     assert r.status_code == 200 and r.json()["role"] == "PM"
     assert c.get("/me", headers={"Authorization": f"Bearer {r.json()['access_token']}"}).json()["staff_id"] == "pm1"
     assert c.post("/auth/demo-login", json={"staff_id": "nobody"}).status_code == 401
+
+
+def test_cors_only_when_configured(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app.main import create_app
+    monkeypatch.delenv("PROPERM_CORS_ORIGINS", raising=False)
+    off = TestClient(create_app("sqlite://"))
+    assert "access-control-allow-origin" not in off.options("/auth/login", headers={"Origin": "https://x.netlify.app", "Access-Control-Request-Method": "POST"}).headers
+    monkeypatch.setenv("PROPERM_CORS_ORIGINS", "https://x.netlify.app")
+    on = TestClient(create_app("sqlite://"))
+    r = on.options("/auth/login", headers={"Origin": "https://x.netlify.app", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type"})
+    assert r.headers["access-control-allow-origin"] == "https://x.netlify.app"
+    assert "access-control-allow-origin" not in on.options("/auth/login", headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"}).headers

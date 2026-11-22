@@ -20,6 +20,9 @@ Creates users admin, pm1, pmo1, dm1, s1, s2, s3 and a few projects in different 
 
 Set `PROPERM_DEMO_LOGIN=1` to show one-click role buttons on the login page (no password needed). **Demo databases only: never enable it on a deployment with real data.**
 
+### Deploy (Render + optional Netlify)
+`render.yaml` and `Dockerfile` deploy the whole app (API + UI) as one Render service with demo data and quick-login. For a UI on Netlify: publish directory `app/static`, no build command, then set `window.PROPERM_API` in `app/static/config.js` to the Render address and set `PROPERM_CORS_ORIGINS` on Render to the Netlify address. Demo settings use a throwaway SQLite file; use Postgres for real data.
+
 `DATABASE_URL` selects the database (default `sqlite:///./properm.db`).
 
 ## What is built (flow chart section)

@@ -1,6 +1,9 @@
 from pathlib import Path
 
+import os
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
@@ -22,6 +25,9 @@ def create_app(database_url: str = "sqlite:///./properm.db") -> FastAPI:
     app = FastAPI(title="PROPERM Smart PMO", version="0.1.0")
     app.state.engine = engine
     app.state.Session = sessionmaker(engine, expire_on_commit=False)
+    origins = [o.strip() for o in os.environ.get("PROPERM_CORS_ORIGINS", "").split(",") if o.strip()]
+    if origins:   # only for a UI hosted on another origin (e.g. Netlify); tokens go in a header, not cookies
+        app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["Authorization", "Content-Type"])
     for r in (auth_users.router, projects.router, projects.pending_router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
         app.include_router(r)
 
