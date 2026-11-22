@@ -52,7 +52,7 @@ The login page shows milestones with green (done), amber (in progress) and red (
 | Weekly progress per activity (percent complete, ETC, reason when it decreases, stale flag) | 2.6 | |
 | Non-labor cost ledger (committed / invoiced / paid; second approval above a threshold) | 2.7 | labor cost is computed from approved hours x the grade rate in effect on the entry date |
 | Planned allocation per staff per week, over-allocation warning, resource load view | 2.1b | |
-| Risk register and issue log (risk "occurred" auto-creates a linked issue) | 1.6 | benefits register not built |
+| Risk register and issue log (risk "occurred" auto-creates a linked issue) | 1.6 | benefits register: see below |
 | Earned value: BAC, PV, EV, AC, CPI, SPI, EAC, ETC, VAC | 3.1 | `GET /projects/{id}/evm`, cost viewers only. PV is phased per activity from each activity's own planned dates; an activity without dates falls back to the project window and is listed in `warnings` |
 | Effective-dated rate card (`/admin/rates`), append-only; labor cost priced at the rate in effect on each entry date; rates snapshotted at baseline lock | 2.1.5, 2.7.3 | a rate change never reprices past cost |
 | Rule-based alerts: CPI/SPI thresholds, cost over baseline, overdue activities (warning beyond tolerance, critical beyond 3x), risk score, critical or overdue issues, stale progress. Deduplicated, with a cooldown after dismissal; thresholds editable via `/admin/settings/{key}` | 3.3 | `POST /projects/{id}/alerts/evaluate`, `POST /alerts/evaluate` (all projects; call from cron, no scheduler yet) |
@@ -60,8 +60,20 @@ The login page shows milestones with green (done), amber (in progress) and red (
 | Dashboards: project health (RAG, reasons, progress, hours, overdue, risks, issues, EVM) and portfolio (RAG counts, per-project CPI/SPI, open alerts, filters, top risks) | 3.4 | RAG: RED = active critical alert, AMBER = active warning, GREEN, GREY = not in delivery |
 | Weekly PM report with auto-populated snapshot (needs the week's progress update first) | 3.2 | EVM inside the snapshot is hidden from non-cost viewers |
 
+## Governance, notifications, exports and AI (added 2026-11-23)
+| Area | Notes |
+|---|---|
+| Closure checklist | Opens when a project moves to `closing`. 8 items: 2 checked by the system (all timesheets approved, no open issues), 6 ticked by the manager. Archiving is refused (409) until every item is satisfied. `GET/PUT /projects/{id}/closure` |
+| Benefits register | Baseline, target, actual, owner, status; realisation % = (actual - baseline) / (target - baseline), capped 0-150. `/projects/{id}/benefits` |
+| Programs | Group projects (`/programs`, `PUT /projects/{id}/program`); roll-up dashboard with RAG counts, benefits and summed EVM (only when all projects share one currency). PMO/ADMIN manage; executive roles read |
+| Work calendar | Work week Sunday to Thursday (`WEEKEND_DAYS` in `app/config.py`). Public holidays (`/calendar/holidays`, PMO/ADMIN) reduce that week's capacity by one day each. New rule **R10** (default FLAG) marks entries on weekends/holidays |
+| Notifications | Outbox events become in-app notifications (`app/notify.py`) after every successful write; bell in the header. Optional e-mail: set `PROPERM_SMTP_HOST`, `PROPERM_SMTP_PORT`, `PROPERM_SMTP_USER`, `PROPERM_SMTP_PASSWORD`, `PROPERM_SMTP_FROM` and give users an e-mail in Admin. E-mail is best effort and has not been tried against a real mail server. Not available in the browser demo |
+| Exports | CSV with UTF-8 BOM (Excel-safe Arabic, formula-injection neutralised): timesheets, alerts, portfolio, costs, benefits. Printable project report `GET /projects/{id}/report.html` (cost section only for cost viewers) |
+| Scheduled reports | Weekly/monthly portfolio or project reports delivered as notifications. `POST /reports/run-due` (PMO/ADMIN) sends what is due; call it from a cron (for example a GitHub Actions schedule with an admin token). Nothing runs it automatically |
+| AI layer | OpenAI-compatible client for a model hosted **inside the Kingdom** (`app/ai.py`). Set `PROPERM_AI_BASE_URL` (for example a Saudi-hosted vLLM serving Qwen), `PROPERM_AI_MODEL`, `PROPERM_AI_API_KEY`. The host must be localhost, a private address, or under `.sa` (`PROPERM_AI_ALLOWED_HOSTS` overrides); anything else is refused before any data is sent. With no URL set (and always in the browser demo) an **offline stub** answers and is labelled as such. Features: plan drafting from a brief, status narrative, alert suggested action. Output is schema-validated and stored as a draft; a person edits and applies or rejects it (plans) or copies it (text). Prompts contain only data the requesting user may see (no rates for non-cost viewers); user text is passed inside `<data>` delimiters; 30 requests per user per hour |
+
 ## Not built yet (next slices)
-Benefits register, a rate card per role and project (rates are per grade only), closure checklist beyond the pending-timesheet check (1.5), program-level roll-ups (there is no program or portfolio grouping yet; the portfolio view covers all projects), AI-generated reports and ML forecasts (3.3), export and scheduled delivery (3.4.5), notification delivery, all AI features (1.2, 3.3), notification dispatcher (outbox rows are written but nothing consumes them), work calendars / holidays (4.6), remaining UI screens (see Web UI), Postgres row-level security (access control is enforced in the API layer today).
+A rate card per role and project (rates are per grade only), forecasting models, PDF/DOCX parsing for the AI brief (paste text for now), a real mail-server test, a built-in scheduler for reports and alert evaluation (call the endpoints from a cron), Postgres with migrations and row-level security (access control is enforced in the API layer today), remaining UI polish (see Web UI).
 
 ## Assumptions to confirm (see Section 8 of the flow chart)
 - Work week starts Sunday (`WEEK_STARTS_ON_SUNDAY` in `app/config.py`); capacity is a flat `capacity_hours_week` per user until the calendar service exists.
@@ -70,4 +82,4 @@ Benefits register, a rate card per role and project (rates are per grade only), 
 - Single organization (no tenant_id yet).
 
 ## Schema changes
-Tables are created with `create_all`; there are no migrations yet. If you created a dev database from the first commit, delete `properm.db` (`activities` gained `baseline_cost`, `planned_start`, `planned_end`; `users.cost_rate_hour` was replaced by `rate_grade`). Add Alembic before any real data exists.
+Tables are created with `create_all`; there are no migrations yet. If you created a dev database from the first commit, delete `properm.db` (`activities` gained `baseline_cost`, `planned_start`, `planned_end`; `users.cost_rate_hour` was replaced by `rate_grade`). Add Alembic before any real data exists. The 2026-11-23 slice added tables (`programs`, `closure_items`, `benefits`, `holidays`, `notifications`, `report_schedules`, `ai_drafts`) and columns (`projects.program_id`, `users.email`); `create_all` adds new tables but not new columns, so delete an old dev database.

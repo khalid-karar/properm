@@ -106,6 +106,14 @@ await step("schedule a weekly project report", async () => {
   await p.selectOption("select >> nth=0", "project"); await p.click("button:has-text('Add')"); await p.waitForSelector("td:has-text('Project report')");
 });
 
+await step("AI tab shows stub banner and drafts a narrative", async () => {
+  await p.goto(BASE + "#/projects/1"); await tab(p, "AI assistant"); await p.waitForSelector(".warn:has-text('offline stub')");
+  await p.click("button:has-text('Draft status narrative')"); await p.waitForSelector("textarea:has-text('(stub)')");
+});
+await step("AI suggestion on an alert", async () => {
+  await p.goto(BASE + "#/alerts"); await p.click("button:has-text('AI suggestion') >> nth=0"); await p.waitForSelector(".modal:has-text('Offline stub output')");
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

@@ -1,5 +1,5 @@
 import { api, downloadCsv, openReport } from "../api.js";
-import { st, t } from "../i18n.js";
+import { getLang, st, t } from "../i18n.js";
 import { askText, badge, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
 
 const MANAGE = ["PM", "PMO", "ADMIN"];
@@ -43,8 +43,8 @@ async function detail(root, me, pid) {
 
   async function render() {
     const p = await api("GET", `/projects/${pid}`);
-    const tabs = ["overview", "progress", "risks", "costs", "changes", "allocations", "benefits", "closure", "reports"];
-    const show = (x) => (x === "costs" || x === "allocations") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : true;
+    const tabs = ["overview", "progress", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
+    const show = (x) => (x === "costs" || x === "allocations") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : true;
     const body = h("div");
     mount(root,
       h("p", {}, h("a", { href: "#/projects" }, `← ${t("projects")}`)),
@@ -62,6 +62,7 @@ async function detail(root, me, pid) {
       else if (tab === "allocations") await allocations(body, p);
       else if (tab === "benefits") await benefits(body, p);
       else if (tab === "closure") await closure(body, p);
+      else if (tab === "ai") await aiTab(body, p);
       else await reports(body, p);
     } catch (e) { mount(body, errorBox(e)); }
   }
@@ -104,6 +105,43 @@ async function detail(root, me, pid) {
       canManage && p.state === "planning" ? h("div", { class: "card" }, h("h2", {}, t("add_activity")),
         h("div", { class: "row" }, field(t("code"), code), field(t("name"), name), field(t("planned_hours"), hrs), field(t("baseline_cost"), bc), field(t("planned_start"), ps), field(t("planned_end"), pe), add), err) : null,
       canManage ? h("div", { class: "card" }, h("h2", {}, t("assigned_staff")), h("div", { class: "row" }, field(t("staff"), who), assignBtn)) : null);
+  }
+
+  async function aiTab(body, p) {
+    const [stt, drafts] = await Promise.all([api("GET", "/ai/status"), api("GET", `/ai/drafts?project_id=${pid}`)]);
+    const banner = stt.mode === "stub" ? h("div", { class: "warn" }, t("ai_stub_banner"))
+      : h("div", { class: stt.in_kingdom ? "card" : "warn" }, `${stt.model} @ ${stt.host} · ${stt.in_kingdom ? t("ai_in_kingdom") : t("ai_not_in_kingdom")}`);
+    const brief = h("textarea", { rows: "6", style: "width:100%", placeholder: t("ai_brief_ph") });
+    const area = h("div"), err = h("div");
+    const gen = h("button", { class: "btn", type: "button" }, t("ai_generate_plan"));
+    gen.addEventListener("click", guarded(gen, async () => {
+      mount(err);
+      try { const d = await api("POST", "/ai/plans", { project_id: pid, brief: brief.value, lang: getLang() }); showPlan(d); } catch (e) { mount(err, errorBox(e)); }
+    }));
+    function showPlan(d) {
+      const rows = d.output.activities.map(a => ({ inc: h("input", { type: "checkbox", checked: true }), code: h("input", { value: a.code, style: "width:80px" }), name: h("input", { value: a.name, style: "min-width:260px" }), hrs: h("input", { type: "number", min: "1", value: a.planned_hours, style: "width:90px" }) }));
+      const e2 = h("div");
+      mount(area, h("div", { class: "card" }, h("h2", {}, t("ai_review_plan")), h("p", { class: "muted small" }, d.mode === "stub" ? t("ai_stub_note") : t("ai_draft_note")),
+        table(["", t("code"), t("name"), t("planned_hours")], rows.map(r => [r.inc, r.code, r.name, r.hrs]), t("none")),
+        (d.output.assumptions || []).length ? h("ul", {}, d.output.assumptions.map(x => h("li", {}, x))) : null,
+        h("div", { class: "row" },
+          h("button", { class: "btn", type: "button", onClick: guarded(null, async () => {
+            mount(e2);
+            try { await api("POST", `/ai/drafts/${d.id}/apply`, { activities: rows.filter(r => r.inc.checked).map(r => ({ code: r.code.value.trim(), name: r.name.value.trim(), planned_hours: Number(r.hrs.value) })) }); toast(t("ai_applied")); tab = "overview"; await render(); }
+            catch (e) { mount(e2, errorBox(e)); }
+          }) }, t("ai_apply")),
+          h("button", { class: "btn secondary", type: "button", onClick: guarded(null, async () => { await api("POST", `/ai/drafts/${d.id}/reject`); mount(area); await render(); }) }, t("reject"))), e2));
+    }
+    const nar = h("div");
+    const narBtn = h("button", { class: "btn secondary", type: "button" }, t("ai_generate_narrative"));
+    narBtn.addEventListener("click", guarded(narBtn, async () => {
+      const d = await api("POST", "/ai/narrative", { project_id: pid, lang: getLang() });
+      mount(nar, h("textarea", { rows: "5", style: "width:100%", readonly: true }, d.output.text), h("p", { class: "muted small" }, d.mode === "stub" ? t("ai_stub_note") : t("ai_draft_note")));
+    }));
+    mount(body, banner,
+      p.state === "planning" ? h("div", { class: "card" }, h("h2", {}, t("ai_plan_from_brief")), brief, h("div", { class: "row", style: "margin-top:8px" }, gen), err) : null, area,
+      h("div", { class: "card" }, h("h2", {}, t("ai_status_narrative")), narBtn, nar),
+      h("div", { class: "card" }, h("h2", {}, t("ai_history")), table([t("date"), t("type"), t("status"), t("model")], drafts.map(d => [String(d.created_at).slice(0, 16).replace("T", " "), d.kind, d.status, `${d.model} (${d.mode})`]), t("none"))));
   }
 
   async function closure(body, p) {

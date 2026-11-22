@@ -11,7 +11,34 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from .models import Base
-from .routers import auth_users, projects, timesheets, admin, delivery, registers, reports, alerts, dashboards, governance, notifications, exports
+from .routers import auth_users, projects, timesheets, admin, delivery, registers, reports, alerts, dashboards, governance, notifications, exports, ai as ai_router
+
+
+class OutboxDispatch:
+    """Pure ASGI middleware (no threads or task groups, so it also runs in the browser build): after a successful
+    write request, turn new outbox events into notifications. Best effort; never affects the response."""
+
+    def __init__(self, app, session_factory):
+        self.app, self.sessions = app, session_factory
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] not in ("POST", "PUT", "PATCH", "DELETE"):
+            return await self.app(scope, receive, send)
+        status = {}
+
+        async def watch(message):
+            if message["type"] == "http.response.start":
+                status["code"] = message["status"]
+            await send(message)
+
+        await self.app(scope, receive, watch)
+        if status.get("code", 500) < 400:
+            try:
+                from .notify import dispatch
+                with self.sessions() as db:
+                    dispatch(db)
+            except Exception:
+                pass
 
 
 def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = True) -> FastAPI:
@@ -28,21 +55,10 @@ def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = Tr
     origins = [o.strip() for o in os.environ.get("PROPERM_CORS_ORIGINS", "").split(",") if o.strip()]
     if origins:   # only for a UI hosted on another origin (e.g. Netlify); tokens go in a header, not cookies
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["Authorization", "Content-Type"])
-    for r in (auth_users.router, projects.router, projects.pending_router, governance.router, notifications.router, exports.router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
+    for r in (auth_users.router, projects.router, projects.pending_router, governance.router, notifications.router, exports.router, ai_router.router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
         app.include_router(r)
 
-    @app.middleware("http")
-    async def dispatch_outbox(request, call_next):
-        """After every successful write, turn new outbox events into notifications (best effort)."""
-        response = await call_next(request)
-        if request.method in ("POST", "PUT", "PATCH", "DELETE") and response.status_code < 400:
-            try:
-                from .notify import dispatch
-                with app.state.Session() as db:
-                    dispatch(db)
-            except Exception:
-                pass
-        return response
+    app.add_middleware(OutboxDispatch, session_factory=app.state.Session)
 
     if serve_ui:
         app.mount("/ui", StaticFiles(directory=Path(__file__).parent / "static", html=True), name="ui")

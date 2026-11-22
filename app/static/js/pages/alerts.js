@@ -1,5 +1,5 @@
 import { api, downloadCsv } from "../api.js";
-import { st, t } from "../i18n.js";
+import { getLang, st, t } from "../i18n.js";
 import { askText, badge, errorBox, field, guarded, h, modal, mount, table, toast } from "../ui.js";
 
 const STEPS = {
@@ -37,6 +37,11 @@ export default async function (root, { me }) {
       }
       try { await api("POST", `/alerts/${a.id}/actions`, body); toast(t("saved")); await render(); } catch (e) { toast(e.lines().join(" · "), "error"); }
     }
+    async function suggest(a) {
+      const d = await api("POST", `/ai/alerts/${a.id}/suggest`, { lang: getLang() });
+      modal({ title: t("ai_suggestion"), body: h("div", {}, h("p", { class: "muted small" }, d.mode === "stub" ? t("ai_stub_note") : `${d.model} · ${t("ai_draft_note")}`), h("p", {}, d.output.text)),
+        actions: [{ label: t("close"), class: "secondary", onClick: (c) => c() }] });
+    }
     async function showHistory(a) {
       const hist = await api("GET", `/alerts/${a.id}/history`);
       modal({ title: t("history"), body: table([t("date"), t("staff"), t("status"), t("note")], hist.map(x => [String(x.at).slice(0, 16).replace("T", " "), name(x.actor_id), x.action, x.note || ""]), t("none")), actions: [{ label: t("close"), class: "secondary", onClick: (c) => c() }] });
@@ -62,7 +67,7 @@ export default async function (root, { me }) {
       h("div", { class: "card" }, table([t("severity"), t("project"), t("cause"), t("suggested_action"), t("status"), t("assignee"), ""],
         rows.map(a => [badge(st(a.severity), a.severity), pnum(a.project_id), h("div", {}, a.cause, a.active ? null : h("div", { class: "small muted" }, `✓ ${t("cleared")}`)), h("span", { class: "small" }, a.suggested_action),
           h("span", {}, badge(st(a.status), a.status === "closed" ? "closed" : a.status === "dismissed" ? "dismissed" : "gold"), a.escalated ? " ▲" : ""), a.assignee_id ? `${name(a.assignee_id)}${a.due_date ? ` · ${a.due_date}` : ""}` : "—",
-          h("div", { class: "row", style: "gap:4px" }, (STEPS[a.status] || []).map(s => h("button", { class: "btn secondary small", onClick: guarded(null, () => act(a, s)) }, t(LABEL[s]))), h("button", { class: "btn secondary small", onClick: guarded(null, () => showHistory(a)) }, t("history")))]), t("none"))));
+          h("div", { class: "row", style: "gap:4px" }, (STEPS[a.status] || []).map(s => h("button", { class: "btn secondary small", onClick: guarded(null, () => act(a, s)) }, t(LABEL[s]))), h("button", { class: "btn secondary small", onClick: guarded(null, () => showHistory(a)) }, t("history")), ["PM", "PMO", "ADMIN"].includes(me.role) ? h("button", { class: "btn secondary small", onClick: guarded(null, () => suggest(a)) }, t("ai_suggest")) : null)]), t("none"))));
   }
   await render();
 }

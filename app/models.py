@@ -385,6 +385,24 @@ class ReportSchedule(Base):
     last_run_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
+class AiDraft(Base):
+    """Output of the AI layer. Always a draft: nothing is applied to project data until a person reviews it."""
+    __tablename__ = "ai_drafts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20))            # plan | narrative | alert_action
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
+    alert_id: Mapped[int | None] = mapped_column(ForeignKey("alerts.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="draft")   # draft | applied | rejected
+    input_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    output: Mapped[dict] = mapped_column(JSON, default=dict)
+    model: Mapped[str] = mapped_column(String(100))
+    mode: Mapped[str] = mapped_column(String(10))            # stub | live
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    reviewed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 @event.listens_for(AuditLog, "before_update")
 def _no_update(mapper, connection, target):
     raise RuntimeError("audit_log is append-only")

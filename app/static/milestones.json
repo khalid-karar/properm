@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-22",
+  "updated": "2026-11-23",
   "milestones": [
     {
       "en": "Foundation and access",
@@ -135,22 +135,22 @@
         {
           "en": "Closure checklist",
           "ar": "قائمة مراجعة الإقفال",
-          "s": "todo"
+          "s": "done"
         },
         {
           "en": "Benefits register",
           "ar": "سجل الفوائد",
-          "s": "todo"
+          "s": "done"
         },
         {
           "en": "Program and portfolio grouping",
           "ar": "تجميع البرامج والمحافظ",
-          "s": "todo"
+          "s": "done"
         },
         {
           "en": "Work calendars and holidays",
           "ar": "تقاويم العمل والإجازات",
-          "s": "todo"
+          "s": "done"
         }
       ]
     },
@@ -159,14 +159,24 @@
       "ar": "الإشعارات والتصدير",
       "subs": [
         {
-          "en": "Notification delivery (email, in-app)",
-          "ar": "إرسال الإشعارات (بريد، داخل التطبيق)",
-          "s": "todo"
+          "en": "In-app notifications with bell",
+          "ar": "إشعارات داخل التطبيق مع جرس التنبيه",
+          "s": "done"
         },
         {
-          "en": "Export and scheduled report delivery",
-          "ar": "التصدير والجدولة",
-          "s": "todo"
+          "en": "E-mail delivery (SMTP, not yet tried on a real mail server)",
+          "ar": "إرسال البريد الإلكتروني (لم يُجرَّب على خادم بريد حقيقي)",
+          "s": "progress"
+        },
+        {
+          "en": "CSV exports and printable project report",
+          "ar": "تصدير CSV وتقرير مشروع للطباعة",
+          "s": "done"
+        },
+        {
+          "en": "Scheduled report delivery (needs a cron to trigger)",
+          "ar": "تسليم التقارير المجدولة (يحتاج جدولة خارجية للتشغيل)",
+          "s": "done"
         }
       ]
     },
@@ -175,14 +185,19 @@
       "ar": "طبقة الذكاء الاصطناعي",
       "subs": [
         {
-          "en": "AI-assisted plan generation",
-          "ar": "إنشاء الخطة بمساعدة الذكاء الاصطناعي",
-          "s": "todo"
+          "en": "In-Kingdom host guard, audit and human review of every draft",
+          "ar": "ضابط الاستضافة داخل المملكة والتدقيق ومراجعة بشرية لكل مسودة",
+          "s": "done"
         },
         {
-          "en": "AI-written reports",
-          "ar": "تقارير بالذكاء الاصطناعي",
-          "s": "todo"
+          "en": "AI plan drafting from a brief (offline stub until a Saudi-hosted model is connected)",
+          "ar": "صياغة الخطة بالذكاء الاصطناعي (تجريبي حتى يُربط نموذج مستضاف في المملكة)",
+          "s": "progress"
+        },
+        {
+          "en": "AI status narratives and alert suggestions (same stub limit)",
+          "ar": "ملخصات الحالة واقتراحات التنبيهات (بالقيد نفسه)",
+          "s": "progress"
         },
         {
           "en": "Forecasting models",
