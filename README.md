@@ -11,8 +11,8 @@ Implements the Phase 1 slice of `PROPERM_Workflow_V1` (no AI yet): Python 3.11+,
     pytest -q
 
 ## Web UI
-Served by the same app at `/ui` (`/` redirects there). Vanilla ES modules, no build step. English/Arabic with RTL, role-based navigation. Screens: login, timesheet (overtime/warning acknowledgment flow), approvals queue, projects (activities, progress, costs, risks, issues), portfolio and project dashboards, alert triage, admin (rules, settings, rate card).
-Server messages (rule explanations) are shown in English even in Arabic mode. Not yet in the UI: change control, allocations, weekly-report forms, user management.
+Served by the same app at `/ui` (`/` redirects there). Vanilla ES modules, no build step. English/Arabic with RTL, role-based navigation. Screens: login, timesheet (overtime/warning acknowledgment flow), approvals queue (timesheets and change requests), projects (overview, progress, risks and issues, cost and EVM, change control, allocations, weekly reports), resource load, portfolio and project dashboards, alert triage, admin (users incl. CCB flag, rules, settings, rate card).
+Server messages (rule explanations) are shown in English even in Arabic mode. Not yet in the UI: editing or deactivating users, a program/portfolio grouping, notifications.
 
 ### Demo data
     PROPERM_DEMO=1 PROPERM_DEMO_PASSWORD="<pw>" python -m app.demo      # empty database only

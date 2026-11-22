@@ -8,11 +8,11 @@ let me = null;
 
 const NAV = {
   STAFF: ["timesheet", "approvals", "projects", "alerts"],
-  PM: ["timesheet", "approvals", "projects", "dashboard", "alerts"],
-  PMO: ["timesheet", "approvals", "projects", "dashboard", "alerts"],
-  ADMIN: ["timesheet", "approvals", "projects", "dashboard", "alerts", "admin"],
-  DECISION_MAKER: ["projects", "dashboard", "alerts"],
-  PROGRAM_MANAGER: ["projects", "dashboard", "alerts"],
+  PM: ["timesheet", "approvals", "projects", "load", "dashboard", "alerts"],
+  PMO: ["timesheet", "approvals", "projects", "load", "dashboard", "alerts"],
+  ADMIN: ["timesheet", "approvals", "projects", "load", "dashboard", "alerts", "admin"],
+  DECISION_MAKER: ["projects", "load", "dashboard", "alerts"],
+  PROGRAM_MANAGER: ["projects", "load", "dashboard", "alerts"],
 };
 const HOME = { STAFF: "timesheet", PM: "projects" };
 export const homeFor = (role) => HOME[role] || "dashboard";

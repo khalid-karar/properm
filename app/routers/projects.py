@@ -61,6 +61,18 @@ class DecisionIn(BaseModel):
     reason: str | None = None
 
 
+pending_router = APIRouter(tags=["projects (Layer 1)"])
+
+
+@pending_router.get("/changes/pending")
+def pending_changes(db=Depends(get_db), user: User = Depends(current_user)):
+    """Change requests awaiting a decision, for CCB members and PMO/ADMIN (never your own request)."""
+    if not (user.is_ccb or user.role in ("PMO", "ADMIN")):
+        raise HTTPException(403, "Only CCB members or PMO can decide change requests")
+    q = db.query(ChangeRequest).filter_by(status="requested").order_by(ChangeRequest.id)
+    return [cr_out(c, True) for c in q if c.requested_by != user.id or user.role == "ADMIN"]
+
+
 def p_out(p: Project) -> dict:
     return {"id": p.id, "number": p.number, "name": p.name, "state": p.state, "pm_id": p.pm_id,
             "planned_start": p.planned_start, "planned_end": p.planned_end, "budget_ceiling": p.budget_ceiling,
@@ -142,7 +154,10 @@ def get_one(pid: int, db=Depends(get_db), user: User = Depends(current_user)):
         raise HTTPException(403, "No access to this project")
     acts = db.query(Activity).filter_by(project_id=pid).order_by(Activity.id).all()
     cost = can_view_cost(db, user, p)
-    return {**p_out(p), "activities": [a_out(a, cost) for a in acts]}
+    out = {**p_out(p), "activities": [a_out(a, cost) for a in acts]}
+    if cost:
+        out["assigned_user_ids"] = [a.user_id for a in db.query(Assignment).filter_by(project_id=pid)]
+    return out
 
 
 @router.post("/{pid}/assignments", status_code=201)
@@ -293,6 +308,25 @@ def request_change(pid: int, body: ChangeIn, db=Depends(get_db), user: User = De
     emit(db, "change.requested", {"project_id": pid, "change_id": cr.id})
     db.commit()
     return {"id": cr.id, "status": cr.status}
+
+
+def cr_out(cr: ChangeRequest, cost_ok: bool) -> dict:
+    d = {"id": cr.id, "project_id": cr.project_id, "change_type": cr.change_type, "description": cr.description,
+         "impact_hours_delta": cr.impact_hours_delta, "impact_schedule_days": cr.impact_schedule_days,
+         "status": cr.status, "requested_by": cr.requested_by, "decided_by": cr.decided_by,
+         "decision_reason": cr.decision_reason, "new_baseline_version": cr.new_baseline_version}
+    if cost_ok:
+        d["impact_cost_delta"] = cr.impact_cost_delta     # cost data: cost viewers only
+    return d
+
+
+@router.get("/{pid}/changes")
+def list_changes(pid: int, db=Depends(get_db), user: User = Depends(current_user)):
+    p = get_project(db, pid)
+    if not can_view(db, user, p):
+        raise HTTPException(403, "No access to this project")
+    ok = can_view_cost(db, user, p)
+    return [cr_out(c, ok) for c in db.query(ChangeRequest).filter_by(project_id=pid).order_by(ChangeRequest.id.desc())]
 
 
 @router.post("/{pid}/changes/{cid}/decision")

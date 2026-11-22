@@ -22,7 +22,7 @@ def create_app(database_url: str = "sqlite:///./properm.db") -> FastAPI:
     app = FastAPI(title="PROPERM Smart PMO", version="0.1.0")
     app.state.engine = engine
     app.state.Session = sessionmaker(engine, expire_on_commit=False)
-    for r in (auth_users.router, projects.router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
+    for r in (auth_users.router, projects.router, projects.pending_router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
         app.include_router(r)
 
     app.mount("/ui", StaticFiles(directory=Path(__file__).parent / "static", html=True), name="ui")

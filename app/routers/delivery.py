@@ -195,3 +195,12 @@ def resource_load(week_of: date | None = None, db=Depends(get_db), user: User = 
             out.append({"user_id": u.id, "staff_id": u.staff_id, "capacity": u.capacity_hours_week, "planned": planned,
                         "actual": actual, "over_allocated": planned > u.capacity_hours_week})
     return {"week_start": ws, "staff": out}
+
+
+@router.get("/projects/{pid}/allocations")
+def list_allocations(pid: int, db=Depends(get_db), user: User = Depends(current_user)):
+    p = get_project(db, pid)
+    if not can_view_cost(db, user, p):
+        raise HTTPException(403, "No access to this project's allocations")
+    rows = db.query(PlannedAllocation).filter_by(project_id=pid).order_by(PlannedAllocation.week_start, PlannedAllocation.user_id)
+    return [{"user_id": r.user_id, "week_start": r.week_start, "hours": r.hours} for r in rows]
