@@ -12,13 +12,16 @@ Implements the Phase 1 slice of `PROPERM_Workflow_V1` (no AI yet): Python 3.11+,
 
 ## Web UI
 Served by the same app at `/ui` (`/` redirects there). Vanilla ES modules, no build step. English/Arabic with RTL, role-based navigation. Screens: login, timesheet (overtime/warning acknowledgment flow), approvals queue (timesheets and change requests), projects (overview, progress, risks and issues, cost and EVM, change control, allocations, weekly reports), resource load, portfolio and project dashboards, alert triage, admin (users incl. CCB flag, rules, settings, rate card).
-Server messages (rule explanations) are shown in English even in Arabic mode. Not yet in the UI: editing or deactivating users, a program/portfolio grouping, notifications.
+Server messages (rule explanations) are shown in English even in Arabic mode. Not yet in the UI: a program/portfolio grouping, notifications.
 
 ### Demo data
     PROPERM_DEMO=1 PROPERM_DEMO_PASSWORD="<pw>" python -m app.demo      # empty database only
 Creates users admin, pm1, pmo1, dm1, s1, s2, s3 and a few projects in different health states.
 
 Set `PROPERM_DEMO_LOGIN=1` to show one-click role buttons on the login page (no password needed). **Demo databases only: never enable it on a deployment with real data.**
+
+### Tests
+`python -m pytest` runs the backend suite. `bash tests/ui/run.sh` runs the browser test against a freshly seeded demo server (needs `npm i playwright` and Chrome; set `PLAYWRIGHT_PATH` / `CHROME_PATH` if they are installed elsewhere).
 
 ### Build progress timeline
 The login page shows milestones with green (done), amber (in progress) and red (not started) lights, read from `app/static/milestones.json`. Change a sub-step's `s` to `done`, `progress` or `todo` and bump `updated`; the percentage counts steps equally, not effort.

@@ -1,11 +1,29 @@
 import { api } from "../api.js";
 import { t } from "../i18n.js";
-import { errorBox, field, guarded, h, mount, num, table, toast, today } from "../ui.js";
+import { badge, errorBox, field, guarded, h, modal, mount, num, table, toast, today } from "../ui.js";
 
 const ROLES = ["STAFF", "PM", "PMO", "PROGRAM_MANAGER", "DECISION_MAKER", "ADMIN"];
 
 export default async function (root) {
+  function editUser(u, users, me) {
+    const f = { name: h("input", { value: u.full_name }), role: h("select", {}, ROLES.map(r => h("option", { value: r, selected: r === u.role }, r))),
+      grade: h("input", { value: u.rate_grade || "" }), cap: h("input", { type: "number", value: u.capacity_hours_week, style: "width:80px" }), ccb: h("input", { type: "checkbox", checked: u.is_ccb }),
+      active: h("input", { type: "checkbox", checked: u.active, disabled: u.id === me.id }), pw: h("input", { type: "password", autocomplete: "new-password" }),
+      lm: h("select", {}, h("option", { value: "" }, "—"), users.filter(x => x.id !== u.id).map(x => h("option", { value: x.id, selected: x.id === u.line_manager_id }, x.full_name))) };
+    const err = h("div");
+    modal({ title: `${t("edit")}: ${u.staff_id}`,
+      body: h("div", {}, h("div", { class: "row" }, field(t("full_name"), f.name), field(t("role"), f.role), field(t("grade"), f.grade), field(t("capacity"), f.cap), field(t("line_manager"), f.lm)),
+        h("div", { class: "row", style: "margin-top:10px" }, field(t("is_ccb"), f.ccb), field(t("active"), f.active), field(t("new_password"), f.pw)), err),
+      actions: [{ label: t("cancel"), onClick: (close) => close() }, { label: t("save"), class: "primary", onClick: async (close) => {
+        mount(err);
+        const body = { full_name: f.name.value.trim(), role: f.role.value, rate_grade: f.grade.value.trim() || null, capacity_hours_week: Number(f.cap.value), is_ccb: f.ccb.checked, line_manager_id: f.lm.value ? Number(f.lm.value) : null, active: f.active.checked };
+        if (f.pw.value) body.new_password = f.pw.value;
+        try { await api("PATCH", `/users/${u.id}`, body); toast(t("saved")); close(); await render(); } catch (e) { mount(err, errorBox(e)); }
+      } }] });
+  }
+
   async function render() {
+    const me = await api("GET", "/me");
     const [users, rates, cfg] = await Promise.all([api("GET", "/users"), api("GET", "/admin/rates"), api("GET", "/admin/rules")]);
     const f = { sid: h("input"), name: h("input"), pw: h("input", { type: "password", autocomplete: "new-password" }), role: h("select", {}, ROLES.map(r => h("option", { value: r }, r))), grade: h("input", { style: "width:90px" }),
       cap: h("input", { type: "number", value: "40", style: "width:80px" }), ccb: h("input", { type: "checkbox" }), lm: h("select", {}, h("option", { value: "" }, "—"), users.map(u => h("option", { value: u.id }, u.full_name))) };
@@ -25,7 +43,7 @@ export default async function (root) {
     const setting = (key) => { const i = h("input", { type: "number", step: "any", value: cfg.params[key], style: "width:110px" }); i.addEventListener("change", guarded(i, async () => { await api("PUT", `/admin/settings/${key}`, { value: Number(i.value) }); toast(t("saved_ok")); })); return i; };
 
     mount(root, h("h1", {}, t("nav_admin")),
-      h("div", { class: "card" }, h("h2", {}, t("users")), table([t("staff_id"), t("full_name"), t("role"), t("grade"), t("capacity"), t("is_ccb")], users.map(u => [u.staff_id, u.full_name, u.role, u.rate_grade || "—", num(u.capacity_hours_week), u.is_ccb ? "✓" : ""]), t("none")),
+      h("div", { class: "card" }, h("h2", {}, t("users")), table([t("staff_id"), t("full_name"), t("role"), t("grade"), t("capacity"), t("is_ccb"), t("status"), ""], users.map(u => [u.staff_id, u.full_name, u.role, u.rate_grade || "—", num(u.capacity_hours_week), u.is_ccb ? "✓" : "", badge(u.active ? t("active") : t("inactive"), u.active ? "approved" : "critical"), h("button", { class: "btn small", type: "button", onClick: () => editUser(u, users, me) }, t("edit"))]), t("none")),
         h("h2", { style: "margin-top:14px" }, t("new_user")),
         h("div", { class: "row" }, field(t("staff_id"), f.sid), field(t("full_name"), f.name), field(t("password"), f.pw), field(t("role"), f.role), field(t("grade"), f.grade), field(t("capacity"), f.cap), field(t("is_ccb"), f.ccb), field(t("line_manager"), f.lm), addU), uerr),
       h("div", { class: "card" }, h("h2", {}, t("rates")), table([t("grade"), t("hourly_rate"), t("currency"), t("effective_from")], rates.map(r => [r.grade, num(r.hourly_rate, 2), r.currency, r.effective_from]), t("none")),

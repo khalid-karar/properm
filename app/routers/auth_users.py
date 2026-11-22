@@ -105,6 +105,46 @@ def create_user(body: UserIn, db=Depends(get_db), admin: User = Depends(require_
     return user_out(u, include_cost=True)
 
 
+class UserPatch(BaseModel):
+    full_name: str | None = None
+    role: str | None = None
+    is_ccb: bool | None = None
+    job_title: str | None = None
+    department: str | None = None
+    capacity_hours_week: float | None = Field(None, gt=0, le=80)
+    rate_grade: str | None = None
+    line_manager_id: int | None = None
+    delegate_id: int | None = None
+    active: bool | None = None
+    new_password: str | None = Field(None, min_length=8)
+
+
+@router.patch("/users/{uid}")
+def update_user(uid: int, body: UserPatch, db=Depends(get_db), admin: User = Depends(require_roles("ADMIN"))):
+    u = db.get(User, uid)
+    if not u:
+        raise HTTPException(404, "User not found")
+    changes = body.model_dump(exclude_unset=True, exclude={"new_password"})
+    if "role" in changes and changes["role"] not in ROLES:
+        raise HTTPException(422, f"role must be one of {ROLES}")
+    if (changes.get("active") is False or ("role" in changes and changes["role"] != "ADMIN")) and u.role == "ADMIN" and u.active:
+        others = db.query(User).filter(User.role == "ADMIN", User.active.is_(True), User.id != u.id).count()
+        if others == 0:
+            raise HTTPException(409, "Cannot remove or demote the last active ADMIN")
+    if u.id == admin.id and (changes.get("active") is False):
+        raise HTTPException(409, "You cannot deactivate your own account")
+    for k in ("line_manager_id", "delegate_id"):
+        if changes.get(k) is not None and (changes[k] == u.id or not db.get(User, changes[k])):
+            raise HTTPException(422, f"{k} must be another existing user")
+    for k, v in changes.items():
+        setattr(u, k, v)
+    if body.new_password:
+        u.password_hash = hash_pw(body.new_password)
+    log(db, admin.id, "user.updated", "user", u.id, {"fields": sorted(changes) + (["password"] if body.new_password else [])})
+    db.commit()
+    return user_out(u, include_cost=True)
+
+
 @router.get("/users")
 def list_users(db=Depends(get_db), user: User = Depends(require_roles("ADMIN", "PMO", "PM"))):
     show_cost = user.role in ("ADMIN", "PMO")

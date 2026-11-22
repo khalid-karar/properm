@@ -1,45 +1,216 @@
 {
   "updated": "2026-11-22",
   "milestones": [
-    {"en": "Foundation and access", "ar": "الأساس والصلاحيات", "subs": [
-      {"en": "Sign-in, roles, row-level access", "ar": "الدخول والأدوار وصلاحيات الصفوف", "s": "done"},
-      {"en": "Append-only audit log and event outbox", "ar": "سجل تدقيق غير قابل للتعديل وصندوق الأحداث", "s": "done"}]},
-    {"en": "Project setup and baseline", "ar": "إعداد المشروع وخط الأساس", "subs": [
-      {"en": "Project states and activities", "ar": "حالات المشروع والأنشطة", "s": "done"},
-      {"en": "Baseline lock and staff assignment", "ar": "قفل خط الأساس وإسناد الموظفين", "s": "done"},
-      {"en": "Change control (request, decide, revise baseline)", "ar": "التحكم في التغيير (طلب، قرار، مراجعة خط الأساس)", "s": "done"}]},
-    {"en": "Time and approvals", "ar": "الوقت والموافقات", "subs": [
-      {"en": "Timesheet entry with rule engine (R1-R9)", "ar": "إدخال الساعات مع محرك القواعد", "s": "done"},
-      {"en": "Approval queue, overtime flow, period lock", "ar": "طابور الموافقات والعمل الإضافي وإقفال الفترة", "s": "done"}]},
-    {"en": "Delivery tracking", "ar": "متابعة التنفيذ", "subs": [
-      {"en": "Weekly progress, costs, risks, issues", "ar": "التقدم الأسبوعي والتكاليف والمخاطر والمشكلات", "s": "done"},
-      {"en": "Planned allocations and resource load", "ar": "التخصيصات المخططة وتحميل الموارد", "s": "done"}]},
-    {"en": "Performance and reporting", "ar": "الأداء والتقارير", "subs": [
-      {"en": "Versioned rate card and earned value (CPI, SPI, EAC)", "ar": "جدول أسعار بإصدارات والقيمة المكتسبة", "s": "done"},
-      {"en": "Weekly PM report with auto-filled snapshot", "ar": "تقرير المدير الأسبوعي بلقطة تلقائية", "s": "done"}]},
-    {"en": "Dashboards and alerts", "ar": "لوحات المتابعة والتنبيهات", "subs": [
-      {"en": "Project and portfolio health (RAG)", "ar": "صحة المشروع والمحفظة (أحمر/برتقالي/أخضر)", "s": "done"},
-      {"en": "Rule-based alerts with triage lifecycle", "ar": "تنبيهات قائمة على القواعد مع دورة المعالجة", "s": "done"}]},
-    {"en": "Web app and demo", "ar": "تطبيق الويب والنسخة التجريبية", "subs": [
-      {"en": "Web UI in English and Arabic (RTL)", "ar": "واجهة ويب بالعربية والإنجليزية", "s": "done"},
-      {"en": "Netlify demo with one-click role login", "ar": "نسخة نتلايفاي التجريبية بدخول سريع حسب الدور", "s": "done"},
-      {"en": "Edit and deactivate users", "ar": "تعديل المستخدمين وإيقافهم", "s": "todo"},
-      {"en": "Automated UI tests", "ar": "اختبارات آلية للواجهة", "s": "todo"}]},
-    {"en": "Governance and closure", "ar": "الحوكمة والإقفال", "subs": [
-      {"en": "Closure checklist", "ar": "قائمة مراجعة الإقفال", "s": "todo"},
-      {"en": "Benefits register", "ar": "سجل الفوائد", "s": "todo"},
-      {"en": "Program and portfolio grouping", "ar": "تجميع البرامج والمحافظ", "s": "todo"},
-      {"en": "Work calendars and holidays", "ar": "تقاويم العمل والإجازات", "s": "todo"}]},
-    {"en": "Notifications and exports", "ar": "الإشعارات والتصدير", "subs": [
-      {"en": "Notification delivery (email, in-app)", "ar": "إرسال الإشعارات (بريد، داخل التطبيق)", "s": "todo"},
-      {"en": "Export and scheduled report delivery", "ar": "التصدير والجدولة", "s": "todo"}]},
-    {"en": "AI layer", "ar": "طبقة الذكاء الاصطناعي", "subs": [
-      {"en": "AI-assisted plan generation", "ar": "إنشاء الخطة بمساعدة الذكاء الاصطناعي", "s": "todo"},
-      {"en": "AI-written reports", "ar": "تقارير بالذكاء الاصطناعي", "s": "todo"},
-      {"en": "Forecasting models", "ar": "نماذج التنبؤ", "s": "todo"}]},
-    {"en": "Production readiness", "ar": "الجاهزية للإنتاج", "subs": [
-      {"en": "Postgres and database migrations", "ar": "بوستجرس وترحيلات قاعدة البيانات", "s": "todo"},
-      {"en": "Real hosting with a server", "ar": "استضافة فعلية بخادم", "s": "todo"},
-      {"en": "Database-level row security and security review", "ar": "أمان الصفوف في قاعدة البيانات ومراجعة أمنية", "s": "todo"}]}
+    {
+      "en": "Foundation and access",
+      "ar": "الأساس والصلاحيات",
+      "subs": [
+        {
+          "en": "Sign-in, roles, row-level access",
+          "ar": "الدخول والأدوار وصلاحيات الصفوف",
+          "s": "done"
+        },
+        {
+          "en": "Append-only audit log and event outbox",
+          "ar": "سجل تدقيق غير قابل للتعديل وصندوق الأحداث",
+          "s": "done"
+        }
+      ]
+    },
+    {
+      "en": "Project setup and baseline",
+      "ar": "إعداد المشروع وخط الأساس",
+      "subs": [
+        {
+          "en": "Project states and activities",
+          "ar": "حالات المشروع والأنشطة",
+          "s": "done"
+        },
+        {
+          "en": "Baseline lock and staff assignment",
+          "ar": "قفل خط الأساس وإسناد الموظفين",
+          "s": "done"
+        },
+        {
+          "en": "Change control (request, decide, revise baseline)",
+          "ar": "التحكم في التغيير (طلب، قرار، مراجعة خط الأساس)",
+          "s": "done"
+        }
+      ]
+    },
+    {
+      "en": "Time and approvals",
+      "ar": "الوقت والموافقات",
+      "subs": [
+        {
+          "en": "Timesheet entry with rule engine (R1-R9)",
+          "ar": "إدخال الساعات مع محرك القواعد",
+          "s": "done"
+        },
+        {
+          "en": "Approval queue, overtime flow, period lock",
+          "ar": "طابور الموافقات والعمل الإضافي وإقفال الفترة",
+          "s": "done"
+        }
+      ]
+    },
+    {
+      "en": "Delivery tracking",
+      "ar": "متابعة التنفيذ",
+      "subs": [
+        {
+          "en": "Weekly progress, costs, risks, issues",
+          "ar": "التقدم الأسبوعي والتكاليف والمخاطر والمشكلات",
+          "s": "done"
+        },
+        {
+          "en": "Planned allocations and resource load",
+          "ar": "التخصيصات المخططة وتحميل الموارد",
+          "s": "done"
+        }
+      ]
+    },
+    {
+      "en": "Performance and reporting",
+      "ar": "الأداء والتقارير",
+      "subs": [
+        {
+          "en": "Versioned rate card and earned value (CPI, SPI, EAC)",
+          "ar": "جدول أسعار بإصدارات والقيمة المكتسبة",
+          "s": "done"
+        },
+        {
+          "en": "Weekly PM report with auto-filled snapshot",
+          "ar": "تقرير المدير الأسبوعي بلقطة تلقائية",
+          "s": "done"
+        }
+      ]
+    },
+    {
+      "en": "Dashboards and alerts",
+      "ar": "لوحات المتابعة والتنبيهات",
+      "subs": [
+        {
+          "en": "Project and portfolio health (RAG)",
+          "ar": "صحة المشروع والمحفظة (أحمر/برتقالي/أخضر)",
+          "s": "done"
+        },
+        {
+          "en": "Rule-based alerts with triage lifecycle",
+          "ar": "تنبيهات قائمة على القواعد مع دورة المعالجة",
+          "s": "done"
+        }
+      ]
+    },
+    {
+      "en": "Web app and demo",
+      "ar": "تطبيق الويب والنسخة التجريبية",
+      "subs": [
+        {
+          "en": "Web UI in English and Arabic (RTL)",
+          "ar": "واجهة ويب بالعربية والإنجليزية",
+          "s": "done"
+        },
+        {
+          "en": "Netlify demo with one-click role login",
+          "ar": "نسخة نتلايفاي التجريبية بدخول سريع حسب الدور",
+          "s": "done"
+        },
+        {
+          "en": "Edit and deactivate users",
+          "ar": "تعديل المستخدمين وإيقافهم",
+          "s": "done"
+        },
+        {
+          "en": "Automated UI tests",
+          "ar": "اختبارات آلية للواجهة",
+          "s": "done"
+        }
+      ]
+    },
+    {
+      "en": "Governance and closure",
+      "ar": "الحوكمة والإقفال",
+      "subs": [
+        {
+          "en": "Closure checklist",
+          "ar": "قائمة مراجعة الإقفال",
+          "s": "todo"
+        },
+        {
+          "en": "Benefits register",
+          "ar": "سجل الفوائد",
+          "s": "todo"
+        },
+        {
+          "en": "Program and portfolio grouping",
+          "ar": "تجميع البرامج والمحافظ",
+          "s": "todo"
+        },
+        {
+          "en": "Work calendars and holidays",
+          "ar": "تقاويم العمل والإجازات",
+          "s": "todo"
+        }
+      ]
+    },
+    {
+      "en": "Notifications and exports",
+      "ar": "الإشعارات والتصدير",
+      "subs": [
+        {
+          "en": "Notification delivery (email, in-app)",
+          "ar": "إرسال الإشعارات (بريد، داخل التطبيق)",
+          "s": "todo"
+        },
+        {
+          "en": "Export and scheduled report delivery",
+          "ar": "التصدير والجدولة",
+          "s": "todo"
+        }
+      ]
+    },
+    {
+      "en": "AI layer",
+      "ar": "طبقة الذكاء الاصطناعي",
+      "subs": [
+        {
+          "en": "AI-assisted plan generation",
+          "ar": "إنشاء الخطة بمساعدة الذكاء الاصطناعي",
+          "s": "todo"
+        },
+        {
+          "en": "AI-written reports",
+          "ar": "تقارير بالذكاء الاصطناعي",
+          "s": "todo"
+        },
+        {
+          "en": "Forecasting models",
+          "ar": "نماذج التنبؤ",
+          "s": "todo"
+        }
+      ]
+    },
+    {
+      "en": "Production readiness",
+      "ar": "الجاهزية للإنتاج",
+      "subs": [
+        {
+          "en": "Postgres and database migrations",
+          "ar": "بوستجرس وترحيلات قاعدة البيانات",
+          "s": "todo"
+        },
+        {
+          "en": "Real hosting with a server",
+          "ar": "استضافة فعلية بخادم",
+          "s": "todo"
+        },
+        {
+          "en": "Database-level row security and security review",
+          "ar": "أمان الصفوف في قاعدة البيانات ومراجعة أمنية",
+          "s": "todo"
+        }
+      ]
+    }
   ]
 }
