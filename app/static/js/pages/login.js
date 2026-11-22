@@ -22,6 +22,17 @@ export default function (root) {
     field(t("staff_id"), id), field(t("password"), pw), msg,
     h("div", { class: "row" }, btn,
       h("button", { class: "btn secondary right", type: "button", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); location.reload(); } }, getLang() === "en" ? "العربية" : "English")));
-  mount(root, form);
+  const quick = h("div", { class: "card", hidden: true });
+  mount(root, form, quick);
   id.focus();
+  // Demo quick login: the server only answers when PROPERM_DEMO_LOGIN=1, otherwise this stays hidden.
+  api("GET", "/auth/demo-users").then((users) => {
+    if (!users.length) return;
+    mount(quick, h("h2", {}, t("quick_login")), h("p", { class: "muted small" }, t("quick_login_note")),
+      h("div", { class: "row" }, users.map(u => h("button", { class: "btn secondary", type: "button", onClick: guarded(null, async () => {
+        const r = await api("POST", "/auth/demo-login", { staff_id: u.staff_id });
+        session.set(r.access_token, r.role); resetMe(); location.hash = `#/${homeFor(r.role)}`;
+      }) }, `${u.full_name} · ${u.role}`))));
+    quick.hidden = false;
+  }).catch(() => {});
 }

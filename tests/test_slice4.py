@@ -42,3 +42,16 @@ def test_allocations_list_and_assigned_ids(c, costed):
     assert c.get(f"/projects/{pid}/allocations", headers=h["s3"]).status_code == 403     # staff cannot see planning data
     assert ids["s3"] in c.get(f"/projects/{pid}", headers=h["pm1"]).json()["assigned_user_ids"]
     assert "assigned_user_ids" not in c.get(f"/projects/{pid}", headers=h["s3"]).json()
+
+
+def test_demo_login_off_by_default_and_on_with_flag(c, world, monkeypatch):
+    monkeypatch.delenv("PROPERM_DEMO_LOGIN", raising=False)
+    assert c.get("/auth/demo-users").status_code == 404
+    assert c.post("/auth/demo-login", json={"staff_id": "pm1"}).status_code == 404
+    monkeypatch.setenv("PROPERM_DEMO_LOGIN", "1")
+    users = c.get("/auth/demo-users").json()
+    assert {"pm1", "pmo1", "s1"} <= {u["staff_id"] for u in users}
+    r = c.post("/auth/demo-login", json={"staff_id": "pm1"})
+    assert r.status_code == 200 and r.json()["role"] == "PM"
+    assert c.get("/me", headers={"Authorization": f"Bearer {r.json()['access_token']}"}).json()["staff_id"] == "pm1"
+    assert c.post("/auth/demo-login", json={"staff_id": "nobody"}).status_code == 401

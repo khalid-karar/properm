@@ -14,6 +14,10 @@ class LoginIn(BaseModel):
     password: str
 
 
+class DemoLoginIn(BaseModel):
+    staff_id: str
+
+
 class UserIn(BaseModel):
     staff_id: str
     full_name: str
@@ -41,6 +45,30 @@ def user_out(u: User, include_cost: bool = False) -> dict:
 def login(body: LoginIn, db=Depends(get_db)):
     u = db.query(User).filter_by(staff_id=body.staff_id).first()
     if not u or not u.active or not verify_pw(body.password, u.password_hash):
+        raise HTTPException(401, "Invalid credentials")
+    return {"access_token": make_token(u), "token_type": "bearer", "role": u.role}
+
+
+def _demo_login_on() -> bool:
+    import os
+    return os.environ.get("PROPERM_DEMO_LOGIN") == "1"
+
+
+@router.get("/auth/demo-users")
+def demo_users(db=Depends(get_db)):
+    """Quick-login list. Exists only when PROPERM_DEMO_LOGIN=1; never enable on a real deployment."""
+    if not _demo_login_on():
+        raise HTTPException(404, "Not found")
+    return [{"staff_id": u.staff_id, "full_name": u.full_name, "role": u.role}
+            for u in db.query(User).filter_by(active=True).order_by(User.id)]
+
+
+@router.post("/auth/demo-login")
+def demo_login(body: DemoLoginIn, db=Depends(get_db)):
+    if not _demo_login_on():
+        raise HTTPException(404, "Not found")
+    u = db.query(User).filter_by(staff_id=body.staff_id).first()
+    if not u or not u.active:
         raise HTTPException(401, "Invalid credentials")
     return {"access_token": make_token(u), "token_type": "bearer", "role": u.role}
 

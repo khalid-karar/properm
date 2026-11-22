@@ -18,6 +18,8 @@ Server messages (rule explanations) are shown in English even in Arabic mode. No
     PROPERM_DEMO=1 PROPERM_DEMO_PASSWORD="<pw>" python -m app.demo      # empty database only
 Creates users admin, pm1, pmo1, dm1, s1, s2, s3 and a few projects in different health states.
 
+Set `PROPERM_DEMO_LOGIN=1` to show one-click role buttons on the login page (no password needed). **Demo databases only: never enable it on a deployment with real data.**
+
 `DATABASE_URL` selects the database (default `sqlite:///./properm.db`).
 
 ## What is built (flow chart section)
