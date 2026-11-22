@@ -228,6 +228,37 @@ class WeeklyReport(Base):
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class Alert(Base):
+    """3.3 rule-generated alert; 3.5 triage lifecycle. Deduplicated per (project, rule, subject)."""
+    __tablename__ = "alerts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    rule: Mapped[str] = mapped_column(String(40))
+    dedupe_key: Mapped[str] = mapped_column(String(200))
+    severity: Mapped[str] = mapped_column(String(10))            # info | warning | critical
+    cause: Mapped[str] = mapped_column(Text)
+    suggested_action: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="open")  # open|acknowledged|assigned|resolved|closed|dismissed
+    active: Mapped[bool] = mapped_column(Boolean, default=True)      # does the condition still hold?
+    escalated: Mapped[bool] = mapped_column(Boolean, default=False)
+    assignee_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AlertAction(Base):
+    """Audit trail of every triage step (3.5.4)."""
+    __tablename__ = "alert_actions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    alert_id: Mapped[int] = mapped_column(ForeignKey("alerts.id"))
+    actor_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    action: Mapped[str] = mapped_column(String(30))
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class RuleViolation(Base):
     __tablename__ = "rule_violations"
     id: Mapped[int] = mapped_column(primary_key=True)

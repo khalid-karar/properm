@@ -24,6 +24,12 @@ DEFAULT_PARAMS = {
     "anomaly_block_count": 3,       # BLOCK violations within 7 days that raise anomaly.flag
     "cost_approval_threshold": 50000.0,  # non-labor costs above this need PMO/ADMIN approval (Finance stand-in)
     "stale_progress_weeks": 2,      # weeks without a progress update before an activity is flagged
+    # rule-based alerts (3.3); every threshold is editable via PUT /admin/settings/{key}
+    "cpi_warning": 0.9, "cpi_critical": 0.8,
+    "spi_warning": 0.9, "spi_critical": 0.8,
+    "slip_tolerance_days": 7,       # overdue activity: warning beyond this, critical beyond 3x
+    "risk_score_warning": 15, "risk_score_critical": 20,
+    "alert_cooldown_days": 7,       # a dismissed alert is not re-raised within this many days
 }
 
 # Non-project time codes valid for any user in any state (4.5 configuration, minimal).
