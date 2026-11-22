@@ -1,6 +1,6 @@
 import { api, session } from "../api.js";
 import { getLang, setLang, t } from "../i18n.js";
-import { errorBox, field, guarded, h, mount } from "../ui.js";
+import { bar, errorBox, field, guarded, h, mount } from "../ui.js";
 import { homeFor, resetMe } from "../app.js";
 
 export default function (root) {
@@ -24,7 +24,9 @@ export default function (root) {
       h("button", { class: "btn secondary right", type: "button", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); location.reload(); } }, getLang() === "en" ? "العربية" : "English")));
   const quick = h("div", { class: "card login", hidden: true });
   const starting = window.PROPERM_EMBEDDED ? h("div", { class: "card login" }, h("p", { class: "muted" }, t("demo_starting"))) : null;
-  mount(root, form, starting, quick);
+  const board = h("div", { class: "card timeline" });
+  mount(root, form, starting, quick, board);
+  timeline(board);
   id.focus();
   // Demo quick login: the server only answers when PROPERM_DEMO_LOGIN=1, otherwise this stays hidden.
   api("GET", "/auth/demo-users").then((users) => {
@@ -37,4 +39,28 @@ export default function (root) {
       }) }, `${u.full_name} · ${u.role}`))));
     quick.hidden = false;
   }).catch(() => {});
+}
+
+// Build progress: edit app/static/milestones.json as work moves (done / progress / todo).
+const STATE = { done: ["✓", "done"], progress: ["…", "progress"], todo: ["○", "todo"] };
+async function timeline(board) {
+  let data;
+  try { data = await (await fetch(new URL("../../milestones.json", import.meta.url), { cache: "no-cache" })).json(); } catch { return; }
+  const ar = getLang() === "ar";
+  const name = (x) => (ar && x.ar) || x.en;
+  const light = (s) => h("span", { class: `light ${STATE[s][1]}`, role: "img", "aria-label": t(`ms_${s}`), title: t(`ms_${s}`) }, STATE[s][0]);
+  const all = data.milestones.flatMap(m => m.subs);
+  const done = all.filter(s => s.s === "done").length;
+  const pct = Math.round((done / all.length) * 100);
+  const status = (m) => (m.subs.every(s => s.s === "done") ? "done" : m.subs.some(s => s.s !== "todo") ? "progress" : "todo");
+  mount(board,
+    h("h2", {}, t("ms_title")),
+    h("p", { class: "muted small" }, `${t("ms_updated")}: ${data.updated}`),
+    h("div", { class: "ms-total" }, h("strong", {}, `${pct}%`), ` · ${done} / ${all.length} ${t("ms_steps")}`, bar(pct)),
+    h("div", { class: "legend small" }, ["done", "progress", "todo"].map(s => h("span", {}, light(s), ` ${t(`ms_${s}`)}`))),
+    data.milestones.map((m, i) => {
+      const st = status(m), d = m.subs.filter(s => s.s === "done").length;
+      return h("details", { class: "ms", open: st === "progress" }, h("summary", {}, light(st), h("span", { class: "ms-name" }, `${i + 1}. ${name(m)}`), h("span", { class: "muted small" }, `${d}/${m.subs.length}`)),
+        h("ul", {}, m.subs.map(s => h("li", {}, light(s.s), ` ${name(s)}`))));
+    }));
 }

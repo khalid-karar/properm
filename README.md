@@ -20,6 +20,9 @@ Creates users admin, pm1, pmo1, dm1, s1, s2, s3 and a few projects in different 
 
 Set `PROPERM_DEMO_LOGIN=1` to show one-click role buttons on the login page (no password needed). **Demo databases only: never enable it on a deployment with real data.**
 
+### Build progress timeline
+The login page shows milestones with green (done), amber (in progress) and red (not started) lights, read from `app/static/milestones.json`. Change a sub-step's `s` to `done`, `progress` or `todo` and bump `updated`; the percentage counts steps equally, not effort.
+
 ### Netlify only (no server)
 `netlify.toml` publishes `app/static`; the real Python backend then runs inside the visitor's browser (Pyodide, in a Web Worker) with an in-memory database seeded with demo data and one-click role buttons. First load takes a few seconds; data resets on reload. Demo only. `python3 scripts/build_demo.py` rebuilds `app/static/demo/pyapp.zip` from `app/` and `vendor/` (Netlify runs it; the committed copy is the fallback). The Pyodide runtime in `app/static/pyodide/` is 0.27.7 (Python 3.12); `vendor/` pins FastAPI 0.115 and Starlette 0.46 to match its Pydantic 2.10.
 
