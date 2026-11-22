@@ -50,6 +50,19 @@ def me(user: User = Depends(current_user)):
     return user_out(user)
 
 
+@router.get("/directory")
+def directory(db=Depends(get_db), _: User = Depends(current_user)):
+    """Names only (no cost data), so any signed-in user can pick an assignee."""
+    return [{"id": u.id, "staff_id": u.staff_id, "full_name": u.full_name, "role": u.role}
+            for u in db.query(User).filter_by(active=True).order_by(User.full_name)]
+
+
+@router.get("/config/codes")
+def codes(_: User = Depends(current_user)):
+    from ..config import NON_PROJECT_CODES
+    return NON_PROJECT_CODES
+
+
 @router.post("/users", status_code=201)
 def create_user(body: UserIn, db=Depends(get_db), admin: User = Depends(require_roles("ADMIN"))):
     if body.role not in ROLES:

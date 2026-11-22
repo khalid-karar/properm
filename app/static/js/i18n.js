@@ -1,0 +1,93 @@
+const dict = {
+  en: {
+    app: "PROPERM", login: "Sign in", logout: "Sign out", staff_id: "Staff ID", password: "Password",
+    nav_timesheet: "Timesheet", nav_approvals: "Approvals", nav_projects: "Projects", nav_dashboard: "Dashboard", nav_alerts: "Alerts", nav_admin: "Admin",
+    date: "Date", hours: "Hours", project: "Project", activity: "Activity", description: "Description", code: "Code", status: "Status",
+    submit: "Submit", save: "Save", cancel: "Cancel", edit: "Edit", add: "Add", create: "Create", close: "Close", back: "Back", refresh: "Refresh",
+    approve: "Approve", reject: "Reject", adjust: "Adjust", reason: "Reason", note: "Note", none: "None", yes: "Yes", no: "No",
+    week_of: "Week of", prev: "Previous", next: "Next", this_week: "This week",
+    capacity: "Capacity", utilization: "Utilization", remaining: "Remaining", submitted: "Submitted", approved: "Approved", rejected: "Rejected", overtime: "Overtime",
+    new_entry: "New entry", edit_entry: "Edit entry", project_time: "Project time", non_project: "Non-project", my_entries: "My entries this week",
+    no_entries: "No entries this week.", entry_saved: "Entry submitted", warnings_title: "Please confirm", overtime_reason: "Overtime reason",
+    acknowledge: "I acknowledge these warnings", acknowledge_submit: "Acknowledge and submit",
+    queue: "Approval queue", queue_empty: "Nothing waiting for your approval.", staff: "Staff", flags: "Flags",
+    projects: "Projects", new_project: "New project", number: "Number", name: "Name", state: "State", planned_start: "Planned start", planned_end: "Planned end",
+    budget: "Budget", currency: "Currency", open: "Open", tendering: "Tendering", planning: "Planning", execution: "Execution", closing: "Closing", archived: "Archived", on_hold: "On hold", cancelled: "Cancelled",
+    tab_overview: "Overview", tab_progress: "Progress", tab_risks: "Risks & issues", tab_costs: "Cost & EVM",
+    activities: "Activities", planned_hours: "Planned hours", baseline_cost: "Baseline cost", locked: "Locked", add_activity: "Add activity",
+    lock_baseline: "Lock baseline", assign_staff: "Assign staff", assigned_staff: "Assign a person", transition: "Move to", baseline_version: "Baseline version",
+    baseline_locked: "Baseline locked", activity_added: "Activity added", staff_assigned: "Staff assigned", state_changed: "State updated",
+    progress_pct: "Progress %", etc_hours: "Est. hours to complete", save_progress: "Save progress", progress_saved: "Progress saved", stale: "Stale",
+    risks: "Risks", issues: "Issues", title: "Title", probability: "Probability (1-5)", impact: "Impact (1-5)", score: "Score", severity: "Severity", owner: "Owner", due_date: "Due date",
+    add_risk: "Add risk", add_issue: "Add issue", saved: "Saved",
+    costs: "Costs", amount: "Amount", category: "Category", vendor: "Vendor", cost_status: "Cost status", approval: "Approval", add_cost: "Add cost", pending: "Pending",
+    evm: "Earned value", not_available: "Not available",
+    dashboard: "Dashboard", portfolio: "Portfolio", rag: "Health", progress: "Progress", open_alerts: "Open alerts", top_alert: "Top alert",
+    why: "Why", overdue: "Overdue activities", pending_approval: "Pending approval", planned: "Planned", all: "All", filter_rag: "Health filter",
+    alerts: "Alerts", cause: "Cause", suggested_action: "Suggested action", assignee: "Assignee", active_only: "Condition still active", evaluate: "Evaluate now", evaluated: "Evaluation done",
+    acknowledge_a: "Acknowledge", assign: "Assign", escalate: "Escalate", dismiss: "Dismiss", resolve: "Resolve", verify: "Verify closure", reject_verification: "Reject resolution", history: "History",
+    users: "Users", new_user: "New user", role: "Role", grade: "Rate grade", full_name: "Full name", line_manager: "Line manager", rates: "Rate card", hourly_rate: "Hourly rate", effective_from: "Effective from",
+    rules: "Timesheet rules", settings: "Thresholds", rule: "Rule", saved_ok: "Saved",
+    loading: "Loading…", error: "Something went wrong", confirm_lock: "Lock the baseline? Activities will be frozen and the project moves to execution.",
+    server_text_note: "Server messages are shown in English.",
+    days_late: "Days late", max: "max", critical_short: "critical",
+    rag_RED: "RED", rag_AMBER: "AMBER", rag_GREEN: "GREEN", rag_GREY: "GREY",
+    st_open: "open", st_acknowledged: "acknowledged", st_assigned: "assigned", st_resolved: "resolved", st_closed: "closed", st_dismissed: "dismissed",
+    st_critical: "critical", st_warning: "warning", st_info: "info", st_low: "low", st_medium: "medium", st_high: "high",
+    st_in_progress: "in progress", st_mitigating: "mitigating", st_occurred: "occurred", st_invoiced: "invoiced", st_paid: "paid", st_committed: "committed",
+    cleared: "condition cleared", evaluate_hint: "Evaluated your projects",
+  },
+  ar: {
+    app: "بروبرم", login: "تسجيل الدخول", logout: "تسجيل الخروج", staff_id: "الرقم الوظيفي", password: "كلمة المرور",
+    nav_timesheet: "سجل الساعات", nav_approvals: "الموافقات", nav_projects: "المشاريع", nav_dashboard: "لوحة المتابعة", nav_alerts: "التنبيهات", nav_admin: "الإدارة",
+    date: "التاريخ", hours: "الساعات", project: "المشروع", activity: "النشاط", description: "الوصف", code: "الرمز", status: "الحالة",
+    submit: "إرسال", save: "حفظ", cancel: "إلغاء", edit: "تعديل", add: "إضافة", create: "إنشاء", close: "إغلاق", back: "رجوع", refresh: "تحديث",
+    approve: "اعتماد", reject: "رفض", adjust: "تخفيض", reason: "السبب", note: "ملاحظة", none: "لا يوجد", yes: "نعم", no: "لا",
+    week_of: "أسبوع", prev: "السابق", next: "التالي", this_week: "هذا الأسبوع",
+    capacity: "الطاقة", utilization: "نسبة الاستغلال", remaining: "المتبقي", submitted: "مُرسل", approved: "معتمد", rejected: "مرفوض", overtime: "عمل إضافي",
+    new_entry: "إدخال جديد", edit_entry: "تعديل الإدخال", project_time: "وقت مشروع", non_project: "خارج المشاريع", my_entries: "إدخالاتي لهذا الأسبوع",
+    no_entries: "لا توجد إدخالات هذا الأسبوع.", entry_saved: "تم إرسال الإدخال", warnings_title: "يرجى التأكيد", overtime_reason: "سبب العمل الإضافي",
+    acknowledge: "أقرّ بهذه التنبيهات", acknowledge_submit: "أقرّ وأرسل",
+    queue: "طابور الموافقات", queue_empty: "لا يوجد ما ينتظر موافقتك.", staff: "الموظف", flags: "ملاحظات",
+    projects: "المشاريع", new_project: "مشروع جديد", number: "الرقم", name: "الاسم", state: "المرحلة", planned_start: "بداية مخططة", planned_end: "نهاية مخططة",
+    budget: "الميزانية", currency: "العملة", open: "فتح", tendering: "طرح", planning: "تخطيط", execution: "تنفيذ", closing: "إغلاق", archived: "مؤرشف", on_hold: "معلّق", cancelled: "ملغى",
+    tab_overview: "نظرة عامة", tab_progress: "التقدم", tab_risks: "المخاطر والمشكلات", tab_costs: "التكلفة والقيمة المكتسبة",
+    activities: "الأنشطة", planned_hours: "الساعات المخططة", baseline_cost: "تكلفة خط الأساس", locked: "مقفل", add_activity: "إضافة نشاط",
+    lock_baseline: "قفل خط الأساس", assign_staff: "إسناد موظفين", assigned_staff: "إسناد شخص", transition: "نقل إلى", baseline_version: "إصدار خط الأساس",
+    baseline_locked: "تم قفل خط الأساس", activity_added: "تمت إضافة النشاط", staff_assigned: "تم الإسناد", state_changed: "تم تحديث المرحلة",
+    progress_pct: "نسبة التقدم %", etc_hours: "ساعات متبقية متوقعة", save_progress: "حفظ التقدم", progress_saved: "تم حفظ التقدم", stale: "قديم",
+    risks: "المخاطر", issues: "المشكلات", title: "العنوان", probability: "الاحتمال (1-5)", impact: "الأثر (1-5)", score: "الدرجة", severity: "الخطورة", owner: "المسؤول", due_date: "تاريخ الاستحقاق",
+    add_risk: "إضافة خطر", add_issue: "إضافة مشكلة", saved: "تم الحفظ",
+    costs: "التكاليف", amount: "المبلغ", category: "الفئة", vendor: "المورّد", cost_status: "حالة التكلفة", approval: "الاعتماد", add_cost: "إضافة تكلفة", pending: "بانتظار الاعتماد",
+    evm: "القيمة المكتسبة", not_available: "غير متاح",
+    dashboard: "لوحة المتابعة", portfolio: "المحفظة", rag: "الحالة", progress: "التقدم", open_alerts: "التنبيهات المفتوحة", top_alert: "أهم تنبيه",
+    why: "السبب", overdue: "أنشطة متأخرة", pending_approval: "بانتظار الاعتماد", planned: "المخطط", all: "الكل", filter_rag: "تصفية الحالة",
+    alerts: "التنبيهات", cause: "السبب", suggested_action: "الإجراء المقترح", assignee: "المكلّف", active_only: "الحالة ما زالت قائمة", evaluate: "تقييم الآن", evaluated: "تم التقييم",
+    acknowledge_a: "إحاطة", assign: "إسناد", escalate: "تصعيد", dismiss: "استبعاد", resolve: "تمت المعالجة", verify: "التحقق من الإغلاق", reject_verification: "رفض المعالجة", history: "السجل",
+    users: "المستخدمون", new_user: "مستخدم جديد", role: "الدور", grade: "درجة الأجر", full_name: "الاسم الكامل", line_manager: "المدير المباشر", rates: "جدول الأجور", hourly_rate: "أجر الساعة", effective_from: "ساري من",
+    rules: "قواعد الساعات", settings: "الحدود", rule: "القاعدة", saved_ok: "تم الحفظ",
+    loading: "جارٍ التحميل…", error: "حدث خطأ", confirm_lock: "قفل خط الأساس؟ ستُجمَّد الأنشطة وينتقل المشروع إلى التنفيذ.",
+    server_text_note: "رسائل الخادم تظهر بالإنجليزية.",
+    days_late: "أيام التأخير", max: "الأقصى", critical_short: "حرج",
+    rag_RED: "أحمر", rag_AMBER: "برتقالي", rag_GREEN: "أخضر", rag_GREY: "رمادي",
+    st_open: "مفتوح", st_acknowledged: "تمت الإحاطة", st_assigned: "مُسند", st_resolved: "تمت المعالجة", st_closed: "مغلق", st_dismissed: "مستبعد",
+    st_critical: "حرج", st_warning: "تحذير", st_info: "معلومة", st_low: "منخفض", st_medium: "متوسط", st_high: "مرتفع",
+    st_in_progress: "قيد التنفيذ", st_mitigating: "قيد المعالجة", st_occurred: "وقع", st_invoiced: "مفوتر", st_paid: "مدفوع", st_committed: "ملتزم به",
+    cleared: "زالت الحالة", evaluate_hint: "تم تقييم مشاريعك",
+  },
+};
+
+let lang = localStorage.getItem("properm_lang") || "en";
+export const getLang = () => lang;
+export function setLang(l) {
+  lang = l;
+  localStorage.setItem("properm_lang", l);
+  applyDir();
+}
+export function applyDir() {
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+}
+export const t = (k) => dict[lang][k] ?? dict.en[k] ?? k;
+export const st = (v) => dict[lang]["st_" + v] ?? dict.en["st_" + v] ?? v;   // status / severity words
+export const dictionaries = dict;

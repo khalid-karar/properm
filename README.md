@@ -1,4 +1,4 @@
-# PROPERM — Smart PMO Performance Management System (MVP backend)
+# PROPERM — Smart PMO Performance Management System (MVP)
 
 Implements the Phase 1 slice of `PROPERM_Workflow_V1` (no AI yet): Python 3.11+, FastAPI, SQLAlchemy 2 (SQLite for dev, Postgres-ready).
 
@@ -9,6 +9,14 @@ Implements the Phase 1 slice of `PROPERM_Workflow_V1` (no AI yet): Python 3.11+,
     python -m app.seed                                       # creates the first ADMIN
     uvicorn app.main:app_from_env --factory --reload         # API docs at /docs
     pytest -q
+
+## Web UI
+Served by the same app at `/ui` (`/` redirects there). Vanilla ES modules, no build step. English/Arabic with RTL, role-based navigation. Screens: login, timesheet (overtime/warning acknowledgment flow), approvals queue, projects (activities, progress, costs, risks, issues), portfolio and project dashboards, alert triage, admin (rules, settings, rate card).
+Server messages (rule explanations) are shown in English even in Arabic mode. Not yet in the UI: change control, allocations, weekly-report forms, user management.
+
+### Demo data
+    PROPERM_DEMO=1 PROPERM_DEMO_PASSWORD="<pw>" python -m app.demo      # empty database only
+Creates users admin, pm1, pmo1, dm1, s1, s2, s3 and a few projects in different health states.
 
 `DATABASE_URL` selects the database (default `sqlite:///./properm.db`).
 
@@ -39,7 +47,7 @@ Implements the Phase 1 slice of `PROPERM_Workflow_V1` (no AI yet): Python 3.11+,
 | Weekly PM report with auto-populated snapshot (needs the week's progress update first) | 3.2 | EVM inside the snapshot is hidden from non-cost viewers |
 
 ## Not built yet (next slices)
-Benefits register, a rate card per role and project (rates are per grade only), closure checklist beyond the pending-timesheet check (1.5), program-level roll-ups (there is no program or portfolio grouping yet; the portfolio view covers all projects), AI-generated reports and ML forecasts (3.3), export and scheduled delivery (3.4.5), notification delivery, all AI features (1.2, 3.3), notification dispatcher (outbox rows are written but nothing consumes them), work calendars / holidays (4.6), a web UI, Postgres row-level security (access control is enforced in the API layer today).
+Benefits register, a rate card per role and project (rates are per grade only), closure checklist beyond the pending-timesheet check (1.5), program-level roll-ups (there is no program or portfolio grouping yet; the portfolio view covers all projects), AI-generated reports and ML forecasts (3.3), export and scheduled delivery (3.4.5), notification delivery, all AI features (1.2, 3.3), notification dispatcher (outbox rows are written but nothing consumes them), work calendars / holidays (4.6), remaining UI screens (see Web UI), Postgres row-level security (access control is enforced in the API layer today).
 
 ## Assumptions to confirm (see Section 8 of the flow chart)
 - Work week starts Sunday (`WEEK_STARTS_ON_SUNDAY` in `app/config.py`); capacity is a flat `capacity_hours_week` per user until the calendar service exists.
