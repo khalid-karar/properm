@@ -93,6 +93,19 @@ await step("closure tab hidden until closing", async () => { if (await p.locator
 p = await newPage("gov-admin"); await login(p, "admin");
 await step("admin holiday section", async () => { await p.goto(BASE + "#/admin"); await p.waitForSelector("h2:has-text('Public holidays')"); await p.waitForSelector("td:has-text('Demo public holiday')"); });
 
+p = await newPage("notif"); await login(p, "pm1");
+await step("bell shows notifications and page lists them", async () => { await p.waitForSelector("#bell"); await p.goto(BASE + "#/notifications"); await p.waitForSelector("h1:has-text('Notifications')"); });
+await step("csv export downloads with BOM", async () => {
+  await p.goto(BASE + "#/alerts"); await p.waitForSelector("button:has-text('Export CSV')");
+  const [dl] = await Promise.all([p.waitForEvent("download"), p.click("button:has-text('Export CSV')")]);
+  const fs = await import("node:fs"); const txt = fs.readFileSync(await dl.path(), "utf8");
+  if (!txt.startsWith("\ufeffid,project")) throw new Error("bad csv: " + txt.slice(0, 40));
+});
+await step("schedule a weekly project report", async () => {
+  await p.goto(BASE + "#/notifications"); await p.waitForSelector("h2:has-text('Scheduled reports')");
+  await p.selectOption("select >> nth=0", "project"); await p.click("button:has-text('Add')"); await p.waitForSelector("td:has-text('Project report')");
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

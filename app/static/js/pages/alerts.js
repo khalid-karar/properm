@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { api, downloadCsv } from "../api.js";
 import { st, t } from "../i18n.js";
 import { askText, badge, errorBox, field, guarded, h, modal, mount, table, toast } from "../ui.js";
 
@@ -57,6 +57,7 @@ export default async function (root, { me }) {
       toast(`${t("evaluated")}: +${r.created} / ${r.updated} / −${r.cleared}`); await render();
     }) }, t("evaluate")) : null;
     mount(root, h("h1", {}, t("alerts")),
+      h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv("/export/alerts.csv", "alerts.csv")) }, t("export_csv"))),
       h("div", { class: "card" }, h("div", { class: "row" }, field(t("status"), status), field(t("severity"), sev), h("label", { style: "flex-direction:row;align-items:center;gap:6px" }, act_, t("active_only")), h("span", { class: "right" }, evalBtn))),
       h("div", { class: "card" }, table([t("severity"), t("project"), t("cause"), t("suggested_action"), t("status"), t("assignee"), ""],
         rows.map(a => [badge(st(a.severity), a.severity), pnum(a.project_id), h("div", {}, a.cause, a.active ? null : h("div", { class: "small muted" }, `✓ ${t("cleared")}`)), h("span", { class: "small" }, a.suggested_action),

@@ -30,13 +30,14 @@ async function route() {
   const allowed = NAV[me.role] || [];
   const page = name || homeFor(me.role);
   if (page === "login") { location.hash = `#/${homeFor(me.role)}`; return; }
-  if (!allowed.includes(page)) { location.hash = `#/${homeFor(me.role)}`; return; }
+  if (!allowed.includes(page) && page !== "notifications") { location.hash = `#/${homeFor(me.role)}`; return; }
 
   const main = h("main", {}, h("p", { class: "muted" }, t("loading")));
   mount(app, shell(page), main);
   try {
     const mod = await import(`./pages/${page}.js`);
     await mod.default(main, { me, arg });
+    setTimeout(refreshBell, 200);
   } catch (e) {
     mount(main, errorBox(e));
   }
@@ -47,10 +48,20 @@ function shell(active) {
     h("span", { class: "brand" }, t("app")),
     h("nav", {}, (NAV[me.role] || []).map(n =>
       h("a", { href: `#/${n}`, class: n === active ? "active" : "" }, t(`nav_${n}`)))),
+    h("a", { href: "#/notifications", class: "bell", id: "bell", "aria-label": t("notifications"), title: t("notifications") }, "🔔", h("span", { class: "bellcount" })),
     h("span", { class: "who" }, `${me.full_name} · ${me.role}`),
     h("button", { type: "button", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); route(); } }, getLang() === "en" ? "العربية" : "English"),
     h("button", { type: "button", onClick: () => { session.clear(); me = null; location.hash = "#/login"; } }, t("logout")));
 }
+
+async function refreshBell() {
+  const el = document.querySelector("#bell .bellcount");
+  if (!el || !session.get()) return;
+  try { const { unread } = await api("GET", "/notifications/count"); el.textContent = unread ? String(unread) : ""; } catch { /* ignore */ }
+}
+window.addEventListener("properm-notif", refreshBell);
+window.addEventListener("hashchange", () => setTimeout(refreshBell, 300));
+setInterval(refreshBell, 60000);
 
 export function resetMe() { me = null; }
 window.addEventListener("hashchange", route);

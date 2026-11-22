@@ -28,6 +28,7 @@ class User(Base):
     rate_grade: Mapped[str | None] = mapped_column(String(40), nullable=True)   # links to the rate card (restricted data)
     line_manager_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     delegate_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(200), nullable=True)   # optional; used only for e-mail notifications
 
 
 class Program(Base):
@@ -356,6 +357,32 @@ class Outbox(Base):
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     dispatched: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Notification(Base):
+    """In-app notification produced from the outbox by app.notify.dispatch."""
+    __tablename__ = "notifications"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(60))
+    title: Mapped[str] = mapped_column(String(300))
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    link: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    emailed: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class ReportSchedule(Base):
+    """A recurring report delivered as a notification (and e-mail when configured)."""
+    __tablename__ = "report_schedules"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    kind: Mapped[str] = mapped_column(String(20))            # portfolio | project
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
+    frequency: Mapped[str] = mapped_column(String(10))       # weekly | monthly
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_run_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
 @event.listens_for(AuditLog, "before_update")

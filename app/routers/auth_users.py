@@ -30,12 +30,15 @@ class UserIn(BaseModel):
     rate_grade: str | None = None
     line_manager_id: int | None = None
     delegate_id: int | None = None
+    email: str | None = Field(None, max_length=200, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def user_out(u: User, include_cost: bool = False) -> dict:
     d = {"id": u.id, "staff_id": u.staff_id, "full_name": u.full_name, "role": u.role, "is_ccb": u.is_ccb,
          "job_title": u.job_title, "department": u.department, "capacity_hours_week": u.capacity_hours_week,
          "line_manager_id": u.line_manager_id, "delegate_id": u.delegate_id, "active": u.active}
+    if include_cost:
+        d["email"] = u.email
     if include_cost:
         d["rate_grade"] = u.rate_grade  # cost data only for ADMIN / PMO (4.1)
     return d
@@ -116,6 +119,7 @@ class UserPatch(BaseModel):
     line_manager_id: int | None = None
     delegate_id: int | None = None
     active: bool | None = None
+    email: str | None = Field(None, max_length=200, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     new_password: str | None = Field(None, min_length=8)
 
 

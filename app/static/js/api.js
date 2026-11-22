@@ -53,3 +53,29 @@ export async function api(method, path, body) {
   if (!res.ok) throw new ApiError(res.status, data);
   return data;
 }
+
+/** Fetch a text resource (CSV, HTML) with the session token. */
+export async function apiText(path) {
+  const s = session.get();
+  const res = await send("GET", path, s ? { Authorization: `Bearer ${s.token}` } : {}, undefined);
+  const text = await res.text();
+  if (!res.ok) { let d = null; try { d = JSON.parse(text); } catch { /* not JSON */ } throw new ApiError(res.status, d); }
+  return text;
+}
+
+/** Download a CSV (adds the BOM back; fetch strips it) via a temporary link. */
+export async function downloadCsv(path, filename) {
+  const text = await apiText(path);
+  const url = URL.createObjectURL(new Blob(["﻿", text.replace(/^﻿/, "")], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+/** Open the print-friendly report in a new tab. */
+export async function openReport(path) {
+  const html = await apiText(path);
+  const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+  window.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
