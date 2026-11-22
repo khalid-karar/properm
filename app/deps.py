@@ -14,7 +14,7 @@ bearer = HTTPBearer(auto_error=False)
 
 
 def hash_pw(p: str) -> str:
-    return bcrypt.hashpw(p.encode(), bcrypt.gensalt()).decode()
+    return bcrypt.hashpw(p.encode(), bcrypt.gensalt(int(os.environ.get("PROPERM_BCRYPT_ROUNDS", "12")))).decode()
 
 
 def verify_pw(p: str, h: str) -> bool:

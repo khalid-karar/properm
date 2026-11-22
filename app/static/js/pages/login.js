@@ -22,11 +22,13 @@ export default function (root) {
     field(t("staff_id"), id), field(t("password"), pw), msg,
     h("div", { class: "row" }, btn,
       h("button", { class: "btn secondary right", type: "button", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); location.reload(); } }, getLang() === "en" ? "العربية" : "English")));
-  const quick = h("div", { class: "card", hidden: true });
-  mount(root, form, quick);
+  const quick = h("div", { class: "card login", hidden: true });
+  const starting = window.PROPERM_EMBEDDED ? h("div", { class: "card login" }, h("p", { class: "muted" }, t("demo_starting"))) : null;
+  mount(root, form, starting, quick);
   id.focus();
   // Demo quick login: the server only answers when PROPERM_DEMO_LOGIN=1, otherwise this stays hidden.
   api("GET", "/auth/demo-users").then((users) => {
+    if (starting) starting.hidden = true;
     if (!users.length) return;
     mount(quick, h("h2", {}, t("quick_login")), h("p", { class: "muted small" }, t("quick_login_note")),
       h("div", { class: "row" }, users.map(u => h("button", { class: "btn secondary", type: "button", onClick: guarded(null, async () => {

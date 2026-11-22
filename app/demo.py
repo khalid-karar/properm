@@ -4,8 +4,6 @@ Never run this against real data: it refuses unless the database has no users.""
 import os
 from datetime import date, timedelta
 
-from fastapi.testclient import TestClient
-
 from .deps import hash_pw
 from .main import app_from_env
 from .models import User
@@ -17,13 +15,18 @@ def main():
     pw = os.environ.get("PROPERM_DEMO_PASSWORD", "")
     if len(pw) < 8:
         raise SystemExit("Set PROPERM_DEMO_PASSWORD (min 8 chars)")
+    from fastapi.testclient import TestClient
     app = app_from_env()
+    seed(app, pw, TestClient(app))
+
+
+def seed(app, pw, c):
+    """Fill an empty database. `c` is any client with TestClient's post/get/put API (the browser build passes its own)."""
     with app.state.Session() as db:
         if db.query(User).count():
             raise SystemExit("Database is not empty; refusing to add demo data")
         db.add(User(staff_id="admin", full_name="Admin User", role="ADMIN", password_hash=hash_pw(pw)))
         db.commit()
-    c = TestClient(app)
     tok = lambda sid: {"Authorization": "Bearer " + c.post("/auth/login", json={"staff_id": sid, "password": pw}).json()["access_token"]}
     ok = lambda r: (r.raise_for_status(), r.json())[1]
     admin = tok("admin")

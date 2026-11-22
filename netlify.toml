@@ -1,0 +1,9 @@
+# Static demo hosting: the Python backend runs inside the browser (Pyodide), seeded with demo data.
+[build]
+  command = "python3 scripts/build_demo.py || echo 'using the committed bundle'"
+  publish = "app/static"
+
+[[headers]]
+  for = "/pyodide/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

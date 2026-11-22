@@ -1,3 +1,6 @@
-// Where the API lives. Empty = same address as this page (when FastAPI serves the UI).
-// For a static host such as Netlify, set it to the API address, e.g. "https://properm.onrender.com"
+// API location.
+//  - FastAPI serves this UI: leave PROPERM_API empty.
+//  - UI on another host: set PROPERM_API to the API address (and allow this origin with PROPERM_CORS_ORIGINS).
+//  - Static demo hosting (Netlify): the Python backend runs in the browser, in-memory, seeded with demo data.
 window.PROPERM_API = "";
+window.PROPERM_EMBEDDED = /\.netlify\.app$/.test(location.hostname) || new URLSearchParams(location.search).has("embedded");
