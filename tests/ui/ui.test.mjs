@@ -86,6 +86,13 @@ await step("staff sees change tab w/o cost, no allocations tab", async () => {
 });
 await step("staff has no load nav", async () => { if (await p.locator('nav a:has-text("Resource load")').count()) throw new Error("load nav visible"); });
 
+p = await newPage("gov"); await login(p, "pmo1");
+await step("programs page shows rollup", async () => { await p.goto(BASE + "#/programs"); await p.waitForSelector("h2:has-text('DX-2026')"); await p.waitForSelector("a:has-text('ALPHA-01')"); });
+await step("benefits tab shows realisation", async () => { await p.goto(BASE + "#/projects/1"); await tab(p, "Benefits"); await p.waitForSelector("td:has-text('Faster month-end close')"); await p.waitForSelector("td:has-text('40%')"); });
+await step("closure tab hidden until closing", async () => { if (await p.locator('button[role=tab]:has-text("Closure")').count()) throw new Error("closure tab visible too early"); });
+p = await newPage("gov-admin"); await login(p, "admin");
+await step("admin holiday section", async () => { await p.goto(BASE + "#/admin"); await p.waitForSelector("h2:has-text('Public holidays')"); await p.waitForSelector("td:has-text('Demo public holiday')"); });
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

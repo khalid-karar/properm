@@ -42,6 +42,7 @@ class Ctx:
     locked_through: date | None = None
     exact_duplicate: bool = False
     is_leave: bool = False
+    non_working: str | None = None           # why the entry date is not a normal working day
 
 
 def week_start(d: date, sunday: bool = True) -> date:
@@ -101,6 +102,10 @@ def evaluate(c: Ctx) -> list[Violation]:
         ceiling = c.capacity * c.params["overtime_ceiling_pct"]
         s = BLOCK if total_week > ceiling else sev("R1")
         v.append(Violation("R1", s, f"Weekly capacity exceeded ({total_week:g}/{c.capacity:g} hrs)"))
+
+    # R10 weekend / public holiday (recorded, never blocks by default)
+    if c.non_working and not c.is_leave:
+        v.append(Violation("R10", sev("R10"), f"Entry on a non-working day ({c.non_working})"))
 
     # R7 exact duplicate
     if c.exact_duplicate:

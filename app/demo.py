@@ -79,6 +79,12 @@ def seed(app, pw, c):
     ok(c.post(f"/projects/{a_pid}/risks", headers=pm, json={"title": "Key vendor delay", "probability": 3, "impact": 3}))
     ok(c.post(f"/projects/{b_pid}/risks", headers=pm, json={"title": "Source data quality", "probability": 5, "impact": 4}))
     ok(c.post(f"/projects/{b_pid}/issues", headers=pm, json={"title": "Production access not granted", "severity": "critical", "due_date": d(-3)}))
+    g = ok(c.post("/programs", headers=pmo, json={"code": "DX-2026", "name": "Digital Transformation", "manager_id": ids["pmo1"]}))["id"]
+    for pid in (a_pid, b_pid):
+        ok(c.put(f"/projects/{pid}/program", headers=pmo, json={"program_id": g}))
+    ok(c.post(f"/projects/{a_pid}/benefits", headers=pm, json={"title": "Faster month-end close", "metric": "Days to close", "unit": "days", "baseline": 10, "target": 5, "actual": 8, "due_date": d(120), "status": "on_track"}))
+    ok(c.post(f"/projects/{b_pid}/benefits", headers=pm, json={"title": "Single source of truth for reporting", "metric": "Manual reports per month", "unit": "reports", "baseline": 40, "target": 10, "due_date": d(150)}))
+    ok(c.post("/calendar/holidays", headers=pmo, json={"day": d(30), "name": "Demo public holiday"}))
     ok(c.post("/alerts/evaluate", headers=pmo))
     print("Demo data ready. Users: admin, pm1, pmo1, dm1, s1, s2, s3 (all with the demo password).")
 

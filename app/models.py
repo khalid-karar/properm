@@ -30,6 +30,16 @@ class User(Base):
     delegate_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
 
+class Program(Base):
+    """A group of related projects (program/portfolio grouping)."""
+    __tablename__ = "programs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(40), unique=True)
+    name: Mapped[str] = mapped_column(String(300))
+    manager_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class Project(Base):
     __tablename__ = "projects"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -44,6 +54,7 @@ class Project(Base):
     currency: Mapped[str] = mapped_column(String(3), default="SAR")
     project_type: Mapped[str] = mapped_column(String(20), default="predictive")
     baseline_version: Mapped[int] = mapped_column(Integer, default=0)
+    program_id: Mapped[int | None] = mapped_column(ForeignKey("programs.id"), nullable=True)
     pm = relationship("User", foreign_keys=[pm_id])
 
 
@@ -257,6 +268,42 @@ class AlertAction(Base):
     action: Mapped[str] = mapped_column(String(30))
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ClosureItem(Base):
+    __tablename__ = "closure_items"
+    __table_args__ = (UniqueConstraint("project_id", "key"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    key: Mapped[str] = mapped_column(String(40))
+    done: Mapped[bool] = mapped_column(Boolean, default=False)
+    done_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class Benefit(Base):
+    """Benefits register: what the project is meant to deliver, and how far it has been realised."""
+    __tablename__ = "benefits"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    title: Mapped[str] = mapped_column(String(300))
+    metric: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    baseline: Mapped[float | None] = mapped_column(Float, nullable=True)
+    target: Mapped[float | None] = mapped_column(Float, nullable=True)
+    actual: Mapped[float | None] = mapped_column(Float, nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="planned")
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class Holiday(Base):
+    __tablename__ = "holidays"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    day: Mapped[date] = mapped_column(Date, unique=True)
+    name: Mapped[str] = mapped_column(String(200))
 
 
 class RuleViolation(Base):

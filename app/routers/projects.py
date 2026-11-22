@@ -76,7 +76,8 @@ def pending_changes(db=Depends(get_db), user: User = Depends(current_user)):
 def p_out(p: Project) -> dict:
     return {"id": p.id, "number": p.number, "name": p.name, "state": p.state, "pm_id": p.pm_id,
             "planned_start": p.planned_start, "planned_end": p.planned_end, "budget_ceiling": p.budget_ceiling,
-            "currency": p.currency, "project_type": p.project_type, "baseline_version": p.baseline_version}
+            "currency": p.currency, "project_type": p.project_type, "baseline_version": p.baseline_version,
+            "program_id": p.program_id}
 
 
 def a_out(a: Activity, cost: bool = False) -> dict:
@@ -277,10 +278,17 @@ def transition(pid: int, body: TransitionIn, db=Depends(get_db), user: User = De
     if user.role not in allowed:
         raise HTTPException(403, f"Transition {frm} -> {to} requires role: {', '.join(allowed)}")
     need_manage(db, user, p)
-    if to == "archived" and frm == "closing":   # minimal closure checklist (1.5)
+    if to == "closing":
+        from .governance import ensure_closure_items
+        ensure_closure_items(db, pid)
+    if to == "archived" and frm == "closing":   # closure checklist (1.5)
         pending = db.query(func.count(TimesheetEntry.id)).filter_by(project_id=pid, status="submitted").scalar()
         if pending:
             raise HTTPException(409, f"Closure blocked: {pending} timesheet entries still awaiting approval")
+        from .governance import closure_status
+        open_items = [i["key"] for i in closure_status(db, pid) if not i["satisfied"]]
+        if open_items:
+            raise HTTPException(409, f"Closure blocked: checklist items not complete: {', '.join(open_items)}")
     if to in ("on_hold",):
         p.previous_state = frm
     p.state = to

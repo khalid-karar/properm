@@ -28,6 +28,13 @@ export default async function (root) {
     const f = { sid: h("input"), name: h("input"), pw: h("input", { type: "password", autocomplete: "new-password" }), role: h("select", {}, ROLES.map(r => h("option", { value: r }, r))), grade: h("input", { style: "width:90px" }),
       cap: h("input", { type: "number", value: "40", style: "width:80px" }), ccb: h("input", { type: "checkbox" }), lm: h("select", {}, h("option", { value: "" }, "—"), users.map(u => h("option", { value: u.id }, u.full_name))) };
     const uerr = h("div");
+    const hols = await api("GET", "/calendar/holidays");
+    const hd = h("input", { type: "date" }), hn = h("input", { placeholder: t("holiday_name") }), herr = h("div");
+    const addH = h("button", { class: "btn", type: "button" }, t("add_holiday"));
+    addH.addEventListener("click", guarded(addH, async () => {
+      mount(herr);
+      try { await api("POST", "/calendar/holidays", { day: hd.value, name: hn.value.trim() }); toast(t("saved")); await render(); } catch (e) { mount(herr, errorBox(e)); }
+    }));
     const addU = h("button", { class: "btn", type: "button" }, t("create"));
     addU.addEventListener("click", guarded(addU, async () => {
       mount(uerr);
@@ -48,6 +55,9 @@ export default async function (root) {
         h("div", { class: "row" }, field(t("staff_id"), f.sid), field(t("full_name"), f.name), field(t("password"), f.pw), field(t("role"), f.role), field(t("grade"), f.grade), field(t("capacity"), f.cap), field(t("is_ccb"), f.ccb), field(t("line_manager"), f.lm), addU), uerr),
       h("div", { class: "card" }, h("h2", {}, t("rates")), table([t("grade"), t("hourly_rate"), t("currency"), t("effective_from")], rates.map(r => [r.grade, num(r.hourly_rate, 2), r.currency, r.effective_from]), t("none")),
         h("div", { class: "row", style: "margin-top:12px" }, field(t("grade"), rg), field(t("hourly_rate"), rv), field(t("currency"), rc), field(t("effective_from"), rd), addR), rerr),
+      h("div", { class: "card" }, h("h2", {}, t("holidays")), h("p", { class: "muted" }, t("work_week_note")),
+        table([t("date"), t("name"), ""], hols.map(x => [x.day, x.name, h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/calendar/holidays/${x.id}`); await render(); }) }, t("remove"))]), t("none")),
+        h("div", { class: "row", style: "margin-top:12px" }, field(t("date"), hd), field(t("name"), hn), addH), herr),
       h("div", { class: "card" }, h("h2", {}, t("rules")), table([t("rule"), t("severity")], Object.keys(cfg.severities).sort().map(r => [r, sevSel(r)]))),
       h("div", { class: "card" }, h("h2", {}, t("settings")), table([t("rule"), t("amount")], Object.keys(cfg.params).sort().map(k => [k, setting(k)]))));
   }

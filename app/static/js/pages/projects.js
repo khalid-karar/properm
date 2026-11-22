@@ -43,8 +43,8 @@ async function detail(root, me, pid) {
 
   async function render() {
     const p = await api("GET", `/projects/${pid}`);
-    const tabs = ["overview", "progress", "risks", "costs", "changes", "allocations", "reports"];
-    const show = (x) => (x === "costs" || x === "allocations") ? (me.role !== "STAFF") : true;
+    const tabs = ["overview", "progress", "risks", "costs", "changes", "allocations", "benefits", "closure", "reports"];
+    const show = (x) => (x === "costs" || x === "allocations") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : true;
     const body = h("div");
     mount(root,
       h("p", {}, h("a", { href: "#/projects" }, `← ${t("projects")}`)),
@@ -59,6 +59,8 @@ async function detail(root, me, pid) {
       else if (tab === "costs") await costs(body, p);
       else if (tab === "changes") await changes(body, p);
       else if (tab === "allocations") await allocations(body, p);
+      else if (tab === "benefits") await benefits(body, p);
+      else if (tab === "closure") await closure(body, p);
       else await reports(body, p);
     } catch (e) { mount(body, errorBox(e)); }
   }
@@ -83,8 +85,16 @@ async function detail(root, me, pid) {
       try { await api("POST", `/projects/${pid}/assignments`, { user_id: Number(who.value) }); toast(t("staff_assigned")); } catch (e) { toast(e.lines().join(" · "), "error"); }
     }));
     const moves = (NEXT[p.state] || []).map(s => h("button", { class: "btn secondary small", onClick: guarded(null, async () => { await api("POST", `/projects/${pid}/transition`, { to_state: s }); toast(t("state_changed")); await render(); }) }, `${t("transition")} ${t(s)}`));
+    let progCard = null;
+    if (["PMO", "ADMIN"].includes(me.role)) {
+      const progs = await api("GET", "/programs");
+      const sel = h("select", {}, h("option", { value: "" }, t("no_program")), progs.map(g => h("option", { value: g.id, selected: g.id === p.program_id }, `${g.code} · ${g.name}`)));
+      progCard = h("div", { class: "card" }, h("h2", {}, t("program")), h("div", { class: "row" }, sel,
+        h("button", { class: "btn secondary small", onClick: guarded(null, async () => { await api("PUT", `/projects/${pid}/program`, { program_id: sel.value ? Number(sel.value) : null }); toast(t("saved")); }) }, t("save"))));
+    }
     mount(body,
       h("div", { class: "grid", style: "margin-bottom:16px" }, stat(t("state"), t(p.state)), stat(t("baseline_version"), p.baseline_version), stat(t("planned_start"), p.planned_start || "—"), stat(t("planned_end"), p.planned_end || "—")),
+      progCard,
       canManage ? h("div", { class: "card" }, h("div", { class: "row" }, moves,
         p.state === "planning" ? h("button", { class: "btn gold small", onClick: guarded(null, async () => { if (!confirm(t("confirm_lock"))) return; await api("POST", `/projects/${pid}/baseline/lock`); toast(t("baseline_locked")); await render(); }) }, t("lock_baseline")) : null)) : null,
       h("div", { class: "card" }, h("h2", {}, t("activities")),
@@ -93,6 +103,45 @@ async function detail(root, me, pid) {
       canManage && p.state === "planning" ? h("div", { class: "card" }, h("h2", {}, t("add_activity")),
         h("div", { class: "row" }, field(t("code"), code), field(t("name"), name), field(t("planned_hours"), hrs), field(t("baseline_cost"), bc), field(t("planned_start"), ps), field(t("planned_end"), pe), add), err) : null,
       canManage ? h("div", { class: "card" }, h("h2", {}, t("assigned_staff")), h("div", { class: "row" }, field(t("staff"), who), assignBtn)) : null);
+  }
+
+  async function closure(body, p) {
+    const c = await api("GET", `/projects/${pid}/closure`);
+    const editable = canManage && p.state === "closing";
+    mount(body, h("div", { class: "card" }, h("h2", {}, t("closure")),
+      h("p", {}, badge(c.ready ? t("closure_ready") : t("closure_not_ready"), c.ready ? "GREEN" : "AMBER")),
+      table(["", t("closure"), t("note")], c.items.map(i => [
+        i.auto ? h("span", { title: t("system_checked") }, i.satisfied ? "✓" : "✗")
+          : h("input", { type: "checkbox", checked: i.done, disabled: !editable, "aria-label": t(`ci_${i.key}`),
+            onChange: guarded(null, async (e) => { await api("PUT", `/projects/${pid}/closure/${i.key}`, { done: e.target.checked }); await render(); }) }),
+        h("span", {}, t(`ci_${i.key}`), i.auto ? h("span", { class: "muted" }, ` (${t("system_checked")})`) : null),
+        i.detail || i.note || ""]), t("none"))));
+  }
+
+  async function benefits(body, p) {
+    const list = await api("GET", `/projects/${pid}/benefits`);
+    const title = h("input"), metric = h("input"), unit = h("input", { style: "width:80px" });
+    const base = h("input", { type: "number", step: "any", style: "width:100px" }), target = h("input", { type: "number", step: "any", style: "width:100px" });
+    const due = h("input", { type: "date" }), err = h("div");
+    const add = h("button", { class: "btn", type: "button" }, t("add"));
+    add.addEventListener("click", guarded(add, async () => {
+      mount(err);
+      try {
+        await api("POST", `/projects/${pid}/benefits`, { title: title.value.trim(), metric: metric.value.trim() || null, unit: unit.value.trim() || null,
+          baseline: base.value === "" ? null : Number(base.value), target: target.value === "" ? null : Number(target.value), due_date: due.value || null });
+        toast(t("saved")); await render();
+      } catch (e) { mount(err, errorBox(e)); }
+    }));
+    const ST = ["planned", "on_track", "at_risk", "realized", "missed"];
+    const actual = (b) => canManage ? h("input", { type: "number", step: "any", value: b.actual ?? "", style: "width:90px", "aria-label": t("actual"),
+      onChange: guarded(null, async (e) => { await api("PATCH", `/projects/${pid}/benefits/${b.id}`, { actual: e.target.value === "" ? null : Number(e.target.value) }); await render(); }) }) : num(b.actual);
+    const status = (b) => canManage ? h("select", { "aria-label": t("status"), onChange: guarded(null, async (e) => { await api("PATCH", `/projects/${pid}/benefits/${b.id}`, { status: e.target.value }); await render(); }) },
+      ST.map(x => h("option", { value: x, selected: x === b.status }, t(`st_${x}`)))) : t(`st_${b.status}`);
+    mount(body, h("div", { class: "card" }, h("h2", {}, t("benefits")),
+      table([t("title"), t("metric"), t("baseline"), t("target"), t("actual"), t("realization"), t("status")],
+        list.map(b => [b.title, `${b.metric || ""} ${b.unit || ""}`.trim() || "—", num(b.baseline), num(b.target), actual(b), b.realization_pct == null ? "—" : `${num(b.realization_pct, 0)}%`, status(b)]), t("none"))),
+      canManage ? h("div", { class: "card" }, h("h2", {}, t("add_benefit")),
+        h("div", { class: "row" }, field(t("title"), title), field(t("metric"), metric), field(t("unit"), unit), field(t("baseline"), base), field(t("target"), target), field(t("due_date"), due), add), err) : null);
   }
 
   async function progress(body, p) {

@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from .models import Base
-from .routers import auth_users, projects, timesheets, admin, delivery, registers, reports, alerts, dashboards
+from .routers import auth_users, projects, timesheets, admin, delivery, registers, reports, alerts, dashboards, governance
 
 
 def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = True) -> FastAPI:
@@ -28,7 +28,7 @@ def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = Tr
     origins = [o.strip() for o in os.environ.get("PROPERM_CORS_ORIGINS", "").split(",") if o.strip()]
     if origins:   # only for a UI hosted on another origin (e.g. Netlify); tokens go in a header, not cookies
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["Authorization", "Content-Type"])
-    for r in (auth_users.router, projects.router, projects.pending_router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
+    for r in (auth_users.router, projects.router, projects.pending_router, governance.router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
         app.include_router(r)
 
     if serve_ui:

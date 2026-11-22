@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 
 from .. import rules
+from ..workcal import effective_capacity
 from ..audit import emit, log
 from ..config import WEEK_STARTS_ON_SUNDAY
 from ..deps import current_user, get_db, get_params, require_roles
@@ -192,8 +193,8 @@ def resource_load(week_of: date | None = None, db=Depends(get_db), user: User = 
             TimesheetEntry.user_id == u.id, TimesheetEntry.status.in_(("submitted", "approved")),
             TimesheetEntry.entry_date >= ws, TimesheetEntry.entry_date <= ws + timedelta(days=6)).scalar()
         if planned or actual:
-            out.append({"user_id": u.id, "staff_id": u.staff_id, "capacity": u.capacity_hours_week, "planned": planned,
-                        "actual": actual, "over_allocated": planned > u.capacity_hours_week})
+            out.append({"user_id": u.id, "staff_id": u.staff_id, "capacity": effective_capacity(db, u.capacity_hours_week, ws), "planned": planned,
+                        "actual": actual, "over_allocated": planned > effective_capacity(db, u.capacity_hours_week, ws)})
     return {"week_start": ws, "staff": out}
 
 

@@ -15,6 +15,7 @@ DEFAULT_SEVERITIES = {
     "R7": "BLOCK",  # exact duplicate entry
     "R8": "BLOCK",  # period locked
     "R9": "BLOCK",  # future date
+    "R10": "FLAG",  # entry on a weekend or public holiday
 }
 
 DEFAULT_PARAMS = {
@@ -46,3 +47,10 @@ PHASE_ACTIVITIES = {
 # Work week starts on Sunday (Saudi deployments). Change here until the work calendar
 # service (4.6) exists.
 WEEK_STARTS_ON_SUNDAY = True
+
+# Saudi work week: Sunday to Thursday. Python weekday numbers: Friday=4, Saturday=5.
+WEEKEND_DAYS = (4, 5)
+CLOSURE_ITEMS = [
+    ("deliverables_accepted", False), ("costs_reconciled", False), ("timesheets_approved", True), ("issues_closed", True),
+    ("risks_reviewed", False), ("lessons_learned", False), ("documents_archived", False), ("benefits_handover", False),
+]   # (key, checked by the system)

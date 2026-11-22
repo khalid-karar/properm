@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func
 
 from .. import rules
+from ..workcal import effective_capacity, non_working_reason
 from ..audit import emit, log
 from ..config import NON_PROJECT_CODES, WEEK_STARTS_ON_SUNDAY
 from ..deps import current_user, get_db, get_params, get_severities, require_roles
@@ -58,8 +59,10 @@ def v_out(vs):
 
 def build_ctx(db, user: User, d: EntryIn, exclude_id: int | None, today: date) -> rules.Ctx:
     sev, params = get_severities(db), get_params(db)
+    ws0 = rules.week_start(d.entry_date, WEEK_STARTS_ON_SUNDAY)
     ctx = rules.Ctx(today=today, entry_date=d.entry_date, hours=d.hours, severities=sev, params=params,
-                    capacity=user.capacity_hours_week)
+                    capacity=effective_capacity(db, user.capacity_hours_week, ws0),
+                    non_working=non_working_reason(db, d.entry_date))
     live = ("submitted", "approved")
     ws = rules.week_start(d.entry_date, WEEK_STARTS_ON_SUNDAY)
     q = db.query(func.coalesce(func.sum(TimesheetEntry.hours), 0.0)).filter(

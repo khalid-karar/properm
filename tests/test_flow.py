@@ -212,6 +212,9 @@ def test_lifecycle_closure_blocked_by_pending_timesheets(c, world):
     assert c.post(f"/projects/{pid}/transition", headers=h["pmo1"], json={"to_state": "archived"}).status_code == 409
     eid = c.get("/timesheets/queue", headers=h["pm1"]).json()[0]["id"]
     c.post(f"/timesheets/{eid}/decision", headers=h["pm1"], json={"action": "approve"})
+    for it in c.get(f"/projects/{pid}/closure", headers=h["pm1"]).json()["items"]:
+        if not it["auto"]:
+            assert c.put(f"/projects/{pid}/closure/{it['key']}", headers=h["pm1"], json={"done": True}).status_code == 200
     assert c.post(f"/projects/{pid}/transition", headers=h["pmo1"], json={"to_state": "archived"}).status_code == 200
     r = c.post("/timesheets", headers=h["s1"], json=entry(world, hours=1))
     assert r.status_code == 422                                         # R4: archived
