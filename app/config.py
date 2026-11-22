@@ -22,6 +22,8 @@ DEFAULT_PARAMS = {
     "activity_cap_tolerance": 0.10, # tolerance above the activity cap before BLOCK
     "date_tolerance_days": 14,      # tolerance outside project window before BLOCK
     "anomaly_block_count": 3,       # BLOCK violations within 7 days that raise anomaly.flag
+    "cost_approval_threshold": 50000.0,  # non-labor costs above this need PMO/ADMIN approval (Finance stand-in)
+    "stale_progress_weeks": 2,      # weeks without a progress update before an activity is flagged
 }
 
 # Non-project time codes valid for any user in any state (4.5 configuration, minimal).

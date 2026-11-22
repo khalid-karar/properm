@@ -29,6 +29,7 @@ class ActivityIn(BaseModel):
     code: str
     name: str
     planned_hours: float = Field(gt=0)
+    baseline_cost: float | None = Field(None, ge=0)   # BAC for this activity; needed for EVM
     change_id: int | None = None     # required once the project is in execution (approved change)
 
 
@@ -64,9 +65,12 @@ def p_out(p: Project) -> dict:
             "currency": p.currency, "project_type": p.project_type, "baseline_version": p.baseline_version}
 
 
-def a_out(a: Activity) -> dict:
-    return {"id": a.id, "code": a.code, "name": a.name, "phase": a.phase, "planned_hours": a.planned_hours,
-            "locked": a.locked, "baseline_version": a.baseline_version}
+def a_out(a: Activity, cost: bool = False) -> dict:
+    d = {"id": a.id, "code": a.code, "name": a.name, "phase": a.phase, "planned_hours": a.planned_hours,
+         "locked": a.locked, "baseline_version": a.baseline_version}
+    if cost:
+        d["baseline_cost"] = a.baseline_cost    # cost data: cost viewers only (4.1)
+    return d
 
 
 def get_project(db, pid: int) -> Project:
@@ -90,8 +94,13 @@ def need_manage(db, user, p):
         raise HTTPException(403, "Not the project manager of this project")
 
 
+def can_view_cost(db, user: User, p: Project) -> bool:
+    """Cost_view permission: project manager (or delegate), PMO, ADMIN, DECISION_MAKER, PROGRAM_MANAGER."""
+    return user.role in ("PMO", "ADMIN", "DECISION_MAKER", "PROGRAM_MANAGER") or can_manage(db, user, p)
+
+
 def can_view(db, user: User, p: Project) -> bool:
-    if user.role in ("PMO", "ADMIN", "DECISION_MAKER"):
+    if user.role in ("PMO", "ADMIN", "DECISION_MAKER", "PROGRAM_MANAGER"):
         return True
     if can_manage(db, user, p):
         return True
@@ -129,7 +138,8 @@ def get_one(pid: int, db=Depends(get_db), user: User = Depends(current_user)):
     if not can_view(db, user, p):
         raise HTTPException(403, "No access to this project")
     acts = db.query(Activity).filter_by(project_id=pid).order_by(Activity.id).all()
-    return {**p_out(p), "activities": [a_out(a) for a in acts]}
+    cost = can_view_cost(db, user, p)
+    return {**p_out(p), "activities": [a_out(a, cost) for a in acts]}
 
 
 @router.post("/{pid}/assignments", status_code=201)
@@ -163,7 +173,7 @@ def add_activity(pid: int, body: ActivityIn, db=Depends(get_db), user: User = De
     if db.query(Activity).filter_by(project_id=pid, code=body.code).first():
         raise HTTPException(409, "Activity code already exists")
     a = Activity(project_id=pid, code=body.code, name=body.name, phase="execution",
-                 planned_hours=body.planned_hours, locked=cr is not None,
+                 planned_hours=body.planned_hours, baseline_cost=body.baseline_cost, locked=cr is not None,
                  baseline_version=cr.new_baseline_version if cr else None)
     db.add(a)
     db.flush()
@@ -171,7 +181,7 @@ def add_activity(pid: int, body: ActivityIn, db=Depends(get_db), user: User = De
         cr.status = "applied"
     log(db, user.id, "activity.added", "activity", a.id, {"project_id": pid, "code": a.code, "change_id": body.change_id})
     db.commit()
-    return a_out(a)
+    return a_out(a, True)
 
 
 @router.put("/{pid}/activities/{aid}/limits")
@@ -211,7 +221,7 @@ def lock_baseline(pid: int, db=Depends(get_db), user: User = Depends(require_rol
     emit(db, "project.baselined", {"project_id": pid, "version": 1})
     emit(db, "project.state_changed", {"project_id": pid, "from": "planning", "to": "execution"})
     db.commit()
-    return {**p_out(p), "activities": [a_out(a) for a in acts]}
+    return {**p_out(p), "activities": [a_out(a, True) for a in acts]}
 
 
 # 1.0 state machine: (from, to) -> roles allowed. planning -> execution happens only via baseline lock.

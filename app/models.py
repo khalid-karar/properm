@@ -65,6 +65,7 @@ class Activity(Base):
     phase: Mapped[str] = mapped_column(String(20))      # tendering | planning | execution | closing
     planned_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
     locked: Mapped[bool] = mapped_column(Boolean, default=False)  # True once in an approved baseline
+    baseline_cost: Mapped[float | None] = mapped_column(Float, nullable=True)  # BAC of this activity (restricted)
     baseline_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
@@ -113,6 +114,92 @@ class TimesheetEntry(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     decision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ActivityProgress(Base):
+    """2.6 weekly progress per activity (percent-complete method in the MVP)."""
+    __tablename__ = "activity_progress"
+    __table_args__ = (UniqueConstraint("activity_id", "week_start"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    activity_id: Mapped[int] = mapped_column(ForeignKey("activities.id"))
+    week_start: Mapped[date] = mapped_column(Date)
+    pct_complete: Mapped[float] = mapped_column(Float)
+    etc_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class CostEntry(Base):
+    """2.7 non-labor cost ledger. Labor cost is computed from approved hours x rate, never entered."""
+    __tablename__ = "cost_entries"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    activity_id: Mapped[int | None] = mapped_column(ForeignKey("activities.id"), nullable=True)
+    category: Mapped[str] = mapped_column(String(60))
+    vendor: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    amount: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String(3))
+    entry_date: Mapped[date] = mapped_column(Date)
+    doc_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    cost_status: Mapped[str] = mapped_column(String(20), default="invoiced")   # committed | invoiced | paid
+    approval: Mapped[str] = mapped_column(String(20), default="approved")      # pending | approved
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    approved_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+
+class PlannedAllocation(Base):
+    """2.1b planned hours per staff per week (forward-looking capacity)."""
+    __tablename__ = "planned_allocations"
+    __table_args__ = (UniqueConstraint("project_id", "user_id", "week_start"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    week_start: Mapped[date] = mapped_column(Date)
+    hours: Mapped[float] = mapped_column(Float)
+
+
+class Risk(Base):
+    __tablename__ = "risks"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    title: Mapped[str] = mapped_column(String(300))
+    category: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    probability: Mapped[int] = mapped_column(Integer)      # 1-5
+    impact: Mapped[int] = mapped_column(Integer)           # 1-5
+    response: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="open")  # open|mitigating|occurred|closed
+    last_reviewed: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    @property
+    def score(self) -> int:
+        return self.probability * self.impact
+
+
+class Issue(Base):
+    __tablename__ = "issues"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    severity: Mapped[str] = mapped_column(String(10))      # low|medium|high|critical
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="open")  # open|in_progress|resolved|closed
+    linked_risk_id: Mapped[int | None] = mapped_column(ForeignKey("risks.id"), nullable=True)
+
+
+class WeeklyReport(Base):
+    __tablename__ = "weekly_reports"
+    __table_args__ = (UniqueConstraint("project_id", "week_start"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    week_start: Mapped[date] = mapped_column(Date)
+    pm_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    narrative: Mapped[dict] = mapped_column(JSON, default=dict)
+    snapshot: Mapped[dict] = mapped_column(JSON, default=dict)   # auto-populated figures at submit time
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 class RuleViolation(Base):
