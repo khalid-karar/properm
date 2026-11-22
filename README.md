@@ -28,14 +28,15 @@ Implements the Phase 1 slice of `PROPERM_Workflow_V1` (no AI yet): Python 3.11+,
 | Append-only audit log, transactional outbox, anomaly.flag | 4.2, 6 | |
 | Admin: rule severities and thresholds | 4.5 (minimum) | |
 | Weekly progress per activity (percent complete, ETC, reason when it decreases, stale flag) | 2.6 | |
-| Non-labor cost ledger (committed / invoiced / paid; second approval above a threshold) | 2.7 | labor cost is computed from approved hours x staff cost rate |
+| Non-labor cost ledger (committed / invoiced / paid; second approval above a threshold) | 2.7 | labor cost is computed from approved hours x the grade rate in effect on the entry date |
 | Planned allocation per staff per week, over-allocation warning, resource load view | 2.1b | |
 | Risk register and issue log (risk "occurred" auto-creates a linked issue) | 1.6 | benefits register not built |
-| Earned value: BAC, PV, EV, AC, CPI, SPI, EAC, ETC, VAC | 3.1 | `GET /projects/{id}/evm`, cost viewers only; PV is linear over the planned window |
+| Earned value: BAC, PV, EV, AC, CPI, SPI, EAC, ETC, VAC | 3.1 | `GET /projects/{id}/evm`, cost viewers only. PV is phased per activity from each activity's own planned dates; an activity without dates falls back to the project window and is listed in `warnings` |
+| Effective-dated rate card (`/admin/rates`), append-only; labor cost priced at the rate in effect on each entry date; rates snapshotted at baseline lock | 2.1.5, 2.7.3 | a rate change never reprices past cost |
 | Weekly PM report with auto-populated snapshot (needs the week's progress update first) | 3.2 | EVM inside the snapshot is hidden from non-cost viewers |
 
 ## Not built yet (next slices)
-Versioned rate card (a single cost rate per user is used for now), benefits register, closure checklist beyond the pending-timesheet check (1.5), dashboards, portfolio roll-ups and alerts (Section 3), all AI features (1.2, 3.3), notification dispatcher (outbox rows are written but nothing consumes them), work calendars / holidays (4.6), a web UI, Postgres row-level security (access control is enforced in the API layer today).
+Benefits register, a rate card per role and project (rates are per grade only), closure checklist beyond the pending-timesheet check (1.5), dashboards, portfolio roll-ups and alerts (Section 3), all AI features (1.2, 3.3), notification dispatcher (outbox rows are written but nothing consumes them), work calendars / holidays (4.6), a web UI, Postgres row-level security (access control is enforced in the API layer today).
 
 ## Assumptions to confirm (see Section 8 of the flow chart)
 - Work week starts Sunday (`WEEK_STARTS_ON_SUNDAY` in `app/config.py`); capacity is a flat `capacity_hours_week` per user until the calendar service exists.
@@ -44,4 +45,4 @@ Versioned rate card (a single cost rate per user is used for now), benefits regi
 - Single organization (no tenant_id yet).
 
 ## Schema changes
-Tables are created with `create_all`; there are no migrations yet. If you created a dev database from the first commit, delete `properm.db` (the `activities` table gained `baseline_cost`). Add Alembic before any real data exists.
+Tables are created with `create_all`; there are no migrations yet. If you created a dev database from the first commit, delete `properm.db` (`activities` gained `baseline_cost`, `planned_start`, `planned_end`; `users.cost_rate_hour` was replaced by `rate_grade`). Add Alembic before any real data exists.

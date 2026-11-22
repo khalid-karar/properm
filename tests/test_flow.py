@@ -74,8 +74,8 @@ def test_only_admin_creates_users_and_cost_hidden_from_pm(c, world):
     h = world["h"]
     r = c.post("/users", headers=h["pm1"], json={"staff_id": "x", "full_name": "x", "password": "password1", "role": "STAFF"})
     assert r.status_code == 403
-    assert "cost_rate_hour" not in c.get("/users", headers=h["pm1"]).json()[0]
-    assert "cost_rate_hour" in c.get("/users", headers=h["pmo1"]).json()[0]
+    assert "rate_grade" not in c.get("/users", headers=h["pm1"]).json()[0]
+    assert "rate_grade" in c.get("/users", headers=h["pmo1"]).json()[0]
 
 
 def test_baseline_lock_moves_state_and_locks_activities(c, world):

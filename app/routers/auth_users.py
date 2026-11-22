@@ -23,7 +23,7 @@ class UserIn(BaseModel):
     job_title: str | None = None
     department: str | None = None
     capacity_hours_week: float = Field(40.0, gt=0, le=80)
-    cost_rate_hour: float | None = None
+    rate_grade: str | None = None
     line_manager_id: int | None = None
     delegate_id: int | None = None
 
@@ -33,7 +33,7 @@ def user_out(u: User, include_cost: bool = False) -> dict:
          "job_title": u.job_title, "department": u.department, "capacity_hours_week": u.capacity_hours_week,
          "line_manager_id": u.line_manager_id, "delegate_id": u.delegate_id, "active": u.active}
     if include_cost:
-        d["cost_rate_hour"] = u.cost_rate_hour  # cost data only for ADMIN / PMO (4.1)
+        d["rate_grade"] = u.rate_grade  # cost data only for ADMIN / PMO (4.1)
     return d
 
 

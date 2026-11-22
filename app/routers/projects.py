@@ -7,8 +7,8 @@ from sqlalchemy import func
 from ..audit import emit, log
 from ..config import PHASE_ACTIVITIES
 from ..deps import current_user, get_db, require_roles
-from ..models import (Activity, ActivityStaffLimit, Assignment, ChangeRequest, Project,
-                      TimesheetEntry, User)
+from ..models import (Activity, ActivityStaffLimit, Assignment, BaselineRate, ChangeRequest, Project,
+                      RateCard, TimesheetEntry, User)
 
 router = APIRouter(prefix="/projects", tags=["projects (Layer 1)"])
 MANAGE = ("PM", "PMO", "ADMIN")
@@ -30,6 +30,8 @@ class ActivityIn(BaseModel):
     name: str
     planned_hours: float = Field(gt=0)
     baseline_cost: float | None = Field(None, ge=0)   # BAC for this activity; needed for EVM
+    planned_start: date | None = None                  # needed to phase PV per activity
+    planned_end: date | None = None
     change_id: int | None = None     # required once the project is in execution (approved change)
 
 
@@ -68,6 +70,7 @@ def p_out(p: Project) -> dict:
 def a_out(a: Activity, cost: bool = False) -> dict:
     d = {"id": a.id, "code": a.code, "name": a.name, "phase": a.phase, "planned_hours": a.planned_hours,
          "locked": a.locked, "baseline_version": a.baseline_version}
+    d["planned_start"], d["planned_end"] = a.planned_start, a.planned_end
     if cost:
         d["baseline_cost"] = a.baseline_cost    # cost data: cost viewers only (4.1)
     return d
@@ -172,7 +175,11 @@ def add_activity(pid: int, body: ActivityIn, db=Depends(get_db), user: User = De
         raise HTTPException(409, f"Cannot add activities in state {p.state}")
     if db.query(Activity).filter_by(project_id=pid, code=body.code).first():
         raise HTTPException(409, "Activity code already exists")
-    a = Activity(project_id=pid, code=body.code, name=body.name, phase="execution",
+    if (body.planned_start is None) != (body.planned_end is None):
+        raise HTTPException(422, "Give both planned_start and planned_end, or neither")
+    if body.planned_start and body.planned_end < body.planned_start:
+        raise HTTPException(422, "planned_end before planned_start")
+    a = Activity(planned_start=body.planned_start, planned_end=body.planned_end, project_id=pid, code=body.code, name=body.name, phase="execution",
                  planned_hours=body.planned_hours, baseline_cost=body.baseline_cost, locked=cr is not None,
                  baseline_version=cr.new_baseline_version if cr else None)
     db.add(a)
@@ -217,6 +224,11 @@ def lock_baseline(pid: int, db=Depends(get_db), user: User = Depends(require_rol
     for a in acts:
         a.locked, a.baseline_version = True, 1
     p.previous_state, p.state = p.state, "execution"
+    seen = set()                                   # snapshot the rates in force at lock (latest per grade)
+    for r in db.query(RateCard).order_by(RateCard.effective_from.desc()).all():
+        if r.grade not in seen and r.effective_from <= date.today():
+            seen.add(r.grade)
+            db.add(BaselineRate(project_id=pid, baseline_version=1, grade=r.grade, hourly_rate=r.hourly_rate, currency=r.currency))
     log(db, user.id, "baseline.locked", "project", pid, {"version": 1, "activities": len(acts)})
     emit(db, "project.baselined", {"project_id": pid, "version": 1})
     emit(db, "project.state_changed", {"project_id": pid, "from": "planning", "to": "execution"})

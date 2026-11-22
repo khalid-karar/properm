@@ -25,7 +25,7 @@ class User(Base):
     job_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     department: Mapped[str | None] = mapped_column(String(200), nullable=True)
     capacity_hours_week: Mapped[float] = mapped_column(Float, default=40.0)
-    cost_rate_hour: Mapped[float | None] = mapped_column(Float, nullable=True)  # restricted data
+    rate_grade: Mapped[str | None] = mapped_column(String(40), nullable=True)   # links to the rate card (restricted data)
     line_manager_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     delegate_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
@@ -66,6 +66,8 @@ class Activity(Base):
     planned_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
     locked: Mapped[bool] = mapped_column(Boolean, default=False)  # True once in an approved baseline
     baseline_cost: Mapped[float | None] = mapped_column(Float, nullable=True)  # BAC of this activity (restricted)
+    planned_start: Mapped[date | None] = mapped_column(Date, nullable=True)     # used to phase PV
+    planned_end: Mapped[date | None] = mapped_column(Date, nullable=True)
     baseline_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
@@ -114,6 +116,30 @@ class TimesheetEntry(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     decision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class RateCard(Base):
+    """Effective-dated hourly cost rate per grade. Append-only: a change is a new row with a later
+    effective_from, so past cost is never repriced (2.1.5)."""
+    __tablename__ = "rate_card"
+    __table_args__ = (UniqueConstraint("grade", "effective_from"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    grade: Mapped[str] = mapped_column(String(40))
+    hourly_rate: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String(3))
+    effective_from: Mapped[date] = mapped_column(Date)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+
+class BaselineRate(Base):
+    """Rates in force when a baseline was locked (audit of what the cost baseline was priced with)."""
+    __tablename__ = "baseline_rates"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    baseline_version: Mapped[int] = mapped_column(Integer)
+    grade: Mapped[str] = mapped_column(String(40))
+    hourly_rate: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String(3))
 
 
 class ActivityProgress(Base):

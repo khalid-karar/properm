@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 import pytest
 
+from app.models import BaselineRate
 from tests.test_flow import TODAY, app, c, login, mkuser, world, entry   # noqa: F401  (shared fixtures)
 
 
@@ -9,7 +10,9 @@ from tests.test_flow import TODAY, app, c, login, mkuser, world, entry   # noqa:
 def costed(c, world):
     """A baselined project with two priced activities, one costed staff member and 50% of the window elapsed."""
     h, ids = world["h"], world["ids"]
-    ids["s3"] = mkuser(c, h["admin"], "s3", "STAFF", cost_rate_hour=250.0, line_manager_id=ids["pm"])
+    r = c.post("/admin/rates", headers=h["admin"], json={"grade": "G1", "hourly_rate": 250, "currency": "SAR", "effective_from": "2020-01-01"})
+    assert r.status_code == 201, r.text
+    ids["s3"] = mkuser(c, h["admin"], "s3", "STAFF", rate_grade="G1", line_manager_id=ids["pm"])
     h["s3"] = login(c, "s3")
     r = c.post("/projects", headers=h["pm1"], json={"number": "P-COST", "name": "Costed", "state": "planning",
         "planned_start": str(TODAY - timedelta(days=50)), "planned_end": str(TODAY + timedelta(days=50))})
@@ -106,7 +109,7 @@ def test_missing_rate_is_reported_not_hidden(c, costed):
     c.post(f"/timesheets/{r.json()['id']}/decision", headers=h["pm1"], json={"action": "approve"})
     progress(c, costed, 10, 10)
     e = c.get(f"/projects/{costed['cpid']}/evm", headers=h["pm1"]).json()
-    assert any("without cost rate" in w for w in e["warnings"])
+    assert any("without a rate grade" in w for w in e["warnings"])
 
 
 def test_allocation_over_capacity_warning_and_load(c, costed):
@@ -168,3 +171,77 @@ def test_weekly_report_requires_progress_then_snapshots(c, costed):
     rep = c.get(f"/projects/{pid}/reports/weekly", headers=h["s3"]).json()[0]
     assert "evm" not in rep["snapshot"] and rep["narrative"]["accomplishments"] == "done"
     assert "evm" in c.get(f"/projects/{pid}/reports/weekly", headers=h["pm1"]).json()[0]["snapshot"]
+
+
+def test_pv_is_phased_per_activity_not_evenly(c, world):
+    h = world["h"]
+    pid = c.post("/projects", headers=h["pm1"], json={"number": "P-PV", "name": "PV", "state": "planning",
+        "planned_start": str(TODAY - timedelta(days=50)), "planned_end": str(TODAY + timedelta(days=50))}).json()["id"]
+    x = c.post(f"/projects/{pid}/activities", headers=h["pm1"], json={"code": "X", "name": "x", "planned_hours": 10, "baseline_cost": 100000,
+               "planned_start": str(TODAY - timedelta(days=10)), "planned_end": str(TODAY + timedelta(days=10))}).json()["id"]
+    y = c.post(f"/projects/{pid}/activities", headers=h["pm1"], json={"code": "Y", "name": "y", "planned_hours": 10, "baseline_cost": 100000,
+               "planned_start": str(TODAY - timedelta(days=40)), "planned_end": str(TODAY - timedelta(days=20))}).json()["id"]
+    c.post(f"/projects/{pid}/baseline/lock", headers=h["pm1"])
+    c.put(f"/projects/{pid}/progress", headers=h["pm1"], json={"week_of": str(TODAY), "updates": [
+        {"activity_id": x, "pct_complete": 50}, {"activity_id": y, "pct_complete": 100}]})
+    e = c.get(f"/projects/{pid}/evm", headers=h["pm1"]).json()
+    # X is half through its own window (50k planned), Y finished (100k planned). A linear spread of 200k over the
+    # project window would have given 100k and misreported this project as ahead of schedule.
+    assert (e["BAC"], e["PV"], e["EV"], e["SPI"]) == (200000, 150000, 150000, 1.0)
+    assert not any("project window" in w for w in e["warnings"])
+
+
+def test_pv_fallback_is_reported(c, costed):
+    e = c.get(f"/projects/{costed['cpid']}/evm", headers=costed["h"]["pm1"]).json()
+    assert any("project window" in w for w in e["warnings"])
+    assert e["PV"] == 50000                                          # 100000 BAC, 50% of the project window
+
+
+def test_activity_dates_validation(c, world):
+    h = world["h"]
+    pid = c.post("/projects", headers=h["pm1"], json={"number": "P-D", "name": "d", "state": "planning"}).json()["id"]
+    base = {"code": "Z", "name": "z", "planned_hours": 1}
+    assert c.post(f"/projects/{pid}/activities", headers=h["pm1"], json={**base, "planned_start": str(TODAY)}).status_code == 422
+    assert c.post(f"/projects/{pid}/activities", headers=h["pm1"], json={**base, "planned_start": str(TODAY), "planned_end": str(TODAY - timedelta(days=1))}).status_code == 422
+
+
+def test_rate_change_does_not_reprice_history(c, costed):
+    h, pid = costed["h"], costed["cpid"]
+    approved_hours(c, costed, costed["a"], 14)                       # 8h at 250 = 2000
+    r = c.post("/admin/rates", headers=h["admin"], json={"grade": "G1", "hourly_rate": 400, "currency": "SAR",
+                                                         "effective_from": str(TODAY - timedelta(days=7))})
+    assert r.status_code == 201
+    approved_hours(c, costed, costed["a"], 3)                        # 8h at 400 = 3200
+    e = c.get(f"/projects/{pid}/evm", headers=h["pm1"]).json()
+    assert e["AC_labor"] == 5200                                     # 2000 + 3200, not 6400 at the new rate
+
+
+def test_rate_card_is_append_only_and_restricted(c, costed):
+    h = costed["h"]
+    for eff in ("2019-01-01", "2020-01-01"):                         # earlier than, or equal to, the latest rate
+        r = c.post("/admin/rates", headers=h["admin"], json={"grade": "G1", "hourly_rate": 1, "effective_from": eff})
+        assert r.status_code == 409
+    assert c.post("/admin/rates", headers=h["pm1"], json={"grade": "G9", "hourly_rate": 1, "effective_from": "2020-01-01"}).status_code == 403
+    assert c.get("/admin/rates", headers=h["s3"]).status_code == 403
+    assert len(c.get("/admin/rates", headers=h["pmo1"]).json()) == 1
+
+
+def test_missing_rate_in_effect_is_reported(c, costed):
+    h = costed["h"]
+    approved_hours(c, costed, costed["a"], 14)
+    c.post("/admin/rates", headers=h["admin"], json={"grade": "G2", "hourly_rate": 100, "effective_from": str(TODAY + timedelta(days=5))})
+    h2 = c.post("/users", headers=h["admin"], json={"staff_id": "s4", "full_name": "s4", "password": "password1", "role": "STAFF", "rate_grade": "G2"})
+    sid = h2.json()["id"]
+    c.post(f"/projects/{costed['cpid']}/assignments", headers=h["pm1"], json={"user_id": sid})
+    r = c.post("/timesheets", headers=login(c, "s4"),
+               json={"project_id": costed["cpid"], "activity_id": costed["a"], "entry_date": str(TODAY), "hours": 2})
+    assert r.status_code == 201, r.text
+    c.post(f"/timesheets/{r.json()['id']}/decision", headers=h["pm1"], json={"action": "approve"})
+    e = c.get(f"/projects/{costed['cpid']}/evm", headers=h["pm1"]).json()
+    assert any("No rate in effect" in w and "G2" in w for w in e["warnings"])
+
+
+def test_baseline_locks_rate_snapshot(app, costed):
+    with app.state.Session() as db:
+        rows = db.query(BaselineRate).filter_by(project_id=costed["cpid"]).all()
+    assert [(r.grade, r.hourly_rate, r.baseline_version) for r in rows] == [("G1", 250.0, 1)]
