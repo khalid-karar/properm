@@ -95,6 +95,10 @@ def seed(app, pw, c):
     ok(c.patch(f"/projects/{a_pid}/milestones/{ms[0]['id']}", headers=pm, json={"achieved_on": d(-18)}))
     k = ok(c.post(f"/projects/{a_pid}/kpis", headers=pm, json={"name": "On-time delivery", "unit": "%", "target": 95}))
     ok(c.put(f"/projects/{a_pid}/kpis/{k['id']}/actual", headers=pm, json={"actual": 88}))
+    # program roadmap: BETA's data platform feeds ALPHA's reporting (late), a program-level risk
+    bm = ok(c.post(f"/projects/{b_pid}/milestones", headers=pm, json={"name": "Data platform live", "due_date": d(25)}))
+    ok(c.post(f"/programs/{g}/dependencies", headers=pmo, json={"project_id": a_pid, "predecessor_id": b_pid, "milestone_id": bm["id"], "needed_by": d(15), "description": "ERP reports read from the data platform"}))
+    ok(c.post(f"/programs/{g}/risks", headers=pmo, json={"title": "Same integration vendor on both projects", "probability": 4, "impact": 4, "owner_id": ids["pg1"], "response": "Agree a shared delivery plan with the vendor"}))
     # portfolio: departments, planned hours for the coming weeks, strategic scores
     for sid, dep in (("s1", "Delivery"), ("s2", "Data"), ("s3", "Delivery"), ("pm1", "PMO Office")):
         ok(c.patch(f"/users/{ids[sid]}", headers=admin, json={"department": dep}))

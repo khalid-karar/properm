@@ -53,9 +53,9 @@ Best practice: manage the program as one unit: roadmap, inter-project dependenci
 | Need | Status | Gap | Pri |
 |---|---|---|---|
 | Own programs, add/remove projects, roll-up of risks and benefits | ✅ | — | |
-| **Program roadmap** (all projects and key milestones on one timeline) | ⬜ | | P1 |
-| **Inter-project dependencies** (project B waits for A's milestone) | ⬜ | Dependencies are inside one project only | P1 |
-| **Program-level risks and issues** (owned by the program, not a project) | ⬜ | Roll-up only | P2 |
+| **Program roadmap** (all projects and key milestones on one timeline) | ✅ | Programs → Roadmap | P1 |
+| **Inter-project dependencies** (project B waits for A's milestone) | ✅ | Conflicts flagged and drawn on the roadmap | P1 |
+| **Program-level risks and issues** (owned by the program, not a project) | 🟡 | Program risks done; program issues not yet | P2 |
 | **Benefits realisation plan** (owner, measure, schedule, handover to operations) | 🟡 | Benefits exist per project; no program plan view | P2 |
 | Program budget envelope vs sum of project budgets | 🟡 | EVM totals only | P3 |
 
@@ -99,6 +99,6 @@ Best practice: secure access, clean organisation data, safe off-boarding, recove
 2. ✅ **PM control** (done 2026-11-23) — baseline vs current variance, estimate to complete, decision & action log, lessons learned register.
 3. ✅ **Staff weekly cycle** (done 2026-11-23) — weekly submission, reminders, planned leave feeding capacity.
 4. ✅ **Portfolio planning** (done 2026-11-23) — 12-week capacity plan, compliance view, prioritisation scoring.
-5. **Program** — roadmap, inter-project dependencies, program-level risks.
+5. ✅ **Program** (done 2026-11-23) — roadmap, inter-project dependencies, program-level risks.
 6. **Admin security** — password policy, lockout, sign-in history, off-boarding with reassignment.
 7. P2/P3 items: templates, RACI/communications, resource requests, critical path, search, board pack, mail settings, backup.

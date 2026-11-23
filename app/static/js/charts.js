@@ -93,9 +93,9 @@ export function ragStack(history, height = 150) {
 }
 
 /** Timeline. rows: [{label, start:'YYYY-MM-DD', end, pct?}], marks: [{label, date, done?}]. */
-export function gantt({ rows, marks = [], todayLabel = "" }) {
+export function gantt({ rows, marks = [], todayLabel = "", links = [] }) {
   const D = (s) => new Date(s + "T00:00:00").getTime();
-  const all = [...rows.flatMap(r => [D(r.start), D(r.end)]), ...marks.map(m => D(m.date))];
+  const all = [...rows.flatMap(r => [D(r.start), D(r.end), ...(r.marks || []).map(m => D(m.date))]), ...marks.map(m => D(m.date)), ...links.flatMap(l => [D(l.fromDate), D(l.toDate)])];
   if (!rows.length || !all.length) return h("p", { class: "muted" }, "—");
   const now = Date.now();
   let lo = Math.min(...all), hi = Math.max(...all);
@@ -106,15 +106,25 @@ export function gantt({ rows, marks = [], todayLabel = "" }) {
   const months = Math.max(1, Math.round(span / (864e5 * 30)));
   const stepM = Math.max(1, Math.ceil(months / 10));
   const d0 = new Date(lo); d0.setDate(1);
+  let lastX = -1e9;
   for (let d = new Date(d0); d.getTime() <= hi; d.setMonth(d.getMonth() + stepM)) {
-    const gx = x(Math.max(d.getTime(), lo));
+    if (d.getTime() < lo) continue;            // first partial month: no label at the clamped edge
+    const gx = x(d.getTime());
+    if (gx - lastX < 70) continue;
+    lastX = gx;
     svg.append(el("line", { x1: gx, x2: gx, y1: T - 6, y2: H - 6, stroke: "var(--line)" }), txt(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, { x: gx + 3, y: T - 10, class: "ct", fill: "var(--muted)" }));
   }
   rows.forEach((r, i) => {
     const y = T + i * RH, x1 = x(D(r.start)), w = Math.max(4, x(D(r.end)) - x1);
     svg.append(txt(r.label.length > 24 ? r.label.slice(0, 23) + "…" : r.label, { x: 4, y: y + 16, class: "ct", fill: "var(--text)" }),
       el("rect", { x: x1, y: y + 4, width: w, height: 14, rx: 3, fill: "var(--grey)", opacity: 0.45 }),
-      r.pct ? el("rect", { x: x1, y: y + 4, width: w * Math.min(1, r.pct / 100), height: 14, rx: 3, fill: "var(--navy2)" }) : null);
+      r.pct ? el("rect", { x: x1, y: y + 4, width: w * Math.min(1, r.pct / 100), height: 14, rx: 3, fill: "var(--navy2)" }) : null,
+      ...(r.marks || []).map(m => { const cx = x(D(m.date)); return el("path", { d: `M${cx} ${y + 4} l7 7 l-7 7 l-7 -7 z`, fill: m.done ? "var(--green)" : "var(--gold)", stroke: "#fff" }, el("title", {}, `${m.label} ${m.date}`)); }));
+  });
+  links.forEach(l => {   // from the delivering row/date to the waiting row/date
+    const xa = x(D(l.fromDate)), ya = T + l.fromRow * RH + 11, xb = x(D(l.toDate)), yb = T + l.toRow * RH + 11;
+    svg.append(el("path", { d: `M${xa} ${ya} C${xa + 30} ${ya}, ${xb - 30} ${yb}, ${xb} ${yb}`, fill: "none", stroke: l.bad ? "var(--red)" : "var(--muted)", "stroke-width": 1.6, "stroke-dasharray": l.bad ? "" : "4 3" }, el("title", {}, l.label || "")),
+      el("circle", { cx: xb, cy: yb, r: 3.5, fill: l.bad ? "var(--red)" : "var(--muted)" }));
   });
   const my = T + rows.length * RH;
   marks.forEach(m => {

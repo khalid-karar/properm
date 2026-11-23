@@ -2,7 +2,8 @@ import { api } from "../api.js";
 import { t } from "../i18n.js";
 import { badge, errorBox, field, guarded, h, mount, num, stat, table, toast } from "../ui.js";
 
-export default async function (root, { me }) {
+export default async function (root, { me, arg }) {
+  if (arg) return (await import("./program.js")).default(root, { me, gid: Number(arg) });
   const canEdit = ["PMO", "ADMIN"].includes(me.role);
   const isPg = me.role === "PROGRAM_MANAGER";
   const dir = await api("GET", "/directory");
@@ -29,7 +30,7 @@ export default async function (root, { me }) {
     }));
     mount(root, h("h1", {}, t("programs")),
       isPg && !progs.some(g => mineIds.has(g.id)) ? h("p", { class: "muted" }, t("none")) : null,
-      progs.slice().sort((a, b) => (mineIds.has(b.id) ? 1 : 0) - (mineIds.has(a.id) ? 1 : 0)).map((g) => { const i = progs.indexOf(g); const d = dash[i]; const ru = roll[i]; return h("div", { class: "card" }, h("h2", {}, `${g.code} · ${g.name} `, mineIds.has(g.id) ? badge(t("my_programs"), "gold") : null),
+      progs.slice().sort((a, b) => (mineIds.has(b.id) ? 1 : 0) - (mineIds.has(a.id) ? 1 : 0)).map((g) => { const i = progs.indexOf(g); const d = dash[i]; const ru = roll[i]; return h("div", { class: "card" }, h("h2", {}, `${g.code} · ${g.name} `, mineIds.has(g.id) ? badge(t("my_programs"), "gold") : null, " ", h("a", { class: "btn small secondary", href: `#/programs/${g.id}` }, t("open_roadmap"))),
         !d ? h("p", { class: "muted" }, t("none")) : [
           h("div", { class: "grid" }, stat("RED", d.rag_counts.RED), stat("AMBER", d.rag_counts.AMBER), stat("GREEN", d.rag_counts.GREEN),
             stat(t("avg_realization"), d.benefits.avg_realization_pct == null ? "—" : `${num(d.benefits.avg_realization_pct, 0)}%`),

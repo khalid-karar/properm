@@ -277,10 +277,19 @@ await step("PMO: approve leave, team week status, reminders", async () => {
 
 p = await newPage("pf-pmo"); await login(p, "pmo1");
 await step("portfolio: priorities, score a project, capacity heat map, compliance", async () => {
-  await p.goto(BASE + "#/portfolio"); await p.waitForSelector("#priorities td"); await p.waitForSelector("#capacity td.hm"); await p.waitForSelector("#compliance td");
+  await p.goto(BASE + "#/portfolio"); await p.waitForSelector("#priorities td"); await p.waitForSelector("#capacity td.cp"); await p.waitForSelector("#compliance td");
   await p.locator("#priorities button:has-text('Score')").first().click();
   await Promise.all([p.waitForResponse(r => r.url().includes("/portfolio/scores/")), p.click(".modal button:has-text('Save')")]);
   await p.selectOption("#capacity select", "person"); await p.waitForSelector("#capacity td:has-text('Faisal')");
+});
+
+p = await newPage("pg-road"); await login(p, "pg1");
+await step("program manager: roadmap with conflict, add program risk", async () => {
+  await p.goto(BASE + "#/programs"); await p.click("a:has-text('Roadmap')"); await p.waitForSelector("#roadmap svg.chart");
+  await p.waitForSelector("#xdeps .badge:has-text('Conflict')");
+  const r = p.locator("#prisks"); await r.getByLabel("Title", { exact: true }).fill("UI program risk");
+  await Promise.all([p.waitForResponse(x => x.url().includes("/risks") && x.request().method() === "POST"), r.locator("button:has-text('Add risk')").click()]);
+  await p.waitForSelector("#prisks td:has-text('UI program risk')");
 });
 
 p = await newPage("ar"); await login(p, "pmo1");

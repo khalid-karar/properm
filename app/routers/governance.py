@@ -355,6 +355,10 @@ def program_rollup(gid: int, db=Depends(get_db), user: User = Depends(current_us
     risks = db.query(Risk).filter(Risk.project_id.in_(list(projs)), Risk.status.in_(("open", "mitigating"))).all() if projs else []
     risks.sort(key=lambda r: -r.score)
     bens = db.query(Benefit).filter(Benefit.project_id.in_(list(projs))).all() if projs else []
-    return {"risks": [{"id": r.id, "project_id": r.project_id, "project": projs[r.project_id].number, "title": r.title, "score": r.score,
-                       "status": r.status} for r in risks[:50]],
+    from ..models import ProgramRisk
+    prisks = [{"id": r.id, "project_id": None, "project": "PROGRAM", "title": r.title, "score": r.score, "status": r.status}
+              for r in db.query(ProgramRisk).filter(ProgramRisk.program_id == gid, ProgramRisk.status.in_(("open", "mitigating")))]
+    allr = sorted(prisks + [{"id": r.id, "project_id": r.project_id, "project": projs[r.project_id].number, "title": r.title, "score": r.score,
+                             "status": r.status} for r in risks], key=lambda x: -x["score"])
+    return {"risks": allr[:50],
             "benefits": [{**b_out(b), "project": projs[b.project_id].number} for b in bens]}

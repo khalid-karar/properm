@@ -632,3 +632,32 @@ class ProjectScore(Base):
     urgency: Mapped[int] = mapped_column(Integer, default=3)
     risk_level: Mapped[int] = mapped_column(Integer, default=3)
     updated_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+
+class ProjectDependency(Base):
+    """Cross-project dependency: a project needs another project's milestone (or finish) by a date."""
+    __tablename__ = "project_dependencies"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"), index=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))                 # the project that waits
+    predecessor_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))             # the project that delivers
+    milestone_id: Mapped[int | None] = mapped_column(ForeignKey("milestones.id"), nullable=True)
+    needed_by: Mapped[date] = mapped_column(Date)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ProgramRisk(Base):
+    """Risk owned at program level (not by one project)."""
+    __tablename__ = "program_risks"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    probability: Mapped[int] = mapped_column(Integer)
+    impact: Mapped[int] = mapped_column(Integer)
+    response: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="open")
+
+    @property
+    def score(self) -> int:
+        return self.probability * self.impact

@@ -23,8 +23,8 @@ export default async function (root, { me }) {
     const [pri, cap, comp] = await Promise.all([api("GET", "/portfolio/priorities"), api("GET", `/portfolio/capacity?group=${group}`), canComp ? api("GET", "/portfolio/compliance") : null]);
     const gsel = h("select", { onChange: (e) => { group = e.target.value; render(); } }, ["department", "grade", "person"].map(g => h("option", { value: g, selected: g === group }, t(`grp_${g}`))));
     const cell = (x) => {
-      const cls = x.load_pct == null ? (x.demand ? "hm-r" : "") : x.load_pct > 100 ? "hm-r" : x.load_pct >= 85 ? "hm-a" : x.demand ? "hm-g" : "";
-      return h("td", { class: `hm ${cls}`, title: `${t("demand")} ${num(x.demand)} / ${t("supply")} ${num(x.supply)} h` }, x.load_pct == null ? (x.demand ? "!" : "—") : `${x.load_pct}%`);
+      const cls = x.load_pct == null ? (x.demand ? "cp-r" : "") : x.load_pct > 100 ? "cp-r" : x.load_pct >= 85 ? "cp-a" : x.demand ? "cp-g" : "";
+      return h("td", { class: `cp ${cls}`, title: `${t("demand")} ${num(x.demand)} / ${t("supply")} ${num(x.supply)} h` }, x.load_pct == null ? (x.demand ? "!" : "—") : `${x.load_pct}%`);
     };
     const wkLabel = (w) => w.slice(5);
     const capTable = h("div", { style: "overflow-x:auto" }, h("table", { class: "heat" },
