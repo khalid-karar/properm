@@ -148,10 +148,10 @@ def _decisions(db, user: User) -> dict:
     names = {p.id: f"{p.number} · {p.name}" for p in db.query(Project)}
     changes, costs, alerts = [], [], []
     if user.is_ccb or user.role in ("PMO", "ADMIN"):
-        for c in db.query(ChangeRequest).filter_by(status="requested").order_by(ChangeRequest.id):
+        for c in db.query(ChangeRequest).filter(ChangeRequest.status.in_(("requested", "deferred"))).order_by(ChangeRequest.id):
             if c.requested_by != user.id or user.role == "ADMIN":
                 changes.append({"id": c.id, "project_id": c.project_id, "project": names.get(c.project_id), "title": c.description[:140], "type": c.change_type,
-                                "cost_delta": c.impact_cost_delta, "schedule_days": c.impact_schedule_days})
+                                "cost_delta": c.impact_cost_delta, "schedule_days": c.impact_schedule_days, "status": c.status})
     if user.role in ("PMO", "ADMIN"):
         for c in db.query(CostEntry).filter_by(approval="pending").order_by(CostEntry.id):
             costs.append({"id": c.id, "project_id": c.project_id, "project": names.get(c.project_id), "amount": c.amount, "currency": c.currency, "title": f"{c.category}{' · ' + c.vendor if c.vendor else ''}"})
@@ -159,7 +159,20 @@ def _decisions(db, user: User) -> dict:
         p = db.get(Project, a.project_id)
         if user.role in EXEC or (p and can_manage(db, user, p)):
             alerts.append({"id": a.id, "project_id": a.project_id, "project": names.get(a.project_id), "title": a.cause})
-    return {"changes": changes, "costs": costs, "alerts": alerts, "total": len(changes) + len(costs) + len(alerts)}
+    proposals, gates = [], []
+    if user.role in ("DECISION_MAKER", "PMO", "ADMIN"):
+        from ..models import GateReview, Proposal
+        from .gates import score
+        for x in db.query(Proposal).filter(Proposal.status.in_(("submitted", "deferred"))):
+            if x.submitted_by != user.id or user.role == "ADMIN":
+                proposals.append({"id": x.id, "title": f"{x.number} · {x.name}", "score": score(x), "est_cost": x.est_cost, "currency": x.currency, "status": x.status})
+        proposals.sort(key=lambda r: -r["score"])
+        for g in db.query(GateReview).filter(GateReview.status.in_(("pending", "deferred"))).order_by(GateReview.id):
+            if g.requested_by != user.id or user.role == "ADMIN":
+                gates.append({"id": g.id, "project_id": g.project_id, "project": names.get(g.project_id), "gate": g.gate, "status": g.status,
+                              "checks": g.checks, "failing": sum(1 for c in g.checks if not c["ok"]), "note": g.note})
+    return {"changes": changes, "costs": costs, "alerts": alerts, "proposals": proposals, "gates": gates,
+            "total": len(changes) + len(costs) + len(alerts) + len(proposals) + len(gates)}
 
 
 @router.get("/decisions")

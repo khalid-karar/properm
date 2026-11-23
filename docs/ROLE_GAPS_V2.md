@@ -28,7 +28,7 @@ Best practice: plan against a baseline, forecast honestly, control change, keep 
 | Plan, baseline, milestones, KPIs, risks, issues, changes, costs, benefits | ✅ | — | |
 | **Baseline vs current** per activity (dates, hours, cost variance) | ⬜ | No variance view; EAC only at project level | P1 |
 | **Estimate to complete** per activity (PM's own forecast, not just formula) | ⬜ | | P1 |
-| **Decision and action log** per project (who decided what, actions with owners and due dates) | ⬜ | Only change-request decisions are recorded | P1 |
+| **Decision and action log** per project (who decided what, actions with owners and due dates) | 🟡 | Decision log done (Overview tab); action log still to do | P1 |
 | **Lessons learned register** (during and at closure, searchable by other PMs) | ⬜ | Only a closure checkbox | P1 |
 | **Resource request** to PMO/line manager instead of assigning people directly | ⬜ | | P2 |
 | **RACI** and **communication plan** (who is informed, how often) | ⬜ | | P2 |
@@ -41,7 +41,7 @@ Best practice: run the governance cycle (stage gates, reporting calendar, compli
 | Need | Status | Gap | Pri |
 |---|---|---|---|
 | Portfolio health, alerts, audit, period lock, reports, filters | ✅ | — | |
-| **Stage gates**: entry criteria and a recorded approval to move tendering → planning → execution → closing | 🟡 | State changes exist but no criteria, no gate approval record | P1 |
+| **Stage gates**: entry criteria and a recorded approval to move tendering → planning → execution → closing | ✅ | Automatic checks, recorded decision; switch in Configuration | P1 |
 | **Compliance view**: late weekly reports, missing timesheets, stale risks, overdue actions, per PM | ⬜ | Signals exist separately, no single view | P1 |
 | **Capacity plan** for the next 8–12 weeks (demand vs supply by department/grade) | ⬜ | Resource load shows one week | P1 |
 | **Project templates / methodology library** maintained by PMO | ⬜ | | P2 |
@@ -65,9 +65,9 @@ Best practice: decides on investment (what to start, stop, continue), not on dai
 | Need | Status | Gap | Pri |
 |---|---|---|---|
 | Executive dashboard, decisions queue, investment vs return, drill-down | ✅ | — | |
-| **Project intake approval** (business case → approve/reject before a PM can start) | ⬜ | PMs create projects directly | P1 |
-| **Prioritisation / scoring** (strategic fit, value, risk, cost) to rank the portfolio | ⬜ | | P1 |
-| Decision options beyond approve/reject: **defer, request more information, approve with conditions**, with rationale kept | 🟡 | Approve/reject only | P1 |
+| **Project intake approval** (business case → approve/reject before a PM can start) | ✅ | Proposals page; switch in Configuration | P1 |
+| **Prioritisation / scoring** (strategic fit, value, risk, cost) to rank the portfolio | 🟡 | Proposals are scored and ranked; running projects not yet | P1 |
+| Decision options beyond approve/reject: **defer, request more information, approve with conditions**, with rationale kept | ✅ | Proposals, stage gates and change requests | P1 |
 | **Steering-committee pack**: one-page per project, exportable | 🟡 | Period reports exist; no board pack format | P2 |
 | What-if (stop or delay a project, effect on budget and capacity) | ⬜ | | P3 |
 
@@ -95,7 +95,7 @@ Best practice: secure access, clean organisation data, safe off-boarding, recove
 ---
 
 ## Recommended build order
-1. **Governance core** — project intake approval, stage gates with criteria, decision options with rationale (Decision Maker + PMO, P1).
+1. ✅ **Governance core** (done 2026-11-23) — project intake approval, stage gates with criteria, decision options with rationale (Decision Maker + PMO, P1).
 2. **PM control** — baseline vs current variance, estimate to complete, decision & action log, lessons learned register.
 3. **Staff weekly cycle** — weekly submission, reminders, planned leave feeding capacity.
 4. **Portfolio planning** — 12-week capacity plan, compliance view, prioritisation scoring.

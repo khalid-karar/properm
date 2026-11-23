@@ -6,7 +6,7 @@ from sqlalchemy import func
 
 from ..audit import emit, log
 from ..config import PHASE_ACTIVITIES
-from ..deps import current_user, get_db, require_roles
+from ..deps import current_user, get_db, get_params, require_roles
 from ..models import (Activity, ActivityStaffLimit, Assignment, BaselineRate, ChangeRequest, Project,
                       RateCard, TimesheetEntry, User)
 
@@ -60,8 +60,15 @@ class ChangeIn(BaseModel):
 
 
 class DecisionIn(BaseModel):
-    approve: bool
+    approve: bool | None = None
     reason: str | None = None
+    outcome: str | None = None        # approve | approve_conditions | reject | defer | request_info
+    conditions: str | None = None
+
+
+class ResubmitIn(BaseModel):
+    description: str | None = Field(None, min_length=1)
+    note: str | None = None
 
 
 pending_router = APIRouter(tags=["projects (Layer 1)"])
@@ -134,15 +141,22 @@ def create_project(body: ProjectIn, db=Depends(get_db), user: User = Depends(req
         raise HTTPException(422, "planned_end before planned_start")
     if db.query(Project).filter_by(number=body.number).first():
         raise HTTPException(409, "project_number already exists")
-    p = Project(**body.model_dump(), pm_id=user.id)
+    if user.role == "PM" and get_params(db).get("intake_required"):
+        raise HTTPException(403, "New projects start as a proposal that a decision maker approves (Proposals page)")
+    p = new_project(db, body.model_dump(), user.id, user.id)
+    db.commit()
+    return p_out(p)
+
+
+def new_project(db, data: dict, pm_id: int, actor_id: int) -> Project:
+    p = Project(**data, pm_id=pm_id)
     db.add(p)
     db.flush()
     for phase, (code, name) in PHASE_ACTIVITIES.items():   # phase activities allow time before a baseline exists
         db.add(Activity(project_id=p.id, code=code, name=name, phase=phase, planned_hours=None, locked=True))
-    log(db, user.id, "project.created", "project", p.id, {"number": p.number, "state": p.state})
+    log(db, actor_id, "project.created", "project", p.id, {"number": p.number, "state": p.state})
     emit(db, "project.created", {"project_id": p.id})
-    db.commit()
-    return p_out(p)
+    return p
 
 
 @router.get("")
@@ -239,6 +253,8 @@ def lock_baseline(pid: int, db=Depends(get_db), user: User = Depends(require_rol
         raise HTTPException(409, "Add at least one execution activity before locking the baseline")
     if not p.planned_start or not p.planned_end:
         raise HTTPException(409, "planned_start and planned_end are required before baselining")
+    from .gates import require_gate
+    require_gate(db, p, "planning_execution")
     p.baseline_version = 1
     for a in acts:
         a.locked, a.baseline_version = True, 1
@@ -281,6 +297,9 @@ def transition(pid: int, body: TransitionIn, db=Depends(get_db), user: User = De
     if user.role not in allowed:
         raise HTTPException(403, f"Transition {frm} -> {to} requires role: {', '.join(allowed)}")
     need_manage(db, user, p)
+    if to == "closing" and frm == "execution":
+        from .gates import require_gate
+        require_gate(db, p, "execution_closing")
     if to == "closing":
         from .governance import ensure_closure_items
         ensure_closure_items(db, pid)
@@ -342,6 +361,7 @@ def list_changes(pid: int, db=Depends(get_db), user: User = Depends(current_user
 
 @router.post("/{pid}/changes/{cid}/decision")
 def decide_change(pid: int, cid: int, body: DecisionIn, db=Depends(get_db), user: User = Depends(current_user)):
+    from .gates import check_decision, record_decision
     cr = db.get(ChangeRequest, cid)
     if not cr or cr.project_id != pid:
         raise HTTPException(404, "Change request not found")
@@ -349,22 +369,47 @@ def decide_change(pid: int, cid: int, body: DecisionIn, db=Depends(get_db), user
         raise HTTPException(403, "Only CCB members or PMO can decide change requests")
     if cr.requested_by == user.id and user.role != "ADMIN":
         raise HTTPException(403, "Requester cannot decide own change request")
-    if cr.status != "requested":
+    if cr.status not in ("requested", "deferred"):
         raise HTTPException(409, f"Change request already {cr.status}")
-    if not body.approve and not body.reason:
-        raise HTTPException(422, "A reason is required to reject")
+    outcome = body.outcome or ("approve" if body.approve else "reject" if body.approve is False else None)
+    if outcome is None:
+        raise HTTPException(422, "outcome is required")
+    check_decision(outcome, body.reason, body.conditions)
     p = get_project(db, pid)
-    cr.decided_by, cr.decision_reason = user.id, body.reason
-    if body.approve:
+    cr.decided_by = user.id
+    cr.decision_reason = body.reason + (f" | Conditions: {body.conditions}" if body.conditions else "") if body.reason else (f"Conditions: {body.conditions}" if body.conditions else None)
+    if outcome in ("approve", "approve_conditions"):
         p.baseline_version += 1
         cr.status, cr.new_baseline_version = "approved", p.baseline_version
         event = "change.approved"
+    elif outcome == "reject":
+        cr.status, event = "rejected", "change.rejected"
     else:
-        cr.status = "rejected"
-        event = "change.rejected"
-    log(db, user.id, event, "change_request", cid, {"project_id": pid, "baseline_version": p.baseline_version})
-    emit(db, event, {"project_id": pid, "change_id": cid})
-    if body.approve:
+        cr.status, event = ("deferred" if outcome == "defer" else "info_requested"), "change.returned"
+    record_decision(db, "change", cid, pid, f"Change: {cr.description[:120]}", outcome, body.reason, body.conditions, user)
+    log(db, user.id, event, "change_request", cid, {"project_id": pid, "baseline_version": p.baseline_version, "outcome": outcome})
+    emit(db, event, {"project_id": pid, "change_id": cid, "user_id": cr.requested_by, "outcome": outcome})
+    if cr.status == "approved":
         emit(db, "baseline.revised", {"project_id": pid, "version": p.baseline_version})
     db.commit()
     return {"id": cid, "status": cr.status, "baseline_version": p.baseline_version}
+
+
+@router.post("/{pid}/changes/{cid}/resubmit")
+def resubmit_change(pid: int, cid: int, body: ResubmitIn, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE))):
+    p = get_project(db, pid)
+    need_manage(db, user, p)
+    cr = db.get(ChangeRequest, cid)
+    if not cr or cr.project_id != pid:
+        raise HTTPException(404, "Change request not found")
+    if cr.status not in ("info_requested", "deferred"):
+        raise HTTPException(409, "Only deferred or returned change requests can be resubmitted")
+    if body.description:
+        cr.description = body.description
+    if body.note:
+        cr.description = f"{cr.description}\n\nResponse: {body.note}"
+    cr.status = "requested"
+    log(db, user.id, "change.resubmitted", "change_request", cid, {"project_id": pid})
+    emit(db, "change.requested", {"project_id": pid, "change_id": cid})
+    db.commit()
+    return {"id": cid, "status": cr.status}

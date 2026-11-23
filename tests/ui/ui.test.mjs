@@ -212,6 +212,32 @@ await step("admin bulk import and permission matrix", async () => {
   await p.waitForSelector("#import-card code"); await p.waitForSelector("h2:has-text('Who can do what')");
 });
 
+p = await newPage("gov-pm"); await login(p, "pm1");
+await step("PM: intake required, submit proposal, see stage gate", async () => {
+  await p.goto(BASE + "#/projects"); await p.waitForSelector("a:has-text('Submit a proposal')");
+  await p.goto(BASE + "#/proposals"); await p.waitForSelector("h2:has-text('My proposals')");
+  const f = p.locator("#new-proposal");
+  await f.getByLabel("Number", { exact: true }).fill("UI-PROP-1"); await f.getByLabel("Name", { exact: true }).fill("UI proposal");
+  await f.getByLabel("Business case", { exact: true }).fill("A clear business case for the UI test.");
+  await Promise.all([p.waitForResponse(r => r.url().endsWith("/proposals") && r.request().method() === "POST"), f.locator("button:has-text('Submit a proposal')").click()]);
+  await p.waitForSelector("td:has-text('UI-PROP-1')");
+  await p.goto(BASE + "#/projects/4"); await p.waitForSelector("#gate-card"); await p.waitForSelector("#gate-card li.bad");
+});
+
+p = await newPage("gov-dm"); await login(p, "dm1");
+await step("DM: rank proposals, approve with conditions, decide gate", async () => {
+  await p.goto(BASE + "#/proposals"); await p.waitForSelector("h2:has-text('Proposals ranked by score')");
+  await p.locator("tr:has(td:has-text('DELTA-05')) button:has-text('Open')").click(); await p.click(".modal button:has-text('Decide')");
+  await p.selectOption(".modal select", "approve_conditions"); await p.getByLabel("Rationale", { exact: true }).fill("Strong fit"); await p.getByLabel("Conditions", { exact: true }).fill("Phase 1 only");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/decision")), p.click(".modal button:has-text('Record decision')")]);
+  await p.waitForSelector("tr:has(td:has-text('DELTA-05')) .badge:has-text('Approved with conditions')");
+  await p.goto(BASE + "#/decisions"); await p.waitForSelector("#dq-gates");
+  await p.locator("#dq-gates button:has-text('Decide')").first().click();
+  await p.selectOption(".modal select", "request_info"); await p.getByLabel("Rationale", { exact: true }).fill("Add the risk register first");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/gates/")), p.click(".modal button:has-text('Record decision')")]);
+  await p.goto(BASE + "#/projects/4"); await p.waitForSelector("#decision-log td:has-text('Add the risk register first')");
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

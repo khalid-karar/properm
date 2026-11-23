@@ -332,6 +332,47 @@
    ]
   },
   {
+   "en": "Governance and control",
+   "ar": "الحوكمة والرقابة",
+   "subs": [
+    {
+     "en": "Project intake: proposals, scoring, approval",
+     "ar": "استقبال المشاريع: المقترحات والتقييم والاعتماد",
+     "s": "done"
+    },
+    {
+     "en": "Stage gates and decision log",
+     "ar": "بوابات المراحل وسجل القرارات",
+     "s": "done"
+    },
+    {
+     "en": "PM control: variance, estimate to complete, actions, lessons",
+     "ar": "رقابة مدير المشروع: الانحراف والتقدير المتبقي والإجراءات والدروس",
+     "s": "todo"
+    },
+    {
+     "en": "Staff weekly cycle, reminders, planned leave",
+     "ar": "الدورة الأسبوعية للموظف والتذكيرات والإجازات المخططة",
+     "s": "todo"
+    },
+    {
+     "en": "Capacity plan, compliance view, portfolio scoring",
+     "ar": "خطة السعة وعرض الالتزام وتقييم المحفظة",
+     "s": "todo"
+    },
+    {
+     "en": "Program roadmap and cross-project dependencies",
+     "ar": "خارطة البرنامج والتبعيات بين المشاريع",
+     "s": "todo"
+    },
+    {
+     "en": "Account security and off-boarding",
+     "ar": "أمن الحسابات وإنهاء خدمة المستخدم",
+     "s": "todo"
+    }
+   ]
+  },
+  {
    "en": "Production readiness",
    "ar": "الجاهزية للإنتاج",
    "subs": [

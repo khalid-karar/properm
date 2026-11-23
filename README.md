@@ -92,6 +92,14 @@ The login page shows milestones with green (done), amber (in progress) and red (
 | PMO / program / decision | Portfolio filters; program managers see and edit only their own programs and move projects in and out; program roll-up of risks and benefits; investment-versus-return table with drill-down; resource load shows the projects behind each person's hours |
 | Admin | Job title and department on users; bulk CSV import with one-time generated passwords (`POST /admin/users/import`); read-only permission matrix |
 
+## Governance (added 2026-11-23, from `docs/ROLE_GAPS_V2.md`)
+| Area | Notes |
+|---|---|
+| Decisions | One set of outcomes everywhere: approve, approve with conditions, reject, defer, request more information. A rationale is required except for a plain approval; conditions for a conditional one. Every decision goes into `decision_records` (`GET /decision-log`) |
+| Project intake | `POST /proposals` with business case and 1-5 scores; score out of 100 (fit and value 35% each, urgency 15%, low risk 15%); ranked list; approval creates the project in planning. Setting `intake_required=1` stops PMs creating projects directly |
+| Stage gates | `POST /projects/{id}/gates` records automatic checks; DECISION_MAKER/PMO/ADMIN decide. With `stage_gates=1`, baseline lock (planning → execution) and execution → closing need an approved gate. A plain approval needs all checks met |
+| Change requests | Same outcomes; deferred or returned requests can be resubmitted (`POST /projects/{id}/changes/{cid}/resubmit`) |
+
 ## Not built yet (next slices)
 A rate card per role and project (rates are per grade only), forecasting models, PDF/DOCX parsing for the AI brief (paste text for now), a real mail-server test, a built-in scheduler for reports and alert evaluation (call the endpoints from a cron), Postgres with migrations and row-level security (access control is enforced in the API layer today), remaining UI polish (see Web UI).
 

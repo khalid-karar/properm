@@ -32,7 +32,9 @@ DEFAULT_PARAMS = {
     "risk_score_warning": 15, "risk_score_critical": 20,
     "ai_enabled": 1.0,              # 1 = AI assistant on, 0 = off for everyone
     "ai_hourly_limit": 30.0,        # AI requests per person per hour
-    "alert_cooldown_days": 7,       # a dismissed alert is not re-raised within this many days
+    "alert_cooldown_days": 7,
+    "intake_required": 0.0,         # 1 = project managers submit a proposal; a decision maker approves it into a project
+    "stage_gates": 0.0,             # 1 = planning->execution and execution->closing need an approved gate review       # a dismissed alert is not re-raised within this many days
 }
 
 # Non-project time codes valid for any user in any state (4.5 configuration, minimal).

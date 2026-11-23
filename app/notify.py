@@ -51,6 +51,17 @@ def targets(db, event: str, d: dict):
         return [(u, "Project state changed", f"{_label(db, pid)}: {d['from']} → {d['to']}", L) for u in _pm(db, pid)]
     elif event == "cost.posted" and d.get("approval") == "pending":
         return [(u, "Cost awaiting approval", _label(db, pid), L) for u in _role(db, "PMO", "ADMIN")]
+    elif event == "proposal.submitted":
+        return [(u, "Project proposal needs a decision", d.get("title"), "#/proposals") for u in _role(db, "DECISION_MAKER", "PMO")]
+    elif event == "proposal.decided":
+        word = {"approve": "approved", "approve_conditions": "approved with conditions", "reject": "rejected", "defer": "deferred", "request_info": "returned for more information"}.get(d.get("outcome"), "decided")
+        return [(d["user_id"], f"Your proposal was {word}", d.get("title"), f"#/projects/{d['project_id']}" if d.get("project_id") else "#/proposals")]
+    elif event == "gate.requested":
+        return [(u, "Stage gate review needs a decision", _label(db, pid), "#/decisions") for u in _role(db, "DECISION_MAKER", "PMO")]
+    elif event == "gate.decided":
+        return [(u, f"Stage gate decision: {d.get('outcome', '').replace('_', ' ')}", _label(db, pid), L) for u in _pm(db, pid)]
+    elif event == "change.returned":
+        return [(d["user_id"], f"Change request {'deferred' if d.get('outcome') == 'defer' else 'needs more information'}", _label(db, pid), L)]
     elif event == "anomaly.flag":
         return [(u, "Timesheet anomaly flagged", f"User {d.get('user_id')} had {d.get('blocks_7d')} flagged blocks in 7 days", "#/approvals") for u in _role(db, "PMO")]
     return []

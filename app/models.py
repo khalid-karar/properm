@@ -505,3 +505,55 @@ class UserPref(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
     muted_kinds: Mapped[list] = mapped_column(JSON, default=list)
     email_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class Proposal(Base):
+    """Project intake: a business case that a decision maker approves before it becomes a project."""
+    __tablename__ = "proposals"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(60))
+    name: Mapped[str] = mapped_column(String(300))
+    business_case: Mapped[str] = mapped_column(Text)
+    expected_benefits: Mapped[str | None] = mapped_column(Text, nullable=True)
+    client: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    sponsor: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    est_cost: Mapped[float | None] = mapped_column(Float, nullable=True)
+    currency: Mapped[str] = mapped_column(String(3), default="SAR")
+    est_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    est_end: Mapped[date | None] = mapped_column(Date, nullable=True)
+    strategic_fit: Mapped[int] = mapped_column(Integer, default=3)
+    value: Mapped[int] = mapped_column(Integer, default=3)
+    urgency: Mapped[int] = mapped_column(Integer, default=3)
+    risk_level: Mapped[int] = mapped_column(Integer, default=3)
+    status: Mapped[str] = mapped_column(String(30), default="submitted")
+    submitted_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class GateReview(Base):
+    """Stage gate: checks and a recorded decision before a project moves to the next stage."""
+    __tablename__ = "gate_reviews"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    gate: Mapped[str] = mapped_column(String(40))          # planning_execution | execution_closing
+    checks: Mapped[list] = mapped_column(JSON, default=list)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="pending")
+    requested_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class DecisionRecord(Base):
+    """Decision log: every governance decision with its rationale and conditions."""
+    __tablename__ = "decision_records"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entity: Mapped[str] = mapped_column(String(30))        # proposal | gate | change
+    entity_id: Mapped[int] = mapped_column(Integer)
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
+    title: Mapped[str] = mapped_column(String(300))
+    outcome: Mapped[str] = mapped_column(String(30))
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    conditions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decided_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

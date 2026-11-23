@@ -2,6 +2,7 @@ import { api, downloadCsv, openReport } from "../api.js";
 import { getLang, st, t } from "../i18n.js";
 import { details } from "./details.js";
 import { plan } from "./plan.js";
+import { decide, decisionList, outcomeBadge } from "../decide.js";
 import { askText, badge, modal, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
 
 const MANAGE = ["PM", "PMO", "ADMIN"];
@@ -11,7 +12,8 @@ export default async function (root, { me, arg }) {
   if (arg) return detail(root, me, Number(arg));
   const canManage = MANAGE.includes(me.role);
   async function render() {
-    const [all, dirAll, progs] = await Promise.all([api("GET", "/projects"), api("GET", "/directory"), me.role === "STAFF" ? [] : api("GET", "/programs").catch(() => [])]);
+    const [all, dirAll, progs, gov] = await Promise.all([api("GET", "/projects"), api("GET", "/directory"), me.role === "STAFF" ? [] : api("GET", "/programs").catch(() => []), api("GET", "/config/governance")]);
+    const viaIntake = gov.intake_required && me.role === "PM";
     const F = (render.F = render.F || { state: "", pm: "", program: "" });
     const list = all.filter(p => (!F.state || p.state === F.state) && (!F.pm || String(p.pm_id) === F.pm) && (!F.program || String(p.program_id) === F.program));
     const sel = (key, opts) => h("select", { onChange: (ev) => { F[key] = ev.target.value; render(); } }, h("option", { value: "" }, t("all")), opts.map(([v, l]) => h("option", { value: v, selected: F[key] === String(v) }, l)));
@@ -33,7 +35,8 @@ export default async function (root, { me, arg }) {
       } catch (e) { mount(err, errorBox(e)); }
     }));
     mount(root, h("h1", {}, t("projects")),
-      canManage ? h("div", { class: "card" }, h("h2", {}, t("new_project")),
+      viaIntake ? h("div", { class: "card" }, h("h2", {}, t("new_project")), h("p", {}, t("intake_note"), " ", h("a", { class: "btn small", href: "#/proposals" }, t("submit_proposal")))) : null,
+      canManage && !viaIntake ? h("div", { class: "card" }, h("h2", {}, t("new_project")),
         h("div", { class: "row" }, field(t("number"), num_), field(t("name"), name), field(t("state"), state), field(t("planned_start"), start), field(t("planned_end"), end), field(t("budget"), budget), field(t("currency"), ccy), field(t("client"), client), field(t("sponsor"), sponsor), btn), err) : null,
       me.role === "STAFF" ? null : h("div", { class: "card" }, h("div", { class: "row" }, field(t("filter_state"), sel("state", [...new Set(all.map(p => p.state))].map(x => [x, t(x)]))),
         field(t("filter_pm"), sel("pm", [...new Set(all.map(p => p.pm_id))].map(x => [x, pmName(x)]))), progs.length ? field(t("filter_program"), sel("program", progs.map(g => [g.id, g.code]))) : null,
@@ -106,9 +109,20 @@ async function detail(root, me, pid) {
       progCard = h("div", { class: "card" }, h("h2", {}, t("program")), h("div", { class: "row" }, sel,
         h("button", { class: "btn secondary small", onClick: guarded(null, async () => { await api("PUT", `/projects/${pid}/program`, { program_id: sel.value ? Number(sel.value) : null }); toast(t("saved")); }) }, t("save"))));
     }
+    const gates = await api("GET", `/projects/${pid}/gates`);
+    const log_ = await api("GET", `/decision-log?project_id=${pid}`);
+    const gerr = h("div"), gnote = h("textarea", { rows: 2 });
+    const pendingG = gates.reviews.find(r => r.gate === gates.next_gate && ["pending", "deferred"].includes(r.status));
+    const gateCard = (gates.next_gate || gates.reviews.length) ? h("div", { class: "card", id: "gate-card" }, h("h2", {}, t("stage_gate"), " ", gates.required ? badge(t("required"), "AMBER") : badge(t("optional"), "GREY")),
+      gates.next_gate ? [h("p", {}, h("strong", {}, t(`gate_${gates.next_gate}`)), " ", gates.next_passed ? badge(t("ps_approved"), "GREEN") : pendingG ? outcomeBadge(pendingG.status) : null),
+        h("ul", { class: "checks" }, gates.preview.map(c => h("li", { class: c.ok ? "ok" : "bad" }, `${c.ok ? "✓" : "✗"} ${t(`gc_${c.key}`)}${c.detail ? ` (${c.detail})` : ""}`))),
+        canManage && !gates.next_passed && !pendingG ? h("div", {}, field(t("note"), gnote), h("button", { class: "btn", type: "button", onClick: guarded(null, async () => { mount(gerr); try { await api("POST", `/projects/${pid}/gates`, { note: gnote.value.trim() || null }); toast(t("saved")); await render(); } catch (e) { mount(gerr, errorBox(e)); } }) }, t("request_gate")), gerr) : null] : null,
+      gates.reviews.length ? [h("h3", {}, t("gate_history")), gates.reviews.map(r => h("div", { class: "small", style: "margin-bottom:8px" }, h("strong", {}, t(`gate_${r.gate}`)), " ", outcomeBadge(r.status), ` · ${r.requested_by || ""} · ${(r.created_at || "").slice(0, 10)}`, decisionList(r.decisions)))] : null) : null;
+    const logCard = log_.length ? h("div", { class: "card", id: "decision-log" }, h("h2", {}, t("decision_log")),
+      table([t("date"), t("title"), t("outcome"), t("rationale"), t("conditions"), t("decided_by")], log_.map(r => [(r.decided_at || "").slice(0, 10), r.title, t(`oc_${r.outcome}`), r.rationale || "", r.conditions || "", r.decided_by || ""]))) : null;
     mount(body,
       h("div", { class: "grid", style: "margin-bottom:16px" }, stat(t("state"), t(p.state)), stat(t("baseline_version"), p.baseline_version), stat(t("planned_start"), p.planned_start || "—"), stat(t("planned_end"), p.planned_end || "—")),
-      progCard,
+      progCard, gateCard,
       canManage ? h("div", { class: "card" }, h("div", { class: "row" }, moves,
         p.state === "planning" ? h("button", { class: "btn gold small", onClick: guarded(null, async () => { if (!confirm(t("confirm_lock"))) return; await api("POST", `/projects/${pid}/baseline/lock`); toast(t("baseline_locked")); await render(); }) }, t("lock_baseline")) : null)) : null,
       h("div", { class: "card" }, h("h2", {}, t("activities")),
@@ -118,7 +132,7 @@ async function detail(root, me, pid) {
               h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { if (!confirm(t("confirm_delete"))) return; await api("DELETE", `/projects/${pid}/activities/${a.id}`); await render(); }) }, t("remove")))] : [])]), t("none"))),
       canManage && p.state === "planning" ? h("div", { class: "card" }, h("h2", {}, t("add_activity")),
         h("div", { class: "row" }, field(t("code"), code), field(t("name"), name), field(t("planned_hours"), hrs), field(t("baseline_cost"), bc), field(t("planned_start"), ps), field(t("planned_end"), pe), add), err) : null,
-      canManage ? h("div", { class: "card" }, h("h2", {}, t("assigned_staff")), h("div", { class: "row" }, field(t("staff"), who), assignBtn)) : null);
+      canManage ? h("div", { class: "card" }, h("h2", {}, t("assigned_staff")), h("div", { class: "row" }, field(t("staff"), who), assignBtn)) : null, logCard);
   }
 
   async function editActivity(a) {
@@ -285,13 +299,14 @@ async function detail(root, me, pid) {
       try { await api("POST", `/projects/${pid}/changes`, { change_type: type.value, description: desc.value.trim(), impact_hours_delta: optNum(hd), impact_cost_delta: optNum(cd), impact_schedule_days: optNum(sd) }); toast(t("saved")); await render(); }
       catch (e) { mount(err, errorBox(e)); }
     }));
-    const decide = (c) => c.status === "requested" && decideOk && c.requested_by !== me.id ? h("div", { class: "row", style: "flex-wrap:nowrap" },
-      h("button", { class: "btn small", onClick: guarded(null, async () => { await api("POST", `/projects/${pid}/changes/${c.id}/decision`, { approve: true }); toast(t("saved")); await render(); }) }, t("approve")),
-      h("button", { class: "btn danger small", onClick: guarded(null, async () => { const r = await askText(t("reject"), t("reason")); if (r === null) return; await api("POST", `/projects/${pid}/changes/${c.id}/decision`, { approve: false, reason: r }); await render(); }) }, t("reject"))) : (c.decision_reason || "");
+    const decideC = (c) => ["requested", "deferred"].includes(c.status) && decideOk && c.requested_by !== me.id
+      ? h("button", { class: "btn small", type: "button", onClick: () => decide(c.description.slice(0, 80), async (v) => { await api("POST", `/projects/${pid}/changes/${c.id}/decision`, { outcome: v.outcome, reason: v.rationale, conditions: v.conditions }); toast(t("saved")); await render(); }) }, t("decide"))
+      : ["info_requested", "deferred"].includes(c.status) && canManage ? h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { const r = await askText(t("resubmit"), t("your_response")); if (r === null) return; await api("POST", `/projects/${pid}/changes/${c.id}/resubmit`, { note: r }); toast(t("saved")); await render(); }) }, t("resubmit"))
+      : (c.decision_reason || "");
     const showCost = list.some(c => "impact_cost_delta" in c);
     mount(body, h("div", { class: "card" }, h("h2", {}, t("changes")),
       table([t("change_type"), t("description"), t("hours_delta"), showCost ? t("cost_delta") : null, t("schedule_days"), t("requested_by"), t("status"), t("baseline_rev"), t("decision")].filter(x => x !== null),
-        list.map(c => [t(`ct_${c.change_type}`), c.description, num(c.impact_hours_delta), ...(showCost ? [num(c.impact_cost_delta, 0)] : []), num(c.impact_schedule_days, 0), (dirById[c.requested_by] || {}).full_name || c.requested_by, badge(st(c.status), c.status === "approved" ? "approved" : c.status === "rejected" ? "critical" : "warning"), c.new_baseline_version ?? "—", decide(c)]), t("none"))),
+        list.map(c => [t(`ct_${c.change_type}`), c.description, num(c.impact_hours_delta), ...(showCost ? [num(c.impact_cost_delta, 0)] : []), num(c.impact_schedule_days, 0), (dirById[c.requested_by] || {}).full_name || c.requested_by, badge(st(c.status), c.status === "approved" ? "approved" : c.status === "rejected" ? "critical" : "warning"), c.new_baseline_version ?? "—", decideC(c)]), t("none"))),
       canManage && p.state === "execution" ? h("div", { class: "card" }, h("h2", {}, t("new_change")),
         h("div", { class: "row" }, field(t("change_type"), type), field(t("hours_delta"), hd), field(t("cost_delta"), cd), field(t("schedule_days"), sd)),
         h("div", { style: "margin-top:10px" }, field(t("description"), desc)), h("div", { style: "margin-top:10px" }, btn), err) : null);

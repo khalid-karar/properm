@@ -95,6 +95,21 @@ def seed(app, pw, c):
     ok(c.patch(f"/projects/{a_pid}/milestones/{ms[0]['id']}", headers=pm, json={"achieved_on": d(-18)}))
     k = ok(c.post(f"/projects/{a_pid}/kpis", headers=pm, json={"name": "On-time delivery", "unit": "%", "target": 95}))
     ok(c.put(f"/projects/{a_pid}/kpis/{k['id']}/actual", headers=pm, json={"actual": 88}))
+    # governance: a planning project waiting at its stage gate, proposals waiting for a decision, one decided proposal
+    g_pid = ok(c.post("/projects", headers=pm, json={"number": "GAMMA-04", "name": "Citizen Portal", "planned_start": d(14), "planned_end": d(200), "budget_ceiling": 300000, "sponsor": "Eng. Hind Al-Shehri"}))["id"]
+    ok(c.post(f"/projects/{g_pid}/activities", headers=pm, json={"code": "UX", "name": "User research and design", "planned_hours": 200, "baseline_cost": 70000, "planned_start": d(14), "planned_end": d(70)}))
+    ok(c.post(f"/projects/{g_pid}/milestones", headers=pm, json={"name": "Design approved", "due_date": d(70)}))
+    ok(c.put("/admin/settings/intake_required", headers=admin, json={"value": 1}))
+    ok(c.put("/admin/settings/stage_gates", headers=admin, json={"value": 1}))
+    ok(c.post(f"/projects/{g_pid}/gates", headers=pm, json={"note": "Design team ready to start; risks to be logged in week one."}))
+    case = "Ministry staff spend about 3,000 hours a month answering status questions by phone. A self-service tracker cuts this and supports Vision 2030 digital targets."
+    ok(c.post("/proposals", headers=pm, json={"number": "DELTA-05", "name": "Case Status Tracker", "business_case": case, "expected_benefits": "50% fewer status calls within 6 months",
+                                               "sponsor": "Dr. Salem Al-Otaibi", "est_cost": 420000, "est_start": d(45), "est_end": d(240), "strategic_fit": 5, "value": 4, "urgency": 4, "risk_level": 2}))
+    ok(c.post("/proposals", headers=pm, json={"number": "EPS-06", "name": "Intranet Refresh", "business_case": "The intranet is dated and staff rarely use it; a refresh would improve internal communication.",
+                                               "est_cost": 180000, "strategic_fit": 2, "value": 2, "urgency": 2, "risk_level": 2}))
+    z = ok(c.post("/proposals", headers=pmo, json={"number": "ZETA-07", "name": "Records Digitisation", "business_case": "Scan and index 2 million paper records so they can be searched online.",
+                                                    "est_cost": 900000, "strategic_fit": 4, "value": 4, "urgency": 2, "risk_level": 4}))
+    ok(c.post(f"/proposals/{z['id']}/decision", headers=tok("dm1"), json={"outcome": "defer", "rationale": "Good idea; revisit in next budget cycle when funding is confirmed."}))
     # a few weeks of history so the trend charts have something to show
     with app.state.Session() as db:
         from datetime import date as _d, timedelta as _td

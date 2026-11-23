@@ -186,3 +186,8 @@ svg.chart{width:100%;height:auto;display:block}svg.chart .ct{font-size:15px;fill
 ul.guide{margin:0;padding-inline-start:20px;line-height:2}
 label.check{display:flex;align-items:center;gap:8px;margin:6px 0;font-weight:400}
 label.check input{width:auto}
+
+ul.checks{list-style:none;margin:6px 0;padding:0;line-height:1.8}
+ul.checks li.ok{color:var(--green)} ul.checks li.bad{color:var(--red)}
+ul.declog{margin:6px 0;padding-inline-start:18px;line-height:1.6}
+.prop h3{margin:14px 0 4px;font-size:14px}

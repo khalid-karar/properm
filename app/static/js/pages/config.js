@@ -42,7 +42,10 @@ export default async function (root) {
         h("button", { class: "btn small", type: "button", onClick: guarded(null, async () => { const r = await api("POST", "/admin/ai/test"); mount(testOut, r.ok ? h("div", { class: "ok" }, `${t("test_ok")}: ${r.sample}`) : h("div", { class: "err" }, r.error)); }) }, t("test_connection"))), testOut,
       h("h3", {}, t("ai_usage")), table([t("type"), t("total"), t("applied"), t("rejected")], Object.entries(ai.usage_30d).map(([k, v]) => [k, v.total, v.applied || 0, v.rejected || 0]), t("none")),
       ai.recent_failures.length ? [h("h3", {}, t("ai_failures")), table([t("time"), t("reason")], ai.recent_failures.map(f => [String(f.ts).replace("T", " ").slice(0, 19), f.reason || ""]))] : null);
-    mount(root, h("h1", {}, t("nav_config")), aiCard, h("div", { class: "grid2" }, cards));
+    const gov = await api("GET", "/config/governance");
+    const tg = (k) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: gov[k], onChange: guarded(null, (ev) => setSetting(k, ev.target.checked ? 1 : 0)) }), " ", t(`gov_${k}`));
+    const govCard = h("div", { class: "card", id: "gov-card" }, h("h2", {}, t("governance")), h("p", { class: "muted small" }, t("governance_note")), tg("intake_required"), tg("stage_gates"));
+    mount(root, h("h1", {}, t("nav_config")), govCard, aiCard, h("div", { class: "grid2" }, cards));
   }
   await render();
 }
