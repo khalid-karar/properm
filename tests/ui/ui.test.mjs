@@ -478,6 +478,10 @@ await step("project book: paste, analyse, review, apply as a plan", async () => 
   await p.click("#dom-accept-communication"); await p.waitForSelector("#dom-communication summary:has-text('Accepted')");
   await p.waitForSelector("#brief-apply:not([disabled])"); await p.click("#brief-apply"); await p.waitForSelector(".toast:has-text('Plan created')");
   await p.waitForSelector("#brief-result td");
+  await tab(p, "Plan"); await p.waitForSelector("#imp-plan");
+  await p.setInputFiles("#imp-file-plan", { name: "plan.csv", mimeType: "text/csv", buffer: Buffer.from("code,name,planned_hours\nX-1,Imported task,24\nX-2,Another,16\n") });
+  await p.click("#imp-preview-plan"); await p.waitForSelector("#imp-out-plan td");
+  await p.click("#imp-commit-plan"); await p.waitForSelector("#imp-done-plan");
 });
 
 p = await newPage("home"); await login(p, "pmo1");

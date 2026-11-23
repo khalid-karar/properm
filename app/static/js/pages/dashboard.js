@@ -1,3 +1,4 @@
+import { xlsxBtn } from "./importer.js";
 import { api, downloadCsv } from "../api.js";
 import { st, t } from "../i18n.js";
 import { heatmap, lineChart, pairedBars, COLORS } from "../charts.js";
@@ -20,7 +21,7 @@ export default async function (root, { me, arg }) {
     const sel = h("select", { value: filter, onChange: (e) => { filter = e.target.value; render(); } },
       h("option", { value: "" }, t("all")), ["RED", "AMBER", "GREEN", "GREY"].map(x => h("option", { value: x }, t(`rag_${x}`))));
     mount(root, h("h1", {}, `${t("nav_dashboard")} · ${t("portfolio")}`),
-      h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv("/export/portfolio.csv", "portfolio.csv")) }, t("export_csv"))),
+      h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv("/export/portfolio.csv", "portfolio.csv")) }, t("export_csv")), xlsxBtn("/export/portfolio.xlsx", "portfolio.xlsx")),
       h("div", { class: "grid", style: "margin-bottom:16px" }, ["RED", "AMBER", "GREEN", "GREY"].map(k => stat(t(`rag_${k}`), d.rag_counts[k]))),
       h("div", { class: "card" }, h("div", { class: "row", style: "margin-bottom:10px" }, field(t("filter_rag"), sel)),
         table([t("project"), t("state"), t("rag"), t("progress"), "CPI", "SPI", t("open_alerts"), t("top_alert")],

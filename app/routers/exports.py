@@ -5,7 +5,7 @@ from datetime import date
 from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from ..alerts import rag_status
 from ..deps import current_user, get_db
@@ -32,8 +32,24 @@ def csv_response(name: str, header: list, rows: list) -> Response:
     w.writerow(header)
     for r in rows:
         w.writerow([_safe(v) for v in r])
-    return Response("﻿" + buf.getvalue(), media_type="text/csv; charset=utf-8",
+    resp = Response("﻿" + buf.getvalue(), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="{name}"'})
+    resp.table = (name, header, rows)          # lets the .xlsx twins reuse the same permission checks and rows
+    return resp
+
+
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def xlsx_response(resp: Response, b64: bool = False) -> Response:
+    """b64=true returns JSON {filename, content_b64} (what the browser demo can save); otherwise the raw file."""
+    from ..xlsx import build_xlsx
+    name, header, rows = resp.table
+    base = name.rsplit(".", 1)[0]
+    if b64:
+        import base64
+        return JSONResponse({"filename": f"{base}.xlsx", "content_b64": base64.b64encode(build_xlsx([(base[:31], header, rows)])).decode()})
+    return Response(build_xlsx([(base[:31], header, rows)]), media_type=XLSX, headers={"Content-Disposition": f'attachment; filename="{base}.xlsx"'})
 
 
 @router.get("/export/timesheets.csv")
@@ -100,6 +116,41 @@ def export_benefits(pid: int, db=Depends(get_db), user: User = Depends(current_u
         raise HTTPException(403, "No access to this project")
     rows = [[b.title, b.metric, b.unit, b.baseline, b.target, b.actual, realization_pct(b), b.status, b.due_date] for b in db.query(Benefit).filter_by(project_id=pid).order_by(Benefit.id)]
     return csv_response(f"{p.number}-benefits.csv", ["title", "metric", "unit", "baseline", "target", "actual", "realization_pct", "status", "due_date"], rows)
+
+
+@router.get("/export/timesheets.xlsx")
+def export_timesheets_x(project_id: int | None = None, start: date | None = None, end: date | None = None, db=Depends(get_db), user: User = Depends(current_user), b64: bool = False):
+    return xlsx_response(export_timesheets(project_id, start, end, db, user), b64)
+
+
+@router.get("/export/alerts.xlsx")
+def export_alerts_x(db=Depends(get_db), user: User = Depends(current_user), b64: bool = False):
+    return xlsx_response(export_alerts(db, user), b64)
+
+
+@router.get("/export/portfolio.xlsx")
+def export_portfolio_x(as_of: date | None = None, db=Depends(get_db), user: User = Depends(current_user), b64: bool = False):
+    return xlsx_response(export_portfolio(as_of, db, user), b64)
+
+
+@router.get("/projects/{pid}/export/costs.xlsx")
+def export_costs_x(pid: int, db=Depends(get_db), user: User = Depends(current_user), b64: bool = False):
+    return xlsx_response(export_costs(pid, db, user), b64)
+
+
+@router.get("/projects/{pid}/export/benefits.xlsx")
+def export_benefits_x(pid: int, db=Depends(get_db), user: User = Depends(current_user), b64: bool = False):
+    return xlsx_response(export_benefits(pid, db, user), b64)
+
+
+@router.get("/projects/{pid}/export/plan.xlsx")
+def export_plan_x(pid: int, db=Depends(get_db), user: User = Depends(current_user), b64: bool = False):
+    """Tasks in the same columns the plan import reads, so a plan can be edited in Excel and brought back."""
+    p = get_project(db, pid)
+    if not can_view(db, user, p):
+        raise HTTPException(403, "No access to this project")
+    rows = [[a.code, a.name, a.planned_hours, a.planned_start, a.planned_end] for a in db.query(Activity).filter_by(project_id=pid).order_by(Activity.code)]
+    return xlsx_response(csv_response(f"{p.number}-plan.csv", ["code", "name", "planned_hours", "planned_start", "planned_end"], rows), b64)
 
 
 # ---------------- summaries (shared with scheduled reports) ----------------

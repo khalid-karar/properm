@@ -7,6 +7,8 @@ import { badge, bar, errorBox, field, guarded, h, mount, num, table, toast } fro
 const RAG = { green: "GREEN", amber: "AMBER", red: "RED" };
 const delBtn = (fn) => h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, fn) }, t("remove"));
 
+import { importCard, xlsxBtn } from "./importer.js";
+
 export async function plan(body, p, { pid, dir, canManage, render }) {
   const byId = Object.fromEntries(dir.map(u => [u.id, u]));
   const acts = p.activities.filter(a => a.phase === "execution");
@@ -71,5 +73,6 @@ export async function plan(body, p, { pid, dir, canManage, render }) {
     g.length ? gantt({ rows: g.map(a => ({ label: `${a.code} ${a.name}`, start: a.planned_start, end: a.planned_end, color: crit.has(a.code) ? "var(--red)" : null })), links: glinks, marks: ms.map(x => ({ label: x.name, date: x.due_date, done: !!x.achieved_on })), todayLabel: t("today") }) : h("p", { class: "muted" }, t("timeline_empty")));
   if (cp.activities.length) gcard.append(h("p", { class: "small", id: "critical-path" }, h("strong", {}, `${t("critical_path")}: `), cp.critical.join(" → ") || "—", ` · ${t("network_finish")}: ${cp.finish}`,
     cp.activities.some(x => x.pushed_days > 0) ? h("span", { class: "neg" }, ` · ${t("pushed_note")}: ${cp.activities.filter(x => x.pushed_days > 0).map(x => `${x.code} +${x.pushed_days}d`).join(", ")}`) : null));
-  mount(body, gcard, mcard, kcard, dcard, lcard);
+  const imp = editable && p.state === "planning" ? importCard("plan", `/projects/${pid}/import/plan`, { accept: ".xlsx,.csv,.xml", after: render }) : null;
+  mount(body, h("p", {}, xlsxBtn(`/projects/${pid}/export/plan.xlsx`, `${p.number}-plan.xlsx`)), gcard, mcard, kcard, dcard, lcard, imp);
 }

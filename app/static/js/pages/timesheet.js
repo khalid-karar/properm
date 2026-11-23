@@ -1,3 +1,4 @@
+import { xlsxBtn } from "./importer.js";
 import { api, downloadCsv } from "../api.js";
 import { t } from "../i18n.js";
 import { addDays, badge, errorBox, field, fmtDate, guarded, h, modal, mount, num, parseDate, stat, bar, table, toast, today, warnBox, weekStart } from "../ui.js";
@@ -34,7 +35,7 @@ export default async function (root, { me }) {
     const live = util.submitted + util.approved;
     mount(root,
       h("h1", {}, t("nav_timesheet")),
-      h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv("/export/timesheets.csv", "timesheets.csv")) }, t("export_csv"))),
+      h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv("/export/timesheets.csv", "timesheets.csv")) }, t("export_csv")), xlsxBtn("/export/timesheets.xlsx", "timesheets.xlsx")),
       h("div", { class: "row", style: "margin-bottom:12px" },
         h("button", { class: "btn secondary small", onClick: () => { S.week = addDays(S.week, -7); render(); } }, t("prev")),
         h("strong", {}, `${t("week_of")} ${wk}`),

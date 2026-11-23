@@ -1,3 +1,4 @@
+import { xlsxBtn } from "./importer.js";
 import { api, downloadCsv, openReport } from "../api.js";
 import { getLang, st, t } from "../i18n.js";
 import { details } from "./details.js";
@@ -231,7 +232,7 @@ async function detail(root, me, pid) {
       onChange: guarded(null, async (e) => { await api("PATCH", `/projects/${pid}/benefits/${b.id}`, { actual: e.target.value === "" ? null : Number(e.target.value) }); await render(); }) }) : num(b.actual);
     const status = (b) => canManage ? h("select", { "aria-label": t("status"), onChange: guarded(null, async (e) => { await api("PATCH", `/projects/${pid}/benefits/${b.id}`, { status: e.target.value }); await render(); }) },
       ST.map(x => h("option", { value: x, selected: x === b.status }, t(`st_${x}`)))) : t(`st_${b.status}`);
-    mount(body, h("div", { class: "card" }, h("h2", {}, t("benefits")), h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv(`/projects/${pid}/export/benefits.csv`, `${p.number}-benefits.csv`)) }, t("export_csv"))),
+    mount(body, h("div", { class: "card" }, h("h2", {}, t("benefits")), h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv(`/projects/${pid}/export/benefits.csv`, `${p.number}-benefits.csv`)) }, t("export_csv")), xlsxBtn(`/projects/${pid}/export/benefits.xlsx`, `${p.number}-benefits.xlsx`)),
       table([t("title"), t("metric"), t("baseline"), t("target"), t("actual"), t("realization"), t("status")],
         list.map(b => [b.title, `${b.metric || ""} ${b.unit || ""}`.trim() || "—", num(b.baseline), num(b.target), actual(b), b.realization_pct == null ? "—" : `${num(b.realization_pct, 0)}%`, status(b)]), t("none"))),
       canManage ? h("div", { class: "card" }, h("h2", {}, t("add_benefit")),
@@ -302,7 +303,7 @@ async function detail(root, me, pid) {
     mount(body, h("div", { class: "card" }, h("h2", {}, t("evm")),
       evm.available ? h("div", { class: "grid" }, ["BAC", "PV", "EV", "AC", "CV", "SV", "CPI", "SPI", "TCPI", "EAC", "VAC"].map(k => stat(k, num(evm[k], ["CPI", "SPI", "TCPI"].includes(k) ? 2 : 0)))) : h("p", { class: "muted" }, `${t("not_available")}: ${evm.reason || ""}`),
       (evm.warnings || []).length ? h("div", { class: "warn" }, h("ul", {}, evm.warnings.map(w => h("li", {}, w)))) : null),
-      h("div", { class: "card" }, h("h2", {}, t("costs")), h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv(`/projects/${pid}/export/costs.csv`, `${p.number}-costs.csv`)) }, t("export_csv"))), table([t("date"), t("category"), t("vendor"), t("amount"), t("cost_status"), t("approval"), ""], list.map(c => [c.entry_date, c.category, c.vendor || "", `${num(c.amount, 0)} ${c.currency}`, st(c.cost_status), badge(c.approval === "pending" ? t("pending") : t("approved"), c.approval === "pending" ? "warning" : "approved"), approve(c)]), t("none")),
+      h("div", { class: "card" }, h("h2", {}, t("costs")), h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv(`/projects/${pid}/export/costs.csv`, `${p.number}-costs.csv`)) }, t("export_csv")), xlsxBtn(`/projects/${pid}/export/costs.xlsx`, `${p.number}-costs.xlsx`)), table([t("date"), t("category"), t("vendor"), t("amount"), t("cost_status"), t("approval"), ""], list.map(c => [c.entry_date, c.category, c.vendor || "", `${num(c.amount, 0)} ${c.currency}`, st(c.cost_status), badge(c.approval === "pending" ? t("pending") : t("approved"), c.approval === "pending" ? "warning" : "approved"), approve(c)]), t("none")),
         h("div", { class: "row", style: "margin-top:12px" }, field(t("category"), cat), field(t("vendor"), vendor), field(t("amount"), amt), field(t("date"), date), field(t("cost_status"), stSel), btn), err));
   }
   async function changes(body, p) {
