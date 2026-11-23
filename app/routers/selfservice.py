@@ -63,7 +63,10 @@ def change_password(body: PasswordIn, db=Depends(get_db), user: User = Depends(c
         raise HTTPException(403, "Current password is incorrect")
     if body.new_password == body.current_password:
         raise HTTPException(422, "New password must differ from the current one")
+    from .. import acct
+    acct.enforce_policy(db, body.new_password)
     user.password_hash = hash_pw(body.new_password)
+    acct.password_set(db, user, by_admin=False)
     log(db, user.id, "user.password_changed", "user", user.id, {})
     db.commit()
     return {"ok": True}

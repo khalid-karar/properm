@@ -77,9 +77,9 @@ Best practice: secure access, clean organisation data, safe off-boarding, recove
 | Need | Status | Gap | Pri |
 |---|---|---|---|
 | Users, roles, rates, lists, AI settings, bulk import, permission matrix | ✅ | — | |
-| **Account security**: password policy, lockout after failed sign-ins, force change at first sign-in, session timeout | ⬜ | | P1 |
-| **Sign-in history** (who, when, failures) | ⬜ | | P1 |
-| **Off-boarding**: deactivate a user and reassign their projects, risks, actions, approvals | ⬜ | Deactivation leaves open items orphaned | P1 |
+| **Account security**: password policy, lockout after failed sign-ins, force change at first sign-in, session timeout | ✅ | Settings + Admin → Security | P1 |
+| **Sign-in history** (who, when, failures) | ✅ | Admin → Security; own history on My profile | P1 |
+| **Off-boarding**: deactivate a user and reassign their projects, risks, actions, approvals | ✅ | Admin → Hand over | P1 |
 | **Organisation structure**: departments as a maintained list/hierarchy | 🟡 | Free text | P2 |
 | Mail server settings and test from the UI | ⬜ | Environment variables only | P2 |
 | Backup / full data export | ⬜ | | P2 |
@@ -100,5 +100,5 @@ Best practice: secure access, clean organisation data, safe off-boarding, recove
 3. ✅ **Staff weekly cycle** (done 2026-11-23) — weekly submission, reminders, planned leave feeding capacity.
 4. ✅ **Portfolio planning** (done 2026-11-23) — 12-week capacity plan, compliance view, prioritisation scoring.
 5. ✅ **Program** (done 2026-11-23) — roadmap, inter-project dependencies, program-level risks.
-6. **Admin security** — password policy, lockout, sign-in history, off-boarding with reassignment.
+6. ✅ **Admin security** (done 2026-11-23) — password policy, lockout, sign-in history, off-boarding with reassignment.
 7. P2/P3 items: templates, RACI/communications, resource requests, critical path, search, board pack, mail settings, backup.

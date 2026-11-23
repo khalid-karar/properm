@@ -292,6 +292,16 @@ await step("program manager: roadmap with conflict, add program risk", async () 
   await p.waitForSelector("#prisks td:has-text('UI program risk')");
 });
 
+p = await newPage("sec-admin"); await login(p, "admin");
+await step("admin: sign-in history and hand over a user's work", async () => {
+  await p.goto(BASE + "#/admin"); await p.waitForSelector("#security-card td");
+  await p.check("#security-card label.check input"); await p.waitForSelector("#security-card .badge:has-text('Wrong password')");
+  await p.locator("tr:has(td:has-text('uiimp1')) button:has-text('Hand over')").click(); await p.waitForSelector(".modal:has-text('No open work')");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/handover") && r.request().method() === "POST"), p.click(".modal button:has-text('Hand over')")]);
+  await p.waitForSelector("tr:has(td:has-text('uiimp1')) .badge:has-text('Inactive')");
+  await p.goto(BASE + "#/profile"); await p.waitForSelector("h2:has-text('Recent sign-ins')");
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

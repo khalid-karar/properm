@@ -21,8 +21,8 @@ def verify_pw(p: str, h: str) -> bool:
     return bcrypt.checkpw(p.encode(), h.encode())
 
 
-def make_token(user: User) -> str:
-    exp = datetime.now(timezone.utc) + timedelta(hours=8)
+def make_token(user: User, hours: float = 8) -> str:
+    exp = datetime.now(timezone.utc) + timedelta(hours=hours)
     return jwt.encode({"sub": str(user.id), "role": user.role, "exp": exp}, SECRET, algorithm="HS256")
 
 
@@ -34,7 +34,7 @@ def get_db(request: Request):
         db.close()
 
 
-def current_user(creds: HTTPAuthorizationCredentials = Depends(bearer), db=Depends(get_db)) -> User:
+def current_user(request: Request, creds: HTTPAuthorizationCredentials = Depends(bearer), db=Depends(get_db)) -> User:
     if not creds:
         raise HTTPException(401, "Not authenticated")
     try:
@@ -44,7 +44,15 @@ def current_user(creds: HTTPAuthorizationCredentials = Depends(bearer), db=Depen
     user = db.get(User, int(data["sub"]))
     if not user or not user.active:
         raise HTTPException(401, "Unknown or inactive user")
+    if request.url.path not in MUST_CHANGE_ALLOWED:
+        from .models import AccountSecurity
+        s = db.get(AccountSecurity, user.id)
+        if s and s.must_change_password:
+            raise HTTPException(403, "Change your password first (My profile)")
     return user
+
+
+MUST_CHANGE_ALLOWED = {"/me", "/me/password", "/me/profile", "/directory", "/notifications/count", "/config/governance"}
 
 
 def require_roles(*roles):

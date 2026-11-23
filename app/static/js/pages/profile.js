@@ -4,7 +4,7 @@ import { t } from "../i18n.js";
 import { errorBox, field, guarded, h, mount, toast } from "../ui.js";
 
 export default async function (root, { me }) {
-  const [p, dir] = await Promise.all([api("GET", "/me/profile"), api("GET", "/directory")]);
+  const [p, dir, logins] = await Promise.all([api("GET", "/me/profile"), api("GET", "/directory"), api("GET", "/me/logins").catch(() => [])]);
   const email = h("input", { type: "email", value: p.email || "" });
   const dg = h("select", {}, h("option", { value: "" }, "—"), dir.filter(u => u.id !== p.id).map(u => h("option", { value: u.id, selected: u.id === p.delegate_id }, u.full_name)));
   const cur = h("input", { type: "password", autocomplete: "current-password" }), nw = h("input", { type: "password", autocomplete: "new-password", minlength: 8 });
@@ -12,6 +12,7 @@ export default async function (root, { me }) {
   const emailOn = h("input", { type: "checkbox", checked: p.prefs.email_enabled });
   const kinds = p.kinds.map(k => ({ k, box: h("input", { type: "checkbox", checked: !p.prefs.muted_kinds.includes(k) }) }));
   mount(root, h("h1", {}, t("profile_title")),
+    me.must_change_password ? h("div", { class: "warn", id: "must-change" }, t("must_change_banner")) : null,
     h("div", { class: "card" }, h("h2", {}, t("account")),
       h("p", {}, h("strong", {}, p.full_name), ` · ${p.staff_id} · ${p.role}`, p.job_title ? ` · ${p.job_title}` : "", p.department ? ` · ${p.department}` : ""),
       p.line_manager_name ? h("p", { class: "muted" }, `${t("line_manager_is")}: ${p.line_manager_name}`) : null,
@@ -32,7 +33,8 @@ export default async function (root, { me }) {
       h("div", { class: "row" }, field(t("cur_password"), cur), field(t("new_password2"), nw)),
       h("button", { class: "btn", type: "button", onClick: async () => {
         perr.replaceChildren();
-        try { await api("POST", "/me/password", { current_password: cur.value, new_password: nw.value }); cur.value = nw.value = ""; toast(t("password_changed")); }
+        try { await api("POST", "/me/password", { current_password: cur.value, new_password: nw.value }); cur.value = nw.value = ""; toast(t("password_changed")); if (me.must_change_password) { location.hash = "#/"; location.reload(); } }
         catch (e) { perr.append(errorBox(e)); }
       } }, t("change_password"))));
+  if (logins.length) root.append(h("div", { class: "card" }, h("h2", {}, t("recent_signins")), h("ul", { class: "declog" }, logins.map(e => h("li", {}, `${e.at ? e.at.slice(0, 16).replace("T", " ") : ""} · `, e.ok ? t("signin_ok") : h("span", { class: "neg" }, t(`sr_${e.reason || "bad_password"}`)))))));
 }

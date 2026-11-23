@@ -34,7 +34,12 @@ DEFAULT_PARAMS = {
     "ai_hourly_limit": 30.0,        # AI requests per person per hour
     "alert_cooldown_days": 7,
     "intake_required": 0.0,         # 1 = project managers submit a proposal; a decision maker approves it into a project
-    "stage_gates": 0.0,             # 1 = planning->execution and execution->closing need an approved gate review       # a dismissed alert is not re-raised within this many days
+    "stage_gates": 0.0,
+    "password_min_length": 8.0,     # passwords also need at least one letter and one digit
+    "lockout_attempts": 5.0,        # failed sign-ins in a row before the account is locked
+    "lockout_minutes": 15.0,        # how long a locked account stays locked (an admin can unlock earlier)
+    "session_hours": 8.0,           # sign-in lifetime
+    "force_password_change": 0.0,   # 1 = new users and admin-set passwords must be changed at next sign-in             # 1 = planning->execution and execution->closing need an approved gate review       # a dismissed alert is not re-raised within this many days
 }
 
 # Non-project time codes valid for any user in any state (4.5 configuration, minimal).

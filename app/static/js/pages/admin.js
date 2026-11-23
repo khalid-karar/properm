@@ -23,8 +23,31 @@ export default async function (root) {
       } }] });
   }
 
+  async function handover(u, users) {
+    const w = await api("GET", `/admin/users/${u.id}/handover`);
+    const to = h("select", {}, users.filter(x => x.active && x.id !== u.id).map(x => h("option", { value: x.id }, `${x.full_name} (${x.role})`)));
+    const deact = h("input", { type: "checkbox", checked: true }), err = h("div");
+    const line = (k, v) => (Array.isArray(v) ? v.length : v) ? h("li", {}, `${t(`ho_${k}`)}: ${Array.isArray(v) ? v.join(", ") : v}`) : null;
+    modal({ title: `${t("handover")}: ${u.full_name}`, body: h("div", {}, err,
+      w.total ? h("ul", {}, Object.entries(w).filter(([k]) => k !== "total" && k !== "own_entries_pending").map(([k, v]) => line(k, v))) : h("p", { class: "muted" }, t("ho_nothing")),
+      w.own_entries_pending ? h("p", { class: "muted small" }, `${t("ho_own_entries_pending")}: ${w.own_entries_pending}`) : null,
+      field(t("ho_to"), to), h("label", { class: "check" }, deact, " ", t("ho_deactivate")), h("p", { class: "muted small" }, t("ho_note"))),
+      actions: [{ label: t("cancel"), class: "secondary", onClick: (c) => c() }, { label: t("handover"), onClick: async (c) => {
+        try { const r = await api("POST", `/admin/users/${u.id}/handover`, { to_user_id: Number(to.value), deactivate: deact.checked }); toast(`${t("saved")}: ${Object.values(r.moved).reduce((a, b) => a + b, 0)} ${t("ho_moved")}`); c(); await render(); }
+        catch (e) { mount(err, errorBox(e)); } } }] });
+  }
+
   async function render() {
     const me = await api("GET", "/me");
+    const sec = await api("GET", "/admin/logins?limit=60");
+    const failedOnly = h("input", { type: "checkbox", checked: !!render.failed, onChange: (e) => { render.failed = e.target.checked; render(); } });
+    const events = render.failed ? sec.events.filter(e => !e.ok) : sec.events;
+    const secCard = h("div", { class: "card", id: "security-card" }, h("h2", {}, t("security")), h("p", { class: "muted small" }, t("security_note")),
+      sec.locked.length ? [h("h3", {}, t("locked_accounts")), table([t("full_name"), t("locked_until"), ""], sec.locked.map(x => [x.user, x.locked_until.slice(0, 16).replace("T", " "),
+        h("button", { class: "btn small", type: "button", onClick: guarded(null, async () => { await api("POST", `/admin/users/${x.user_id}/unlock`); toast(t("saved")); await render(); }) }, t("unlock"))]))] : null,
+      sec.must_change.length ? h("p", { class: "small" }, `${t("must_change_list")}: ${sec.must_change.map(x => x.user).join(", ")}`) : null,
+      h("h3", {}, t("signin_history")), h("label", { class: "check" }, failedOnly, " ", t("failed_only")),
+      table([t("time"), t("staff_id"), t("full_name"), t("result")], events.map(e => [e.at ? e.at.slice(0, 16).replace("T", " ") : "", e.staff_id, e.user || "—", e.ok ? badge(t("signin_ok"), "GREEN") : badge(t(`sr_${e.reason || "bad_password"}`), "RED")]), t("none")));
     const [users, rates, cfg] = await Promise.all([api("GET", "/users"), api("GET", "/admin/rates"), api("GET", "/admin/rules")]);
     const f = { jt: h("input"), dep: h("input"), sid: h("input"), name: h("input"), pw: h("input", { type: "password", autocomplete: "new-password" }), role: h("select", {}, ROLES.map(r => h("option", { value: r }, r))), grade: h("input", { style: "width:90px" }),
       cap: h("input", { type: "number", value: "40", style: "width:80px" }), ccb: h("input", { type: "checkbox" }), lm: h("select", {}, h("option", { value: "" }, "—"), users.map(u => h("option", { value: u.id }, u.full_name))) };
@@ -64,9 +87,11 @@ export default async function (root) {
       } catch (e) { mount(cout, errorBox(e)); }
     }));
     mount(root, h("h1", {}, t("nav_admin")),
-      h("div", { class: "card" }, h("h2", {}, t("users")), table([t("staff_id"), t("full_name"), t("role"), t("grade"), t("capacity"), t("is_ccb"), t("status"), ""], users.map(u => [u.staff_id, u.full_name, u.role, u.rate_grade || "—", num(u.capacity_hours_week), u.is_ccb ? "✓" : "", badge(u.active ? t("active") : t("inactive"), u.active ? "approved" : "critical"), h("button", { class: "btn small", type: "button", onClick: () => editUser(u, users, me) }, t("edit"))]), t("none")),
+      h("div", { class: "card" }, h("h2", {}, t("users")), table([t("staff_id"), t("full_name"), t("role"), t("grade"), t("capacity"), t("is_ccb"), t("status"), ""], users.map(u => [u.staff_id, u.full_name, u.role, u.rate_grade || "—", num(u.capacity_hours_week), u.is_ccb ? "✓" : "", badge(u.active ? t("active") : t("inactive"), u.active ? "approved" : "critical"), h("span", { class: "row", style: "gap:6px;flex-wrap:nowrap" }, h("button", { class: "btn small", type: "button", onClick: () => editUser(u, users, me) }, t("edit")),
+          u.active && u.id !== me.id ? h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, () => handover(u, users)) }, t("handover")) : null)]), t("none")),
         h("h2", { style: "margin-top:14px" }, t("new_user")),
         h("div", { class: "row" }, field(t("staff_id"), f.sid), field(t("full_name"), f.name), field(t("job_title"), f.jt), field(t("department"), f.dep), field(t("password"), f.pw), field(t("role"), f.role), field(t("grade"), f.grade), field(t("capacity"), f.cap), field(t("is_ccb"), f.ccb), field(t("line_manager"), f.lm), addU), uerr),
+      secCard,
       h("div", { class: "card", id: "import-card" }, h("h2", {}, t("bulk_import")), h("p", { class: "muted small" }, t("bulk_import_note")), csvBox, h("p", {}, impBtn), cout),
       h("div", { class: "card" }, h("h2", {}, t("rates")), table([t("grade"), t("hourly_rate"), t("currency"), t("effective_from"), ""], rates.map(r => [r.grade, num(r.hourly_rate, 2), r.currency, r.effective_from, r.future ? h("span", { class: "row", style: "gap:6px" }, badge(t("future_rate"), "AMBER"), h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/admin/rates/${r.id}`); await render(); }) }, t("remove"))) : ""]), t("none")),
         h("div", { class: "row", style: "margin-top:12px" }, field(t("grade"), rg), field(t("hourly_rate"), rv), field(t("currency"), rc), field(t("effective_from"), rd), addR), rerr),

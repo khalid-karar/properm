@@ -46,10 +46,24 @@ def user_out(u: User, include_cost: bool = False) -> dict:
 
 @router.post("/auth/login")
 def login(body: LoginIn, db=Depends(get_db)):
+    from .. import acct
     u = db.query(User).filter_by(staff_id=body.staff_id).first()
+    if u and u.active:
+        until = acct.is_locked(db, u)
+        if until:
+            acct.record(db, body.staff_id, u, False, "locked")
+            db.commit()
+            raise HTTPException(423, f"Account locked after repeated failed sign-ins. Try again after {until.strftime('%H:%M')} UTC or ask an administrator to unlock it")
     if not u or not u.active or not verify_pw(body.password, u.password_hash):
+        locked = acct.on_failure(db, u) if u and u.active else False
+        acct.record(db, body.staff_id, u, False, "inactive" if u and not u.active else "locked_now" if locked else "bad_password" if u else "unknown_user")
+        db.commit()
         raise HTTPException(401, "Invalid credentials")
-    return {"access_token": make_token(u), "token_type": "bearer", "role": u.role}
+    s = acct.on_success(db, u)
+    acct.record(db, body.staff_id, u, True)
+    db.commit()
+    hours = float(acct.params(db).get("session_hours", 8))
+    return {"access_token": make_token(u, hours), "token_type": "bearer", "role": u.role, "must_change_password": bool(s.must_change_password)}
 
 
 def _demo_login_on() -> bool:
@@ -77,8 +91,10 @@ def demo_login(body: DemoLoginIn, db=Depends(get_db)):
 
 
 @router.get("/me")
-def me(user: User = Depends(current_user)):
-    return user_out(user)
+def me(user: User = Depends(current_user), db=Depends(get_db)):
+    from ..models import AccountSecurity
+    s = db.get(AccountSecurity, user.id)
+    return {**user_out(user), "must_change_password": bool(s and s.must_change_password)}
 
 
 @router.get("/directory")
@@ -100,9 +116,12 @@ def create_user(body: UserIn, db=Depends(get_db), admin: User = Depends(require_
         raise HTTPException(422, f"role must be one of {ROLES}")
     if db.query(User).filter_by(staff_id=body.staff_id).first():
         raise HTTPException(409, "staff_id already exists")
+    from .. import acct
+    acct.enforce_policy(db, body.password)
     u = User(**body.model_dump(exclude={"password"}), password_hash=hash_pw(body.password))
     db.add(u)
     db.flush()
+    acct.password_set(db, u, by_admin=True)
     log(db, admin.id, "user.created", "user", u.id, {"role": u.role})
     db.commit()
     return user_out(u, include_cost=True)
@@ -143,7 +162,10 @@ def update_user(uid: int, body: UserPatch, db=Depends(get_db), admin: User = Dep
     for k, v in changes.items():
         setattr(u, k, v)
     if body.new_password:
+        from .. import acct
+        acct.enforce_policy(db, body.new_password)
         u.password_hash = hash_pw(body.new_password)
+        acct.password_set(db, u, by_admin=True)
     log(db, admin.id, "user.updated", "user", u.id, {"fields": sorted(changes) + (["password"] if body.new_password else [])})
     db.commit()
     return user_out(u, include_cost=True)

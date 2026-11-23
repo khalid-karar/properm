@@ -661,3 +661,24 @@ class ProgramRisk(Base):
     @property
     def score(self) -> int:
         return self.probability * self.impact
+
+
+class AccountSecurity(Base):
+    """Sign-in protection per user: failed attempts, lockout, forced password change."""
+    __tablename__ = "account_security"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class LoginEvent(Base):
+    """Sign-in history (successes and failures)."""
+    __tablename__ = "login_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    staff_id: Mapped[str] = mapped_column(String(40), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    ok: Mapped[bool] = mapped_column(Boolean)
+    reason: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

@@ -57,9 +57,12 @@ def import_users(body: ImportIn, db=Depends(get_db), admin: User = Depends(requi
         pw = (r.get("password") or "").strip()
         generated = not pw
         if generated:
-            pw = secrets.token_urlsafe(9)
-        elif len(pw) < 8:
-            errors.append({"line": n, "staff_id": sid, "error": "password must be 8+ characters"}); continue
+            pw = secrets.token_urlsafe(9) + str(secrets.randbelow(10))
+        else:
+            from ..acct import policy_error
+            pe = policy_error(db, pw)
+            if pe:
+                errors.append({"line": n, "staff_id": sid, "error": pe}); continue
         try:
             cap = float(r.get("capacity_hours_week") or 40)
             if not 0 < cap <= 80:
@@ -71,6 +74,9 @@ def import_users(body: ImportIn, db=Depends(get_db), admin: User = Depends(requi
             errors.append({"line": n, "staff_id": sid, "error": "invalid e-mail"}); continue
         db.add(User(staff_id=sid, full_name=name, role=role, password_hash=hash_pw(pw), job_title=(r.get("job_title") or "").strip() or None,
                     department=(r.get("department") or "").strip() or None, email=email, capacity_hours_week=cap))
+        db.flush()
+        from ..acct import password_set
+        password_set(db, db.query(User).filter_by(staff_id=sid).first(), by_admin=True)
         seen.add(sid)
         created.append({"staff_id": sid, "full_name": name, "role": role, **({"password": pw} if generated else {})})
     if created:

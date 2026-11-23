@@ -30,6 +30,7 @@ async function route() {
   const allowed = NAV[me.role] || [];
   const page = name || homeFor(me.role);
   if (page === "login") { location.hash = `#/${homeFor(me.role)}`; return; }
+  if (me.must_change_password && page !== "profile") { location.hash = "#/profile"; return; }
   if (!allowed.includes(page) && page !== "notifications" && page !== "profile" && !(page === "decisions" && me.is_ccb)) { location.hash = `#/${homeFor(me.role)}`; return; }
 
   const main = h("main", {}, h("p", { class: "muted" }, t("loading")));
