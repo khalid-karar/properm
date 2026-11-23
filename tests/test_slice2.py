@@ -149,7 +149,8 @@ def test_issue_validation(c, world):
     h, pid = world["h"], world["pid"]
     assert c.post(f"/projects/{pid}/issues", headers=h["pm1"], json={"title": "t", "severity": "urgent"}).status_code == 422
     iid = c.post(f"/projects/{pid}/issues", headers=h["pm1"], json={"title": "t", "severity": "low"}).json()["id"]
-    r = c.patch(f"/projects/{pid}/issues/{iid}", headers=h["pm1"], json={"status": "resolved"})
+    assert c.patch(f"/projects/{pid}/issues/{iid}", headers=h["pm1"], json={"status": "resolved"}).status_code == 422
+    r = c.post(f"/projects/{pid}/issues/{iid}/close", headers=h["pm1"], json={**{"what_happened": "It happened", "how_handled": "We fixed it", "outcome": "Resolved fully"}, "status": "resolved"})
     assert r.status_code == 200 and r.json()["status"] == "resolved"
 
 

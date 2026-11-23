@@ -23,7 +23,8 @@ def test_closure_checklist_gates_archiving(c, world):
     r = c.post(f"/projects/{pid}/transition", headers=h["pmo1"], json={"to_state": "archived"})
     assert r.status_code == 409 and "issues_closed" in r.text
     issue = c.get(f"/projects/{pid}/issues", headers=h["pm1"]).json()[0]
-    assert c.patch(f"/projects/{pid}/issues/{issue['id']}", headers=h["pm1"], json={"status": "closed"}).status_code == 200
+    assert c.patch(f"/projects/{pid}/issues/{issue['id']}", headers=h["pm1"], json={"status": "closed"}).status_code == 422      # a bare status flip is refused
+    assert c.post(f"/projects/{pid}/issues/{issue['id']}/close", headers=h["pm1"], json={"what_happened": "It happened", "how_handled": "We fixed it", "outcome": "Resolved fully"}).status_code == 200
     assert c.get(f"/projects/{pid}/closure", headers=h["pm1"]).json()["ready"] is True
     assert c.post(f"/projects/{pid}/transition", headers=h["pmo1"], json={"to_state": "archived"}).status_code == 200
 

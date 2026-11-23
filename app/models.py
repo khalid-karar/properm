@@ -231,6 +231,23 @@ class Issue(Base):
     linked_risk_id: Mapped[int | None] = mapped_column(ForeignKey("risks.id"), nullable=True)
 
 
+class ClosureNote(Base):
+    """Why and how a risk or issue was closed (or reopened): never just a status flip."""
+    __tablename__ = "closure_notes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    kind: Mapped[str] = mapped_column(String(10))            # risk | issue
+    item_id: Mapped[int] = mapped_column(Integer)
+    event: Mapped[str] = mapped_column(String(10))           # closed | reopened
+    what_happened: Mapped[str | None] = mapped_column(Text, nullable=True)
+    how_handled: Mapped[str | None] = mapped_column(Text, nullable=True)
+    outcome: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lesson: Mapped[bool] = mapped_column(Boolean, default=False)
+    by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class WeeklyReport(Base):
     __tablename__ = "weekly_reports"
     __table_args__ = (UniqueConstraint("project_id", "week_start"),)

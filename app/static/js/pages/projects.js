@@ -258,7 +258,7 @@ async function detail(root, me, pid) {
   }
 
   async function risks(body, p) {
-    const [rs, is, lists] = await Promise.all([api("GET", `/projects/${pid}/risks`), api("GET", `/projects/${pid}/issues`), api("GET", "/config/lists")]);
+    const [rs, is, lists, cl] = await Promise.all([api("GET", `/projects/${pid}/risks`), api("GET", `/projects/${pid}/issues`), api("GET", "/config/lists"), api("GET", `/projects/${pid}/closures`)]);
     const who = (id) => (dir.find(u => u.id === id) || {}).full_name || "—";
     const ownerSel = (v) => h("select", {}, h("option", { value: "" }, "—"), dir.map(u => h("option", { value: u.id, selected: u.id === v }, u.full_name)));
     const rcat = h("select", {}, h("option", { value: "" }, "—"), lists.risk_category.map(x => h("option", { value: x.code }, x.label)));
@@ -284,11 +284,42 @@ async function detail(root, me, pid) {
           try { await api("PATCH", `/projects/${pid}/${kind}/${item.id}`, body); c(); await render(); } catch (e) { mount(e2, errorBox(e)); } } }] });
     };
     const editBtn = (kind, item) => canManage ? h("button", { class: "btn small secondary", type: "button", onClick: () => editItem(kind, item) }, t("edit")) : "";
-    const statusSel = (kind, item, options) => canManage ? h("select", { value: item.status, onChange: guarded(null, async (ev) => { await api("PATCH", `/projects/${pid}/${kind}/${item.id}`, { status: ev.target.value }); await render(); }) }, options.map(o => h("option", { value: o }, st(o)))) : st(item.status);
+    const notesOf = (kind, item) => cl.filter(n => n.kind === kind.slice(0, -1) && n.item_id === item.id);
+    const area = (rows = 3) => h("textarea", { rows, dir: "auto", class: "ta", style: "width:100%" });
+    const closeDlg = (kind, item) => {
+      const a = area(), b = area(), c_ = area(), lesson = h("input", { type: "checkbox", id: "cl-lesson" }), e2 = h("div");
+      const stSel = kind === "issues" ? h("select", { id: "cl-status" }, ["resolved", "closed"].map(x => h("option", { value: x }, st(x)))) : null;
+      a.id = "cl-what"; b.id = "cl-how"; c_.id = "cl-outcome";
+      modal({ title: `${t("close_item")}: ${item.title}`, body: h("div", {}, e2, field(t("cl_what"), a), field(t("cl_how"), b), field(t("cl_outcome"), c_),
+        stSel ? field(t("status"), stSel) : null, h("label", { class: "small check" }, lesson, ` ${t("cl_lesson")}`)),
+        actions: [{ label: t("cancel"), class: "secondary", onClick: (c) => c() }, { label: t("close_item"), onClick: async (c) => {
+          if ([a, b, c_].some(x => x.value.trim().length < 3)) { mount(e2, errorBox({ message: t("cl_need_all") })); return; }
+          try { await api("POST", `/projects/${pid}/${kind}/${item.id}/close`, { what_happened: a.value.trim(), how_handled: b.value.trim(), outcome: c_.value.trim(), lesson: lesson.checked, status: stSel ? stSel.value : "closed" }); c(); toast(t("cl_done")); await render(); } catch (e) { mount(e2, errorBox(e)); } } }] });
+    };
+    const reopenDlg = (kind, item) => {
+      const r = area(); r.id = "cl-reason"; const e2 = h("div");
+      modal({ title: `${t("cl_reopen")}: ${item.title}`, body: h("div", {}, e2, field(t("reason"), r)),
+        actions: [{ label: t("cancel"), class: "secondary", onClick: (c) => c() }, { label: t("cl_reopen"), onClick: async (c) => {
+          if (r.value.trim().length < 3) { mount(e2, errorBox({ message: t("cl_need_all") })); return; }
+          try { await api("POST", `/projects/${pid}/${kind}/${item.id}/reopen`, { reason: r.value.trim() }); c(); await render(); } catch (e) { mount(e2, errorBox(e)); } } }] });
+    };
+    const historyDlg = (kind, item) => modal({ title: `${t("cl_history")}: ${item.title}`, body: h("div", {}, ...notesOf(kind, item).map(n => h("div", { class: "card", style: "margin:8px 0" },
+      h("b", {}, n.event === "closed" ? t("cl_closed_by") : t("cl_reopened_by")), ` ${n.by || "—"} · ${String(n.at).slice(0, 16).replace("T", " ")}`,
+      n.event === "closed" ? h("div", {}, h("p", {}, h("b", {}, `${t("cl_what")}: `), n.what_happened), h("p", {}, h("b", {}, `${t("cl_how")}: `), n.how_handled), h("p", {}, h("b", {}, `${t("cl_outcome")}: `), n.outcome), n.lesson ? badge(t("cl_lesson_badge"), "info") : null)
+        : h("p", {}, h("b", {}, `${t("reason")}: `), n.reason)))), actions: [{ label: t("close"), onClick: (c) => c() }] });
+    const lifecycle = (kind, item, options) => {
+      const done = item.status === "closed" || item.status === "resolved";
+      const hasNotes = notesOf(kind, item).length > 0;
+      if (!canManage) return h("span", {}, st(item.status), hasNotes ? h("button", { class: "btn small secondary", type: "button", style: "margin-inline-start:6px", onClick: () => historyDlg(kind, item) }, t("cl_history")) : null);
+      return h("span", { class: "row", style: "gap:6px;flex-wrap:nowrap" },
+        done ? badge(st(item.status), "ok") : h("select", { "aria-label": t("status"), onChange: guarded(null, async (ev) => { await api("PATCH", `/projects/${pid}/${kind}/${item.id}`, { status: ev.target.value }); await render(); }) }, options.filter(o => o !== "closed" && o !== "resolved").map(o => h("option", { value: o, selected: o === item.status }, st(o)))),
+        done ? h("button", { class: "btn small secondary", type: "button", "data-act": "reopen", onClick: () => reopenDlg(kind, item) }, t("cl_reopen")) : h("button", { class: "btn small", type: "button", "data-act": "close", onClick: () => closeDlg(kind, item) }, t("close_item")),
+        hasNotes ? h("button", { class: "btn small secondary", type: "button", "data-act": "history", onClick: () => historyDlg(kind, item) }, t("cl_history")) : null);
+    };
     mount(body,
-      h("div", { class: "card" }, h("h2", {}, t("risks")), table([t("title"), t("category"), t("owner"), t("probability"), t("impact"), t("score"), t("status"), ""], rs.map(r => [r.title, r.category || "—", who(r.owner_id), r.probability, r.impact, badge(r.score, r.score >= 20 ? "critical" : r.score >= 15 ? "warning" : "info"), statusSel("risks", r, ["open", "mitigating", "occurred", "closed"]), editBtn("risks", r)]), t("none")),
+      h("div", { class: "card" }, h("h2", {}, t("risks")), table([t("title"), t("category"), t("owner"), t("probability"), t("impact"), t("score"), t("status"), ""], rs.map(r => [r.title, r.category || "—", who(r.owner_id), r.probability, r.impact, badge(r.score, r.score >= 20 ? "critical" : r.score >= 15 ? "warning" : "info"), lifecycle("risks", r, ["open", "mitigating", "occurred", "closed"]), editBtn("risks", r)]), t("none")),
         canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("title"), rt), field(t("category"), rcat), field(t("owner"), rown), field(t("probability"), rp), field(t("impact"), ri), addR) : null),
-      h("div", { class: "card" }, h("h2", {}, t("issues")), table([t("title"), t("severity"), t("owner"), t("due_date"), t("status"), ""], is.map(i => [i.title, badge(st(i.severity), i.severity === "critical" ? "critical" : i.severity === "high" ? "warning" : "info"), who(i.owner_id), i.due_date || "—", statusSel("issues", i, ["open", "in_progress", "resolved", "closed"]), editBtn("issues", i)]), t("none")),
+      h("div", { class: "card" }, h("h2", {}, t("issues")), table([t("title"), t("severity"), t("owner"), t("due_date"), t("status"), ""], is.map(i => [i.title, badge(st(i.severity), i.severity === "critical" ? "critical" : i.severity === "high" ? "warning" : "info"), who(i.owner_id), i.due_date || "—", lifecycle("issues", i, ["open", "in_progress", "resolved", "closed"]), editBtn("issues", i)]), t("none")),
         canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("title"), it), field(t("severity"), isv), field(t("due_date"), idue), field(t("owner"), iown), addI) : null), err);
   }
 

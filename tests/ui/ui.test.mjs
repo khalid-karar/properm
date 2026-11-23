@@ -465,6 +465,28 @@ await step("profile: set up two-factor, then sign in with a code", async () => {
 });
 
 p = await newPage("brief"); await login(p, "pmo1");
+await step("risks and issues: closing needs a note, shows in history, reopen needs a reason", async () => {
+  const q = await newPage("closure"); await login(q, "pmo1");
+  const pid = await q.evaluate(async () => {
+    const tok = JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage)[0])).token;
+    const H = { "Content-Type": "application/json", Authorization: "Bearer " + tok };
+    const r = await (await fetch("/projects", { method: "POST", headers: H, body: JSON.stringify({ number: "CL-UI-1", name: "Closure test", state: "planning", planned_start: "2027-01-03", planned_end: "2027-06-30" }) })).json();
+    await fetch(`/projects/${r.id}/risks`, { method: "POST", headers: H, body: JSON.stringify({ title: "Vendor delay", probability: 3, impact: 3 }) });
+    return r.id;
+  });
+  await q.goto(BASE + "#/projects/" + pid); await tab(q, "Risks"); await q.waitForSelector("td:has-text('Vendor delay')");
+  await q.click("button[data-act=close]"); await q.waitForSelector("#cl-what");
+  await q.locator(".modal .actions button").last().click(); await q.waitForSelector(".modal .err, .modal [role=alert]", { timeout: 3000 }).catch(() => {});
+  await q.fill("#cl-what", "Vendor was late by two weeks"); await q.fill("#cl-how", "Moved the test window and agreed a penalty"); await q.fill("#cl-outcome", "No effect on go-live"); await q.check("#cl-lesson");
+  await q.screenshot({ path: "/tmp/shots/closure-dialog.png" });
+  await q.locator(".modal .actions button").last().click(); await q.waitForSelector(".toast:has-text('Closed and recorded')");
+  await q.waitForSelector("button[data-act=reopen]"); await q.click("button[data-act=history]"); await q.waitForSelector(".modal :text('Moved the test window')");
+  await q.screenshot({ path: "/tmp/shots/closure-history.png" });
+  await q.locator(".modal .actions button").last().click();
+  await q.click("button[data-act=reopen]"); await q.fill("#cl-reason", "The vendor slipped again"); await q.locator(".modal .actions button").last().click();
+  await q.waitForSelector("button[data-act=close]");
+});
+
 await step("project book: paste, analyse, review, apply as a plan", async () => {
   const pid = await p.evaluate(async () => {
     const tok = JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage)[0])).token;

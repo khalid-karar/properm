@@ -111,7 +111,7 @@ def test_triage_loop_end_to_end(c, costed, app):
     assert act("admin", action="reject_verification").status_code == 422      # reason required
     assert act("admin", action="reject_verification", note="risk still open").json()["status"] == "assigned"
     act("pmo1", action="resolve")
-    c.patch(f"/projects/{pid}/risks/{rid}", headers=h["pm1"], json={"status": "closed"})
+    c.post(f"/projects/{pid}/risks/{rid}/close", headers=h["pm1"], json={"what_happened": "It happened", "how_handled": "We fixed it", "outcome": "Resolved fully"})
     res = evaluate(c, costed)
     assert res["cleared"] == 1
     closed = act("admin", action="verify").json()
