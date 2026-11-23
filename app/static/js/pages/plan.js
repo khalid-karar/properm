@@ -1,7 +1,7 @@
 // Project "Plan" tab: milestones, KPIs, dependencies, per-person activity limits.
 import { api } from "../api.js";
 import { t } from "../i18n.js";
-import { gantt } from "../charts.js";
+import { timeline } from "../timeline.js";
 import { badge, bar, errorBox, field, guarded, h, mount, num, table, toast } from "../ui.js";
 
 const RAG = { green: "GREEN", amber: "AMBER", red: "RED" };
@@ -68,9 +68,11 @@ export async function plan(body, p, { pid, dir, canManage, render }) {
   const cp = await api("GET", `/projects/${pid}/critical-path`);
   const crit = new Set(cp.critical), rowIdx = Object.fromEntries(g.map((a, i) => [a.id, i]));
   const glinks = deps.filter(x => x.activity_id in rowIdx && x.predecessor_id in rowIdx).map(x => { const a = g[rowIdx[x.activity_id]], pr = g[rowIdx[x.predecessor_id]];
-    return { fromRow: rowIdx[x.predecessor_id], fromDate: pr.planned_end, toRow: rowIdx[x.activity_id], toDate: a.planned_start, bad: crit.has(a.code) && crit.has(pr.code) }; });
+    return { from: pr.id, to: a.id, bad: crit.has(a.code) && crit.has(pr.code) }; });
+  const grpOf = (a) => { const m = /^([A-Za-z]+\d*)[-_.]/.exec(a.code); return m ? m[1] : ""; };
   const gcard = h("div", { class: "card", id: "gantt-card" }, h("h2", {}, t("timeline")),
-    g.length ? gantt({ rows: g.map(a => ({ label: `${a.code} ${a.name}`, start: a.planned_start, end: a.planned_end, color: crit.has(a.code) ? "var(--red)" : null })), links: glinks, marks: ms.map(x => ({ label: x.name, date: x.due_date, done: !!x.achieved_on })), todayLabel: t("today") }) : h("p", { class: "muted" }, t("timeline_empty")));
+    g.length ? timeline({ rows: g.map(a => ({ id: a.id, label: `${a.code} ${a.name}`, start: a.planned_start, end: a.planned_end, group: grpOf(a), critical: crit.has(a.code), pct: a.pct_complete })), links: glinks, marks: ms.map(x => ({ label: x.name, date: x.due_date, done: !!x.achieved_on })),
+      labels: { month: t("tl_month"), week: t("tl_week"), fit: t("tl_fit"), today: t("today"), milestones: t("milestones"), expand: t("tl_expand"), collapse: t("tl_collapse") } }) : h("p", { class: "muted" }, t("timeline_empty")));
   if (cp.activities.length) gcard.append(h("p", { class: "small", id: "critical-path" }, h("strong", {}, `${t("critical_path")}: `), cp.critical.join(" → ") || "—", ` · ${t("network_finish")}: ${cp.finish}`,
     cp.activities.some(x => x.pushed_days > 0) ? h("span", { class: "neg" }, ` · ${t("pushed_note")}: ${cp.activities.filter(x => x.pushed_days > 0).map(x => `${x.code} +${x.pushed_days}d`).join(", ")}`) : null));
   const imp = editable && p.state === "planning" ? importCard("plan", `/projects/${pid}/import/plan`, { accept: ".xlsx,.csv,.xml", after: render }) : null;

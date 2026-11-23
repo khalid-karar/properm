@@ -195,7 +195,7 @@ await step("risk edit, timeline, portfolio filters, investment table", async () 
   await p.locator(".modal input").first().fill("Edited risk title");
   await Promise.all([p.waitForResponse(r => r.request().method() === "PATCH" && r.url().includes("/risks/")), p.click(".modal button:has-text('Save')")]);
   await p.waitForSelector("td:has-text('Edited risk title')");
-  await p.goto(BASE + "#/projects/1"); await tab(p, "Plan"); await p.waitForSelector("#gantt-card svg.chart");
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Plan"); await p.waitForSelector("#gantt-card .tl .tl-bar"); await p.click("#gantt-card [data-zoom=week]"); await p.waitForSelector("#gantt-card [data-zoom=week][aria-pressed=true]");
   await p.goto(BASE + "#/projects"); await p.waitForSelector("h1:has-text('Projects')"); await p.selectOption("label:has-text('State') select", { index: 1 }); await p.waitForSelector("td");
 });
 p = await newPage("pmo-inv"); await login(p, "pmo1");
@@ -511,6 +511,7 @@ await step("project book: paste, analyse, review, apply as a plan", async () => 
   await p.waitForSelector("#brief-apply:not([disabled])"); await p.click("#brief-apply"); await p.waitForSelector(".toast:has-text('Plan created')");
   await p.waitForSelector("#brief-result td");
   await tab(p, "Plan"); await p.waitForSelector("#imp-plan");
+  await p.waitForSelector("#gantt-card .tl-gtoggle"); await p.click("#gantt-card button:has-text('Collapse all')"); await p.waitForSelector("#gantt-card .tl-gbar", { state: "attached" }); await p.click("#gantt-card button:has-text('Expand all')"); await p.waitForSelector("#gantt-card .tl-bar");
   await p.setInputFiles("#imp-file-plan", { name: "plan.csv", mimeType: "text/csv", buffer: Buffer.from("code,name,planned_hours\nX-1,Imported task,24\nX-2,Another,16\n") });
   await p.click("#imp-preview-plan"); await p.waitForSelector("#imp-out-plan td");
   await p.click("#imp-commit-plan"); await p.waitForSelector(".toast:has-text('Saved rows')");
