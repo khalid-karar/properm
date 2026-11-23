@@ -197,3 +197,8 @@ ul.declog{margin:6px 0;padding-inline-start:18px;line-height:1.6}
 .day{border:1px solid var(--line);border-radius:8px;padding:6px;text-align:center;font-size:13px}
 .day .dn{color:var(--muted);font-size:11px}.day .dh{font-weight:600}
 .day.ok{border-color:var(--green)}.day.miss{border-color:var(--red);background:rgba(200,40,40,.06)}.day.off{opacity:.55}
+table.heat{border-collapse:collapse;width:100%;font-size:13px}
+table.heat th,table.heat td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+table.heat td:first-child,table.heat th:first-child{text-align:start}
+td.hm-g{background:rgba(40,150,80,.12)}td.hm-a{background:rgba(220,150,20,.2)}td.hm-r{background:rgba(200,40,40,.2);font-weight:600}
+table.heat tr.tot td{border-top:2px solid var(--line-strong,#cbd2dc)}

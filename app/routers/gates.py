@@ -195,6 +195,8 @@ def decide_proposal(xid: int, body: DecideIn, db=Depends(get_db), user: User = D
                              "planned_end": x.est_end, "budget_ceiling": x.est_cost, "currency": x.currency,
                              "client": x.client, "sponsor": x.sponsor, "scope_statement": scope[:10000]}, pm_id, user.id)
         x.project_id = p.id
+        from ..models import ProjectScore
+        db.add(ProjectScore(project_id=p.id, strategic_fit=x.strategic_fit, value=x.value, urgency=x.urgency, risk_level=x.risk_level, updated_by=user.id))
     record_decision(db, "proposal", x.id, x.project_id, f"Proposal {x.number} {x.name}", body.outcome, body.rationale, body.conditions, user)
     log(db, user.id, "proposal.decided", "proposal", x.id, {"outcome": body.outcome, "project_id": x.project_id})
     emit(db, "proposal.decided", {"proposal_id": x.id, "user_id": x.submitted_by, "outcome": body.outcome,

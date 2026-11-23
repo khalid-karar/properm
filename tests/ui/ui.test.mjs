@@ -275,6 +275,14 @@ await step("PMO: approve leave, team week status, reminders", async () => {
   const b = p.locator("#team-weeks button:has-text('Send reminders')"); if (await b.count()) await Promise.all([p.waitForResponse(r => r.url().includes("/reminders/")), b.click()]);
 });
 
+p = await newPage("pf-pmo"); await login(p, "pmo1");
+await step("portfolio: priorities, score a project, capacity heat map, compliance", async () => {
+  await p.goto(BASE + "#/portfolio"); await p.waitForSelector("#priorities td"); await p.waitForSelector("#capacity td.hm"); await p.waitForSelector("#compliance td");
+  await p.locator("#priorities button:has-text('Score')").first().click();
+  await Promise.all([p.waitForResponse(r => r.url().includes("/portfolio/scores/")), p.click(".modal button:has-text('Save')")]);
+  await p.selectOption("#capacity select", "person"); await p.waitForSelector("#capacity td:has-text('Faisal')");
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

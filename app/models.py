@@ -621,3 +621,14 @@ class WeekSubmission(Base):
     missing_days: Mapped[list] = mapped_column(JSON, default=list)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ProjectScore(Base):
+    """Strategic scores for a running project, so the whole portfolio can be ranked with the proposals."""
+    __tablename__ = "project_scores"
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), primary_key=True)
+    strategic_fit: Mapped[int] = mapped_column(Integer, default=3)
+    value: Mapped[int] = mapped_column(Integer, default=3)
+    urgency: Mapped[int] = mapped_column(Integer, default=3)
+    risk_level: Mapped[int] = mapped_column(Integer, default=3)
+    updated_by: Mapped[int] = mapped_column(ForeignKey("users.id"))

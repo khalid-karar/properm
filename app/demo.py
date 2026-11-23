@@ -95,6 +95,15 @@ def seed(app, pw, c):
     ok(c.patch(f"/projects/{a_pid}/milestones/{ms[0]['id']}", headers=pm, json={"achieved_on": d(-18)}))
     k = ok(c.post(f"/projects/{a_pid}/kpis", headers=pm, json={"name": "On-time delivery", "unit": "%", "target": 95}))
     ok(c.put(f"/projects/{a_pid}/kpis/{k['id']}/actual", headers=pm, json={"actual": 88}))
+    # portfolio: departments, planned hours for the coming weeks, strategic scores
+    for sid, dep in (("s1", "Delivery"), ("s2", "Data"), ("s3", "Delivery"), ("pm1", "PMO Office")):
+        ok(c.patch(f"/users/{ids[sid]}", headers=admin, json={"department": dep}))
+    ws0 = T - timedelta(days=(T.weekday() + 1) % 7)
+    for wk in range(8):
+        for sid, pid_, hrs in (("s1", a_pid, 32), ("s2", b_pid, 36 + (12 if wk in (2, 3) else 0)), ("s3", a_pid, 20), ("s3", b_pid, 16)):
+            ok(c.put(f"/projects/{pid_}/allocations", headers=pm, json={"user_id": ids[sid], "week_of": str(ws0 + timedelta(days=7 * wk)), "hours": hrs}))
+    ok(c.put(f"/portfolio/scores/{a_pid}", headers=pmo, json={"strategic_fit": 5, "value": 4, "urgency": 4, "risk_level": 2}))
+    ok(c.put(f"/portfolio/scores/{b_pid}", headers=pmo, json={"strategic_fit": 3, "value": 4, "urgency": 3, "risk_level": 4}))
     # weekly cycle: one submitted week, leave requests (one approved, one waiting)
     lw = T - timedelta(days=((T.weekday() + 1) % 7) + 7)
     ok(c.post("/me/week/submit", headers=tok("s1"), json={"week_of": str(lw), "note": "Two days at the vendor workshop"}))

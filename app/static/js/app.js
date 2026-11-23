@@ -9,10 +9,10 @@ let me = null;
 const NAV = {
   STAFF: ["todo", "timesheet", "leave", "mine", "approvals", "projects", "alerts", "guide"],
   PM: ["todo", "timesheet", "leave", "approvals", "projects", "load", "dashboard", "decisions", "proposals", "reports", "lessons", "alerts", "guide"],
-  PMO: ["todo", "timesheet", "leave", "approvals", "projects", "load", "executive", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "alerts", "audit", "guide"],
-  ADMIN: ["todo", "timesheet", "leave", "approvals", "projects", "load", "executive", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "alerts", "audit", "config", "admin", "guide"],
-  DECISION_MAKER: ["todo", "executive", "leave", "projects", "load", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "alerts", "guide"],
-  PROGRAM_MANAGER: ["todo", "executive", "leave", "projects", "load", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "alerts", "guide"],
+  PMO: ["todo", "timesheet", "leave", "approvals", "projects", "load", "executive", "portfolio", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "alerts", "audit", "guide"],
+  ADMIN: ["todo", "timesheet", "leave", "approvals", "projects", "load", "executive", "portfolio", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "alerts", "audit", "config", "admin", "guide"],
+  DECISION_MAKER: ["todo", "executive", "portfolio", "leave", "projects", "load", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "alerts", "guide"],
+  PROGRAM_MANAGER: ["todo", "executive", "portfolio", "leave", "projects", "load", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "alerts", "guide"],
 };
 const HOME = { STAFF: "timesheet", PM: "projects", DECISION_MAKER: "executive" };
 export const homeFor = (role) => HOME[role] || "dashboard";

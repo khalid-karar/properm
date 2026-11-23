@@ -42,8 +42,8 @@ Best practice: run the governance cycle (stage gates, reporting calendar, compli
 |---|---|---|---|
 | Portfolio health, alerts, audit, period lock, reports, filters | ✅ | — | |
 | **Stage gates**: entry criteria and a recorded approval to move tendering → planning → execution → closing | ✅ | Automatic checks, recorded decision; switch in Configuration | P1 |
-| **Compliance view**: late weekly reports, missing timesheets, stale risks, overdue actions, per PM | ⬜ | Signals exist separately, no single view | P1 |
-| **Capacity plan** for the next 8–12 weeks (demand vs supply by department/grade) | ⬜ | Resource load shows one week | P1 |
+| **Compliance view**: late weekly reports, missing timesheets, stale risks, overdue actions, per PM | ✅ | Portfolio page | P1 |
+| **Capacity plan** for the next 8–12 weeks (demand vs supply by department/grade) | ✅ | Portfolio page, by department, grade or person | P1 |
 | **Project templates / methodology library** maintained by PMO | ⬜ | | P2 |
 | Reporting calendar (who must submit what, when) | 🟡 | Scheduled reports exist; no due-date calendar | P2 |
 
@@ -66,7 +66,7 @@ Best practice: decides on investment (what to start, stop, continue), not on dai
 |---|---|---|---|
 | Executive dashboard, decisions queue, investment vs return, drill-down | ✅ | — | |
 | **Project intake approval** (business case → approve/reject before a PM can start) | ✅ | Proposals page; switch in Configuration | P1 |
-| **Prioritisation / scoring** (strategic fit, value, risk, cost) to rank the portfolio | 🟡 | Proposals are scored and ranked; running projects not yet | P1 |
+| **Prioritisation / scoring** (strategic fit, value, risk, cost) to rank the portfolio | ✅ | Projects and proposals on one ranked list (Portfolio page) | P1 |
 | Decision options beyond approve/reject: **defer, request more information, approve with conditions**, with rationale kept | ✅ | Proposals, stage gates and change requests | P1 |
 | **Steering-committee pack**: one-page per project, exportable | 🟡 | Period reports exist; no board pack format | P2 |
 | What-if (stop or delay a project, effect on budget and capacity) | ⬜ | | P3 |
@@ -98,7 +98,7 @@ Best practice: secure access, clean organisation data, safe off-boarding, recove
 1. ✅ **Governance core** (done 2026-11-23) — project intake approval, stage gates with criteria, decision options with rationale (Decision Maker + PMO, P1).
 2. ✅ **PM control** (done 2026-11-23) — baseline vs current variance, estimate to complete, decision & action log, lessons learned register.
 3. ✅ **Staff weekly cycle** (done 2026-11-23) — weekly submission, reminders, planned leave feeding capacity.
-4. **Portfolio planning** — 12-week capacity plan, compliance view, prioritisation scoring.
+4. ✅ **Portfolio planning** (done 2026-11-23) — 12-week capacity plan, compliance view, prioritisation scoring.
 5. **Program** — roadmap, inter-project dependencies, program-level risks.
 6. **Admin security** — password policy, lockout, sign-in history, off-boarding with reassignment.
 7. P2/P3 items: templates, RACI/communications, resource requests, critical path, search, board pack, mail settings, backup.
