@@ -17,7 +17,17 @@ export default async function (root, { me }) {
 
   async function render() {
     const wk = fmtDate(S.week);
-    const [entries, util] = await Promise.all([api("GET", `/timesheets/mine?week_of=${wk}`), api("GET", `/me/utilization?week_of=${wk}`)]);
+    const [entries, util, wkst] = await Promise.all([api("GET", `/timesheets/mine?week_of=${wk}`), api("GET", `/me/utilization?week_of=${wk}`), api("GET", `/me/week?week_of=${wk}`)]);
+    const wnote = h("input", { placeholder: t("week_note_ph"), style: "min-width:260px" }), werr = h("div");
+    const dayName = (iso) => new Date(iso + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" });
+    const weekCard = h("div", { class: "card", id: "week-card" }, h("h2", {}, t("week_status"), " ",
+        wkst.submitted ? badge(`${t("week_submitted")} ${wkst.submitted.at.slice(0, 10)}`, "GREEN") : badge(t("week_not_submitted"), "AMBER")),
+      h("div", { class: "days" }, wkst.days.map(d => h("div", { class: `day ${d.off ? "off" : wkst.missing_days.includes(d.date) ? "miss" : d.hours ? "ok" : ""}`, title: d.holiday || "" },
+        h("div", { class: "dn" }, dayName(d.date)), h("div", { class: "dh" }, d.off === "leave" ? t("leave_short") : d.off === "holiday" ? t("holiday_short") : d.off ? "—" : `${num(d.hours)} h`)))),
+      wkst.missing_days.length ? h("p", { class: "small neg" }, `${t("missing_days_h")}: ${wkst.missing_days.length}`) : null,
+      wkst.can_submit ? h("div", { class: "row", style: "margin-top:8px" }, wkst.missing_days.length ? field(t("note"), wnote) : null,
+        h("button", { class: "btn", type: "button", id: "submit-week", onClick: guarded(null, async () => { mount(werr); try { await api("POST", "/me/week/submit", { week_of: wk, note: wnote.value.trim() || null }); toast(t("week_submitted")); await render(); } catch (e) { mount(werr, errorBox(e)); } }) },
+          wkst.submitted ? t("resubmit_week") : t("submit_week"))) : null, werr);
     const projName = (id) => (S.projects.find(p => p.id === id) || {}).number || id;
     await Promise.all([...new Set(entries.filter(e => e.project_id).map(e => e.project_id))].map(async (pid) => { if (!S.actCache[pid]) { try { S.actCache[pid] = await api("GET", `/projects/${pid}`); } catch { /* no access: fall back to id */ } } }));
     const actCode = (e) => { const pr = S.actCache[e.project_id]; const a = pr && pr.activities.find(x => x.id === e.activity_id); return a ? a.code : `#${e.activity_id}`; };
@@ -43,6 +53,7 @@ export default async function (root, { me }) {
       h("div", { class: "card" }, bar(util.utilization_pct, live > util.capacity),
         Object.keys(util.per_project).length ? h("div", { class: "row", style: "margin-top:12px; gap:8px" }, h("span", { class: "muted small" }, `${t("this_week_by_project")}:`),
           Object.entries(util.per_project).map(([k, v]) => badge(`${/^\d+$/.test(k) ? projName(Number(k)) : k}: ${num(v)} h`, "GREY"))) : null),
+      weekCard,
       await form(),
       h("div", { class: "card" }, h("h2", {}, t("my_entries")),
         table([t("date"), t("project"), t("activity"), t("hours"), t("status"), t("flags"), ""],

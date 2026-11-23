@@ -9,6 +9,8 @@ export default async function (root, { me }) {
     const link = (pid, text) => h("a", { href: `#/projects/${pid}` }, text);
     mount(root, h("h1", {}, `${t("nav_todo")} `, d.total ? badge(d.total, "critical") : null),
       d.total ? null : h("div", { class: "card" }, h("p", { class: "muted" }, t("nothing_pending"))),
+      d.week_due ? h("div", { class: "card" }, h("h2", {}, t("week_due_title")), h("p", {}, `${t("week_of")} ${d.week_due.week_start}: ${num(d.week_due.total)} h` + (d.week_due.missing_days ? ` · ${t("missing_days_h")}: ${d.week_due.missing_days}` : ""), " ", h("a", { class: "btn small", href: "#/timesheet" }, t("nav_timesheet")))) : null,
+      d.leave_waiting ? h("div", { class: "card" }, h("h2", {}, t("leave_requests")), h("p", {}, `${d.leave_waiting} ${t("leave_waiting_txt")} `, h("a", { href: "#/leave" }, t("open")))) : null,
       d.approvals_waiting ? h("div", { class: "card" }, h("h2", {}, t("queue")), h("p", {}, `${d.approvals_waiting} ${t("entries_waiting")} `, h("a", { href: "#/approvals" }, t("open")))) : null,
       d.rejected_entries.length ? h("div", { class: "card" }, h("h2", {}, t("rejected_entries")), h("p", { class: "muted small" }, t("rejected_note")),
         table([t("date"), t("hours"), t("reason"), ""], d.rejected_entries.map(e => [e.entry_date, num(e.hours), e.decision_reason || "—", h("span", { class: "row", style: "gap:6px" },

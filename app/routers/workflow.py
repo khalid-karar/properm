@@ -112,5 +112,14 @@ def todo(db=Depends(get_db), user: User = Depends(current_user)):
     actions = [{"id": x.id, "project_id": x.project_id, "project": names.get(x.project_id), "title": x.title, "due_date": x.due_date,
                 "overdue": x.due_date is not None and x.due_date < date.today()}
                for x in db.query(ProjectAction).filter(ProjectAction.owner_id == user.id, ProjectAction.status == "open").order_by(ProjectAction.due_date)]
+    from .weekly import can_decide_leave, week_status, ws_of
+    from ..models import LeaveRequest, WeekSubmission
+    last = ws_of(date.today()) - timedelta(days=7)
+    week_due = None
+    if user.role in ("STAFF", "PM") and not db.query(WeekSubmission).filter_by(user_id=user.id, week_start=last).first():
+        s = week_status(db, user, last)
+        week_due = {"week_start": last.isoformat(), "missing_days": len(s["missing_days"]), "total": s["total"]}
+    leave_waiting = sum(1 for x in db.query(LeaveRequest).filter_by(status="requested") if can_decide_leave(db, user, x))
     return {"rejected_entries": rejected, "approvals_waiting": waiting, "alerts": alerts, "risks": risks, "issues": issues, "actions": actions,
-            "total": len(rejected) + (1 if waiting else 0) + len(alerts) + len(risks) + len(issues) + len(actions)}
+            "week_due": week_due, "leave_waiting": leave_waiting,
+            "total": len(rejected) + (1 if waiting else 0) + len(alerts) + len(risks) + len(issues) + len(actions) + (1 if week_due else 0) + (1 if leave_waiting else 0)}

@@ -35,7 +35,11 @@ export default async function (root, { me }) {
     const flagBox = h("input", { type: "checkbox", checked: F.flagged, onChange: (e) => { F.flagged = e.target.checked; render(); } });
     const all = h("input", { type: "checkbox", checked: rows.length > 0 && rows.every(r => picked.has(r.id)), "aria-label": t("select_all"), onChange: (e) => { rows.forEach(r => e.target.checked ? picked.add(r.id) : picked.delete(r.id)); render(); } });
     const cell = (e) => h("span", { class: "small" }, [e.overtime_flag ? badge(t("overtime"), "warning") : null, e.overtime_reason, ...(e.flags || [])].filter(Boolean).map(x => x.nodeType ? x : h("span", {}, x + " ")));
-    mount(root, h("h1", {}, t("queue")),
+    const team = ["PM", "PMO", "ADMIN"].includes(me.role) ? await api("GET", "/timesheets/weeks") : null;
+    const teamCard = team && team.staff.length ? h("div", { class: "card", id: "team-weeks" }, h("h2", {}, `${t("team_weeks")} · ${t("week_of")} ${team.week_start}`),
+      table([t("staff"), t("hours"), t("missing_days_h"), t("status"), t("note")], team.staff.map(r => [r.full_name, num(r.total), r.missing_days || "", r.submitted ? badge(t("week_submitted"), "GREEN") : badge(t("week_not_submitted"), "AMBER"), r.note || ""])),
+      ["PMO", "ADMIN"].includes(me.role) && team.not_submitted ? h("p", {}, h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { const r = await api("POST", "/reminders/timesheets"); toast(`${t("reminders_sent")}: ${r.sent}`); }) }, `${t("send_reminders")} (${team.not_submitted})`)) : null) : null;
+    mount(root, h("h1", {}, t("queue")), teamCard,
       h("div", { class: "card" },
         h("div", { class: "row", style: "margin-bottom:10px; align-items:end" }, field(t("project"), projSel), field(t("staff"), userSel), h("label", { style: "flex-direction:row;align-items:center;gap:8px" }, flagBox, t("flagged_only")),
           h("span", { class: "grow" }), h("button", { class: "btn small", type: "button", disabled: !picked.size, onClick: guarded(null, () => bulk("approve")) }, `${t("approve_selected")} (${picked.size})`),

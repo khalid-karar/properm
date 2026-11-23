@@ -251,6 +251,30 @@ await step("PM control tab: variance, action, lesson; lessons library", async ()
   await p.goto(BASE + "#/todo"); await p.waitForSelector("h2:has-text('Actions assigned to you')");
 });
 
+p = await newPage("wk-staff"); await login(p, "s3");
+await step("staff: week strip, submit week with note, book leave", async () => {
+  await p.goto(BASE + "#/timesheet"); await p.waitForSelector("#week-card .day");
+  const wk0 = await p.textContent("strong:has-text('Week of')");
+  await p.click("button:has-text('Previous')"); await p.waitForFunction((w) => document.querySelector("#week-card") && ![...document.querySelectorAll("strong")].some(s => s.textContent === w), wk0);
+  await p.waitForSelector("#submit-week");
+  const n = p.locator("#week-card input"); if (await n.count()) await n.fill("Away at client site");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/me/week/submit")), p.click("#submit-week")]);
+  await p.waitForSelector("#week-card .badge:has-text('Week submitted')");
+  await p.goto(BASE + "#/leave"); await p.waitForSelector("#leave-form");
+  const d = new Date(Date.now() + 60 * 864e5).toISOString().slice(0, 10);
+  await p.locator("#leave-form").getByLabel("From", { exact: true }).fill(d); await p.locator("#leave-form").getByLabel("To", { exact: true }).fill(d);
+  await Promise.all([p.waitForResponse(r => r.url().endsWith("/leave") && r.request().method() === "POST"), p.click("#leave-form button:has-text('Request')")]);
+  await p.waitForSelector("td .badge:has-text('Waiting')");
+});
+
+p = await newPage("wk-pmo"); await login(p, "pmo1");
+await step("PMO: approve leave, team week status, reminders", async () => {
+  await p.goto(BASE + "#/leave"); await p.waitForSelector("#leave-queue");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/decision")), p.locator("#leave-queue button:has-text('Approve')").first().click()]);
+  await p.goto(BASE + "#/approvals"); await p.waitForSelector("#team-weeks td");
+  const b = p.locator("#team-weeks button:has-text('Send reminders')"); if (await b.count()) await Promise.all([p.waitForResponse(r => r.url().includes("/reminders/")), b.click()]);
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

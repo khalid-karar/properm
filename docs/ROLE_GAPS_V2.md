@@ -14,9 +14,9 @@ Best practice: a full, accurate timesheet with little effort; knows what is comi
 | Need | Status | Gap | Pri |
 |---|---|---|---|
 | Log time, fix rejected entries, copy last week | ✅ | — | |
-| Submit the **whole week** in one go and get a weekly status (draft → submitted → approved) | 🟡 | Each entry is submitted on its own; no weekly drafts | P1 |
-| **Reminders** for missing days and the weekly deadline | ⬜ | No nudges | P1 |
-| **Plan leave ahead** so managers see reduced capacity | ⬜ | Leave is logged after the fact only | P1 |
+| Submit the **whole week** in one go and get a weekly status | ✅ | Week strip + Submit week (entries are still approved one by one) | P1 |
+| **Reminders** for missing days and the weekly deadline | ✅ | To-do item; PMO sends reminders (or a cron calls `POST /reminders/timesheets`) | P1 |
+| **Plan leave ahead** so managers see reduced capacity | ✅ | Leave page, line-manager approval, lowers capacity in resource load | P1 |
 | See **upcoming work** (my planned hours for the next weeks) | ⬜ | "My projects" shows caps, not the forward plan | P2 |
 | Update % complete on activities I own | 🟡 | Only the PM updates progress | P3 |
 
@@ -97,7 +97,7 @@ Best practice: secure access, clean organisation data, safe off-boarding, recove
 ## Recommended build order
 1. ✅ **Governance core** (done 2026-11-23) — project intake approval, stage gates with criteria, decision options with rationale (Decision Maker + PMO, P1).
 2. ✅ **PM control** (done 2026-11-23) — baseline vs current variance, estimate to complete, decision & action log, lessons learned register.
-3. **Staff weekly cycle** — weekly submission, reminders, planned leave feeding capacity.
+3. ✅ **Staff weekly cycle** (done 2026-11-23) — weekly submission, reminders, planned leave feeding capacity.
 4. **Portfolio planning** — 12-week capacity plan, compliance view, prioritisation scoring.
 5. **Program** — roadmap, inter-project dependencies, program-level risks.
 6. **Admin security** — password policy, lockout, sign-in history, off-boarding with reassignment.

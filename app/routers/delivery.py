@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 
 from .. import rules
-from ..workcal import effective_capacity
+from ..workcal import effective_capacity, leave_days
 from ..audit import emit, log
 from ..config import WEEK_STARTS_ON_SUNDAY
 from ..deps import current_user, get_db, get_params, require_roles
@@ -195,8 +195,9 @@ def resource_load(week_of: date | None = None, db=Depends(get_db), user: User = 
         if planned or actual:
             per = db.query(PlannedAllocation.project_id, func.sum(PlannedAllocation.hours)).filter_by(user_id=u.id, week_start=ws).group_by(PlannedAllocation.project_id).all()
             names = {p.id: p.number for p in db.query(Project).filter(Project.id.in_([x[0] for x in per]))} if per else {}
-            out.append({"user_id": u.id, "full_name": u.full_name, "by_project": [{"project": names.get(pid_), "hours": hrs} for pid_, hrs in per], "staff_id": u.staff_id, "capacity": effective_capacity(db, u.capacity_hours_week, ws), "planned": planned,
-                        "actual": actual, "over_allocated": planned > effective_capacity(db, u.capacity_hours_week, ws)})
+            out.append({"user_id": u.id, "full_name": u.full_name, "by_project": [{"project": names.get(pid_), "hours": hrs} for pid_, hrs in per], "staff_id": u.staff_id, "capacity": effective_capacity(db, u.capacity_hours_week, ws, u.id), "planned": planned,
+                        "leave_days": len(leave_days(db, u.id, ws, ws + timedelta(days=6))),
+                        "actual": actual, "over_allocated": planned > effective_capacity(db, u.capacity_hours_week, ws, u.id)})
     return {"week_start": ws, "staff": out}
 
 

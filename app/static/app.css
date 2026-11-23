@@ -193,3 +193,7 @@ ul.declog{margin:6px 0;padding-inline-start:18px;line-height:1.6}
 .prop h3{margin:14px 0 4px;font-size:14px}
 
 .neg{color:var(--red);font-weight:600}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:8px 0}
+.day{border:1px solid var(--line);border-radius:8px;padding:6px;text-align:center;font-size:13px}
+.day .dn{color:var(--muted);font-size:11px}.day .dh{font-weight:600}
+.day.ok{border-color:var(--green)}.day.miss{border-color:var(--red);background:rgba(200,40,40,.06)}.day.off{opacity:.55}

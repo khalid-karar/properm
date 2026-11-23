@@ -62,6 +62,16 @@ def targets(db, event: str, d: dict):
         return [(u, f"Stage gate decision: {d.get('outcome', '').replace('_', ' ')}", _label(db, pid), L) for u in _pm(db, pid)]
     elif event == "change.returned":
         return [(d["user_id"], f"Change request {'deferred' if d.get('outcome') == 'defer' else 'needs more information'}", _label(db, pid), L)]
+    elif event == "leave.requested":
+        u = db.get(User, d["user_id"])
+        who = [u.line_manager_id] if u and u.line_manager_id else _role(db, "PMO")
+        if u and u.line_manager_id:
+            lm = db.get(User, u.line_manager_id)
+            if lm and lm.delegate_id:
+                who.append(lm.delegate_id)
+        return [(x, "Leave request needs a decision", f"{d.get('name')}: {d['start']} – {d['end']}", "#/leave") for x in who]
+    elif event == "leave.decided":
+        return [(d["user_id"], f"Your leave was {d['status']}", f"{d['start']} – {d['end']}", "#/leave")]
     elif event == "anomaly.flag":
         return [(u, "Timesheet anomaly flagged", f"User {d.get('user_id')} had {d.get('blocks_7d')} flagged blocks in 7 days", "#/approvals") for u in _role(db, "PMO")]
     return []

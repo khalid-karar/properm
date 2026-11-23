@@ -95,6 +95,12 @@ def seed(app, pw, c):
     ok(c.patch(f"/projects/{a_pid}/milestones/{ms[0]['id']}", headers=pm, json={"achieved_on": d(-18)}))
     k = ok(c.post(f"/projects/{a_pid}/kpis", headers=pm, json={"name": "On-time delivery", "unit": "%", "target": 95}))
     ok(c.put(f"/projects/{a_pid}/kpis/{k['id']}/actual", headers=pm, json={"actual": 88}))
+    # weekly cycle: one submitted week, leave requests (one approved, one waiting)
+    lw = T - timedelta(days=((T.weekday() + 1) % 7) + 7)
+    ok(c.post("/me/week/submit", headers=tok("s1"), json={"week_of": str(lw), "note": "Two days at the vendor workshop"}))
+    lv = ok(c.post("/leave", headers=tok("s3"), json={"start": d(21), "end": d(25), "kind": "annual", "note": "Family trip"}))
+    ok(c.post(f"/leave/{lv['id']}/decision", headers=pmo, json={"approve": True}))
+    ok(c.post("/leave", headers=tok("s2"), json={"start": d(10), "end": d(11), "kind": "training", "note": "PMP exam"}))
     # PM control: forecasts, actions, lessons
     ok(c.put(f"/projects/{b_pid}/activities/{b_acts[1]}/forecast", headers=pm, json={"forecast_end": d(40), "note": "Source system access arrived three weeks late"}))
     ok(c.post(f"/projects/{a_pid}/actions", headers=pm, json={"title": "Circulate steering committee minutes", "owner_id": ids["s1"], "due_date": d(2), "source": "Steering meeting"}))
