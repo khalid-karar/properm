@@ -34,14 +34,17 @@ export default async function (root, { me }) {
         stat(t("capacity"), `${num(util.capacity)} h`), stat(t("submitted"), `${num(util.submitted)} h`), stat(t("approved"), `${num(util.approved)} h`),
         stat(t("utilization"), `${num(util.utilization_pct)}%`), stat(t("remaining"), `${num(util.remaining_capacity)} h`),
         util.overtime_entries ? stat(t("overtime"), util.overtime_entries) : null),
-      h("div", { class: "card" }, bar(util.utilization_pct, live > util.capacity)),
+      h("div", { class: "card" }, bar(util.utilization_pct, live > util.capacity),
+        Object.keys(util.per_project).length ? h("div", { class: "row", style: "margin-top:12px; gap:8px" }, h("span", { class: "muted small" }, `${t("this_week_by_project")}:`),
+          Object.entries(util.per_project).map(([k, v]) => badge(`${/^\d+$/.test(k) ? projName(Number(k)) : k}: ${num(v)} h`, "GREY"))) : null),
       await form(),
       h("div", { class: "card" }, h("h2", {}, t("my_entries")),
         table([t("date"), t("project"), t("activity"), t("hours"), t("status"), t("flags"), ""],
           entries.map(e => [e.entry_date, e.project_id ? projName(e.project_id) : `${t("non_project")}: ${e.code}`,
             e.activity_id ? actCode(e) : "", num(e.hours) + (e.original_hours ? ` (${num(e.original_hours)})` : ""),
             badge(t(e.status), e.status) , h("span", { class: "small muted" }, [e.overtime_flag ? t("overtime") : null, e.decision_reason, ...(e.flags || [])].filter(Boolean).join(" · ")),
-            e.status !== "approved" ? h("button", { class: "btn secondary small", onClick: () => { S.editing = e; render(); } }, t("edit")) : ""]),
+            e.status !== "approved" ? h("span", { class: "row", style: "gap:6px;flex-wrap:nowrap" }, h("button", { class: "btn secondary small", onClick: () => { S.editing = e; render(); } }, t("edit")),
+              h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, async () => { if (!confirm(t("withdraw_confirm"))) return; await api("DELETE", `/timesheets/${e.id}`); toast(t("withdrawn")); if (S.editing?.id === e.id) S.editing = null; await render(); }) }, t("withdraw"))) : ""]),
           t("no_entries"))));
   }
 
@@ -54,7 +57,7 @@ export default async function (root, { me }) {
     const date = h("input", { type: "date", value: ed ? ed.entry_date : today(), max: ed ? undefined : undefined });
     const hours = h("input", { type: "number", step: "0.25", min: "0.25", max: "24", value: ed ? ed.hours : "8", style: "width:90px" });
     const desc = h("input", { value: ed?.description || "", style: "min-width:220px" });
-    const err = h("div");
+    const err = h("div"), hint = h("div", { class: "muted small", style: "margin-top:6px" });
     const projWrap = h("div", { class: "row" }, field(t("project"), proj), field(t("activity"), act));
     const codeWrap = h("div", { class: "row", style: "display:none" }, field(t("code"), code));
 
@@ -64,9 +67,21 @@ export default async function (root, { me }) {
       const acts = await activitiesOf(Number(proj.value));
       acts.forEach(a => act.append(h("option", { value: a.id }, `${a.code} · ${a.name}`)));
       if (ed?.activity_id) act.value = ed.activity_id;
+      await showHint();
     }
+    async function showHint() {
+      mount(hint);
+      if (kind.value === "code" || !proj.value || !act.value) return;
+      try {
+        const x = await api("GET", `/timesheets/hints?project_id=${proj.value}&activity_id=${act.value}`);
+        if (x.cap == null) return;
+        const left = x.remaining;
+        mount(hint, `${x.personal_limit ? t("your_limit") : t("activity_cap")}: ${num(x.used)} / ${num(x.cap)} h · `, h("strong", { style: left < 0 ? "color:var(--red)" : "" }, `${num(left)} h ${t("left")}`));
+      } catch { /* hint is optional */ }
+    }
+    act.addEventListener("change", showHint);
     function sync() { const c = kind.value === "code"; projWrap.style.display = c ? "none" : ""; codeWrap.style.display = c ? "" : "none"; }
-    kind.addEventListener("change", sync);
+    kind.addEventListener("change", () => { sync(); showHint(); });
     proj.addEventListener("change", loadActs);
     if (ed) {
       if (ed.code) { kind.value = "code"; code.value = ed.code; } else if (ed.project_id) proj.value = ed.project_id;
@@ -118,7 +133,7 @@ export default async function (root, { me }) {
     return h("div", { class: "card" }, h("h2", {}, ed ? t("edit_entry") : t("new_entry")),
       h("div", { class: "row" }, field("", kind), projWrap, codeWrap, field(t("date"), date), field(t("hours"), hours), h("div", { class: "grow" }, field(t("description"), desc)), btn,
         ed ? h("button", { class: "btn secondary", type: "button", onClick: () => { S.editing = null; render(); } }, t("cancel")) : null),
-      err);
+      hint, err);
   }
   await render();
 }

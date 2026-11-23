@@ -7,12 +7,12 @@ const app = document.getElementById("app");
 let me = null;
 
 const NAV = {
-  STAFF: ["timesheet", "approvals", "projects", "alerts"],
-  PM: ["timesheet", "approvals", "projects", "load", "dashboard", "decisions", "alerts"],
-  PMO: ["timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "alerts", "audit"],
-  ADMIN: ["timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "alerts", "audit", "admin"],
-  DECISION_MAKER: ["executive", "projects", "load", "dashboard", "decisions", "programs", "alerts"],
-  PROGRAM_MANAGER: ["executive", "projects", "load", "dashboard", "decisions", "programs", "alerts"],
+  STAFF: ["todo", "timesheet", "approvals", "projects", "alerts"],
+  PM: ["todo", "timesheet", "approvals", "projects", "load", "dashboard", "decisions", "alerts"],
+  PMO: ["todo", "timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "alerts", "audit"],
+  ADMIN: ["todo", "timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "alerts", "audit", "admin"],
+  DECISION_MAKER: ["todo", "executive", "projects", "load", "dashboard", "decisions", "programs", "alerts"],
+  PROGRAM_MANAGER: ["todo", "executive", "projects", "load", "dashboard", "decisions", "programs", "alerts"],
 };
 const HOME = { STAFF: "timesheet", PM: "projects", DECISION_MAKER: "executive" };
 export const homeFor = (role) => HOME[role] || "dashboard";

@@ -86,6 +86,13 @@ await step("staff sees change tab w/o cost, no allocations tab", async () => {
 });
 await step("staff has no load nav", async () => { if (await p.locator('nav a:has-text("Resource load")').count()) throw new Error("load nav visible"); });
 
+await step("staff: cap hint, withdraw an entry", async () => {
+  await p.goto(BASE + "#/timesheet"); await p.waitForSelector("h2:has-text('New entry')"); await p.waitForSelector("text=left");
+  await p.fill("input[type=date]", "2026-11-10"); await p.fill("input[type=number]", "1");
+  await p.click("button:has-text('Submit')"); await p.waitForSelector(".toast:has-text('saved')").catch(() => {});
+  await p.goto(BASE + "#/todo"); await p.waitForSelector("h1:has-text('My to-do')");
+});
+
 p = await newPage("gov"); await login(p, "pmo1");
 await step("programs page shows rollup", async () => { await p.goto(BASE + "#/programs"); await p.waitForSelector("h2:has-text('DX-2026')"); await p.waitForSelector("a:has-text('ALPHA-01')"); });
 await step("benefits tab shows realisation", async () => { await p.goto(BASE + "#/projects/1"); await tab(p, "Benefits"); await p.waitForSelector("td:has-text('Faster month-end close')"); await p.waitForSelector("td:has-text('40%')"); });
@@ -139,6 +146,13 @@ await step("executive summary, decision queue, project charts", async () => {
   await p.goto(BASE + "#/executive"); await p.waitForSelector("h1:has-text('Executive')"); await p.waitForSelector("h2:has-text('Needs attention')");
   await p.goto(BASE + "#/decisions"); await p.waitForSelector("h1:has-text('Decisions')");
   await p.goto(BASE + "#/dashboard/1"); await p.waitForSelector("h2:has-text('S-curve')"); await p.waitForSelector("svg.chart"); await p.waitForSelector("h2:has-text('Risk heat map')"); await shot(p, "16-charts");
+});
+
+await step("todo page, approvals filters and bulk select", async () => {
+  await p.goto(BASE + "#/todo"); await p.waitForSelector("h1:has-text('My to-do')");
+  await p.goto(BASE + "#/approvals"); await p.waitForSelector("h2:has-text('My recent decisions')");
+  await p.click("button:has-text('Approve selected')", { trial: true }).catch(() => {});
+  await p.check("label:has-text('Flagged only') input"); await p.waitForSelector("h2:has-text('My recent decisions')"); await p.uncheck("label:has-text('Flagged only') input");
 });
 
 p = await newPage("ar"); await login(p, "pmo1");

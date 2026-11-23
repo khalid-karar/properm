@@ -224,11 +224,8 @@ def queue(db=Depends(get_db), user: User = Depends(require_roles("PM", "PMO", "A
     return [e_out(e) for e in rows if e.user_id != user.id and can_approve(db, user, e)]
 
 
-@router.post("/timesheets/{eid}/decision")
-def decide(eid: int, body: DecisionIn, db=Depends(get_db), user: User = Depends(current_user)):
-    e = db.get(TimesheetEntry, eid)
-    if not e:
-        raise HTTPException(404, "Entry not found")
+def apply_decision(db, user: User, e: TimesheetEntry, body: DecisionIn):
+    """Validate and apply one approver decision (no commit). Shared by single and bulk decisions."""
     if e.user_id == user.id:
         raise HTTPException(403, "Cannot approve your own timesheet")
     if not can_approve(db, user, e):
@@ -255,6 +252,14 @@ def decide(eid: int, body: DecisionIn, db=Depends(get_db), user: User = Depends(
     e.approved_by, e.approved_at, e.decision_reason = user.id, datetime.now(timezone.utc), body.reason
     log(db, user.id, event, "timesheet_entry", e.id, {"action": body.action, "reason": body.reason, "hours": e.hours})
     emit(db, event, {"entry_id": e.id, "user_id": e.user_id, "project_id": e.project_id})
+
+
+@router.post("/timesheets/{eid}/decision")
+def decide(eid: int, body: DecisionIn, db=Depends(get_db), user: User = Depends(current_user)):
+    e = db.get(TimesheetEntry, eid)
+    if not e:
+        raise HTTPException(404, "Entry not found")
+    apply_decision(db, user, e, body)
     db.commit()
     return e_out(e)
 
