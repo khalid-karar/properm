@@ -287,9 +287,30 @@ def apply(pid: int, did: int, body: ApplyIn, db=Depends(get_db), user: User = De
         raise HTTPException(422, "Task codes must be unique")
     if {a.code for a in db.query(Activity).filter_by(project_id=pid)} & set(codes):
         raise HTTPException(409, "Some task codes already exist in this project")
+    pnums = {ph.get("n") for ph in out.get("phases", [])}
     for a in acts:
-        if float(a["planned_hours"]) <= 0:
-            raise HTTPException(422, f"Task {a['code']} needs hours above zero")
+        try:
+            hrs = float(a.get("planned_hours") or 0)
+        except (TypeError, ValueError):
+            hrs = 0
+        if hrs <= 0:
+            raise HTTPException(422, f"Task {a.get('code')} needs hours above zero")
+        if not str(a.get("code") or "").strip() or not str(a.get("name") or "").strip():
+            raise HTTPException(422, "Every task needs a code and a name")
+        if a.get("phase") not in pnums:
+            raise HTTPException(422, f"Task {a['code']} points to a phase that does not exist")
+        if float(a.get("end_month") or 0) < float(a.get("start_month") or 0):
+            raise HTTPException(422, f"Task {a['code']} ends before it starts")
+    for key, label in (("requirements", "title"), ("deliverables", "name"), ("risks", "title"), ("compliance", "title")):
+        if key in secs:
+            for it in out.get(key, []):
+                if not str(it.get(label) or "").strip():
+                    raise HTTPException(422, f"A {key[:-1] if key != 'compliance' else 'compliance item'} has no {label}; fill it in or delete it")
+                if key == "deliverables" and it.get("phase") not in pnums:
+                    raise HTTPException(422, f"Deliverable {it.get('code')} points to a phase that does not exist")
+    for ph in out.get("phases", []):
+        if not str(ph.get("name") or "").strip():
+            raise HTTPException(422, "A phase has no name; fill it in or delete it")
     prop = propose(db, start, acts) if acts else {}
     pick = body.assignments if body.assignments is not None else {c: v.get("user_id") for c, v in prop.items()}
     n = {"requirements": 0, "deliverables": 0, "activities": 0, "milestones": 0, "assigned": 0, "unassigned": 0, "risks": 0, "compliance": 0, "assumptions": 0, "resource_requests": 0}

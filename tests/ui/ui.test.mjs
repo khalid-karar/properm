@@ -478,6 +478,14 @@ await step("project book: paste, analyse, review, apply as a plan", async () => 
   await p.waitForSelector("#brief-domains #dom-cost");
   await p.fill("#dom-fb-cost", "add travel"); await p.click("#dom-reject-cost"); await p.waitForSelector("#dom-cost .diff", { state: "attached" });
   await p.click("#dom-accept-communication"); await p.waitForSelector("#dom-communication summary:has-text('Accepted')");
+  // editor: wrapped text boxes, add / edit / delete anything the reader found
+  await p.evaluate(() => document.querySelectorAll("details.sec").forEach(d => { d.open = true; }));
+  const nTasks = await p.locator("#task-box .item").count();
+  await p.click("#el-add-activities"); await p.locator("#task-box .item").last().locator("textarea").first().fill("Hand-added task with a long name that must wrap inside the box instead of being cut off");
+  if (await p.locator("#task-box .item").count() !== nTasks + 1) throw new Error("add task failed");
+  if (!(await p.locator("#task-box .item").last().locator("textarea").first().evaluate(e => e.scrollHeight <= e.clientHeight + 2))) throw new Error("long text is cut off");
+  await p.click("#el-add-requirements"); await p.locator("#el-requirements .item").last().locator("textarea").nth(1).fill("Added requirement");
+  await p.locator("#task-box .item .del").first().click(); if (await p.locator("#task-box .item").count() !== nTasks) throw new Error("delete task failed");
   await p.waitForSelector("#brief-apply:not([disabled])"); await p.click("#brief-apply"); await p.waitForSelector(".toast:has-text('Plan created')");
   await p.waitForSelector("#brief-result td");
   await tab(p, "Plan"); await p.waitForSelector("#imp-plan");

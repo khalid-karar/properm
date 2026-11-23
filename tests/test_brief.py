@@ -259,3 +259,31 @@ def test_plan_domains_review_and_apply(c, world):
     assert n["domains_skipped"] == 4 and n["domain_items"] > 3          # only the two reviewed domains were applied
     st = c.get(f"/projects/{pid}/stakeholders", headers=pm)
     assert st.status_code == 200 and len(st.json()) >= 3
+
+
+def test_apply_validates_edited_draft(c, world):
+    """Edits made in the review screen are checked on the server: orphan phases, blank names, bad hours."""
+    h = world["h"]
+    pm = h["pm1"]
+    start = TODAY
+    r = c.post("/projects", headers=pm, json={"number": "VAL-1", "name": "Validate", "state": "planning", "planned_start": str(start), "planned_end": str(start + timedelta(days=185))})
+    assert r.status_code == 201, r.text
+    pid = r.json()["id"]
+    did = doc(c, h, pid, "book.txt", AR_BOOK.encode())
+    a = c.post(f"/projects/{pid}/brief/analyze", headers=pm, json={"document_id": did})
+    assert a.status_code == 201, a.text
+    dr = c.get(f"/projects/{pid}/brief/{a.json()['draft_id']}", headers=pm).json()["draft"]
+    url = f"/projects/{pid}/brief/{a.json()['draft_id']}/apply"
+    import copy
+    bad = copy.deepcopy(dr); bad["activities"][0]["phase"] = 99
+    assert c.post(url, headers=pm, json={"draft": bad}).status_code == 422
+    bad = copy.deepcopy(dr); bad["activities"][0]["name"] = "  "
+    assert c.post(url, headers=pm, json={"draft": bad}).status_code == 422
+    bad = copy.deepcopy(dr); bad["phases"][0]["name"] = ""
+    assert c.post(url, headers=pm, json={"draft": bad}).status_code == 422
+    bad = copy.deepcopy(dr); bad["requirements"].append({"code": "R-X", "title": "", "text": "", "priority": "should", "phase": None})
+    assert c.post(url, headers=pm, json={"draft": bad}).status_code == 422
+    ok = copy.deepcopy(dr); ok["activities"].append({"code": "NEW-1", "name": "Added by hand", "description": "", "phase": dr["phases"][0]["n"], "planned_hours": 10, "start_month": 0, "end_month": 1, "role": "", "page": None, "estimate": True})
+    ok["requirements"].append({"code": "R-NEW", "title": "Added requirement", "text": "x", "priority": "must", "phase": None, "page": None, "section": "added"})
+    g = c.post(url, headers=pm, json={"draft": ok})
+    assert g.status_code in (200, 201), g.text
