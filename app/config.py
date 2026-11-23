@@ -32,6 +32,8 @@ DEFAULT_PARAMS = {
     "risk_score_warning": 15, "risk_score_critical": 20,
     "ai_enabled": 1.0,              # 1 = AI assistant on, 0 = off for everyone
     "ai_hourly_limit": 30.0,        # AI requests per person per hour
+    "burn_warning_pct": 0.8,         # hours used as a share of an activity budget before the burn warning can fire
+    "burn_gap_pct": 0.25,            # ... and hours used must run this far ahead of the percent complete
     "alert_cooldown_days": 7,
     "intake_required": 0.0,         # 1 = project managers submit a proposal; a decision maker approves it into a project
     "stage_gates": 0.0,

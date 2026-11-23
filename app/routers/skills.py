@@ -17,9 +17,20 @@ router = APIRouter(tags=["skills and team"])
 GENERIC = {"senior", "junior", "lead", "expert", "principal", "and", "the", "with", "for", "of"}
 
 
+def _ar(w: str) -> str:
+    w = w.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ى", "ي").replace("ة", "ه")
+    for pre in ("وال", "بال", "لل", "ال", "و"):                    # definite article and conjunction
+        if w.startswith(pre) and len(w) - len(pre) >= 3:
+            return w[len(pre):]
+    return w
+
+
 def _tokens(text: str) -> set:
     out = set()
-    for w in re.findall(r"[a-z0-9]+", (text or "").lower()):
+    for w in re.findall(r"[a-z0-9]+|[\u0600-\u06ff]+", (text or "").lower()):
+        if "\u0600" <= w[0] <= "\u06ff":
+            out.add(_ar(w))
+            continue
         if w in GENERIC:
             continue
         for suf in ("ing", "ers", "er", "ists", "ist", "s"):       # engineering / engineer / engineers share a stem

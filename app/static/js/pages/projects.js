@@ -10,6 +10,7 @@ import { agile } from "./agile.js";
 import { engagementCard, reservesCard, riskResponseCards } from "./projdepth.js";
 import { procurement } from "./projprocurement.js";
 import { compliance } from "./projcompliance.js";
+import { briefTab } from "./brief.js";
 import { askText, badge, modal, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
 
 const MANAGE = ["PM", "PMO", "ADMIN"];
@@ -63,8 +64,8 @@ async function detail(root, me, pid) {
 
   async function render() {
     const p = await api("GET", `/projects/${pid}`);
-    const tabs = ["overview", "details", "scope", "agile", "compliance", "procurement", "team", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
-    const show = (x) => (x === "costs" || x === "allocations" || x === "procurement") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : x === "agile" ? p.project_type !== "predictive" : true;
+    const tabs = ["overview", "details", "scope", "agile", "compliance", "procurement", "team", "brief", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
+    const show = (x) => (x === "costs" || x === "allocations" || x === "procurement") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : x === "brief" ? canManage && ["tendering", "planning"].includes(p.state) : x === "agile" ? p.project_type !== "predictive" : true;
     const body = h("div");
     mount(root,
       h("p", {}, h("a", { href: "#/projects" }, `← ${t("projects")}`)),
@@ -81,6 +82,7 @@ async function detail(root, me, pid) {
       else if (tab === "procurement") await procurement(body, p, { pid, dir, canManage, render });
       else if (tab === "agile") await agile(body, p, { pid, me, dir, canManage, render });
       else if (tab === "team") await team(body, p, { pid, me, dir, canManage, render });
+      else if (tab === "brief") await briefTab(body, p, { pid, dir, canManage, render });
       else if (tab === "plan") await plan(body, p, { pid, dir, canManage, render });
       else if (tab === "progress") await progress(body, p);
       else if (tab === "control") await control(body, p, { pid, me, dir, canManage, render });

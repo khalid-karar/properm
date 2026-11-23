@@ -6,7 +6,9 @@ from datetime import date, datetime, timedelta, timezone
 from .audit import emit
 from .deps import get_params
 from .evm import compute_evm, latest_progress
-from .models import Activity, Alert, Issue, Project, Risk
+from sqlalchemy import func
+
+from .models import Activity, Alert, Issue, Project, Risk, TimesheetEntry
 
 RANK = {"info": 0, "warning": 1, "critical": 2}
 LIVE = ("open", "acknowledged", "assigned", "resolved")
@@ -73,6 +75,25 @@ def evaluate_project(db, p: Project, as_of: date) -> list[Finding]:
             out.append(Finding("issue_critical", f"issue:{i.id}", "critical", f"Critical issue open: {i.title}", "Escalate to the sponsor and agree an owner and date."))
         elif overdue and i.severity == "high":
             out.append(Finding("issue_overdue", f"issue:{i.id}", "warning", f"High-severity issue overdue: {i.title}", "Agree a new resolution date or escalate."))
+
+    if p.state == "execution":
+        spent = dict(db.query(TimesheetEntry.activity_id, func.sum(TimesheetEntry.hours)).filter(
+            TimesheetEntry.project_id == p.id, TimesheetEntry.status.in_(("submitted", "approved"))).group_by(TimesheetEntry.activity_id).all())
+        for a in db.query(Activity).filter_by(project_id=p.id, phase="execution", locked=True):
+            if not a.planned_hours:
+                continue
+            used = float(spent.get(a.id) or 0.0)
+            ratio = used / a.planned_hours
+            lp = latest_progress(db, a.id, as_of)
+            done = (lp.pct_complete if lp else 0.0) / 100.0
+            if done >= 1.0:
+                continue
+            if ratio >= 1.0:
+                out.append(Finding("activity_hours_exceeded", a.code, "critical", f"Activity {a.code} has used {used:g} of {a.planned_hours:g} planned hours ({ratio:.0%}) and is {done:.0%} complete",
+                                   "Re-estimate the remaining work, then raise a change request or move the work; do not let hours run on silently."))
+            elif ratio >= float(P["burn_warning_pct"]) and ratio - done >= float(P["burn_gap_pct"]):
+                out.append(Finding("activity_burn_high", a.code, "warning", f"Activity {a.code} has used {ratio:.0%} of its hours but is only {done:.0%} complete",
+                                   "Check the estimate to complete with the owner before the hours run out."))
 
     stale_weeks = int(P["stale_progress_weeks"])
     stale = []
