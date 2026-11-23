@@ -16,6 +16,7 @@ DEFAULT_SEVERITIES = {
     "R8": "BLOCK",  # period locked
     "R9": "BLOCK",  # future date
     "R10": "FLAG",  # entry on a weekend or public holiday
+    "R11": "WARN",  # more than daily_soft_hours booked on one day (above daily_max_hours is blocked)
 }
 
 DEFAULT_PARAMS = {
@@ -24,6 +25,8 @@ DEFAULT_PARAMS = {
     "date_tolerance_days": 14,      # tolerance outside project window before BLOCK
     "anomaly_block_count": 3,       # BLOCK violations within 7 days that raise anomaly.flag
     "cost_approval_threshold": 50000.0,  # non-labor costs above this need PMO/ADMIN approval (Finance stand-in)
+    "daily_soft_hours": 10.0,       # hours on one day before the daily warning
+    "daily_max_hours": 14.0,        # hours on one day above which entries are blocked
     "stale_progress_weeks": 2,      # weeks without a progress update before an activity is flagged
     # rule-based alerts (3.3); every threshold is editable via PUT /admin/settings/{key}
     "cpi_warning": 0.9, "cpi_critical": 0.8,

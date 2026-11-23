@@ -38,6 +38,7 @@ class Ctx:
     # capacity
     week_hours: float = 0.0                  # existing hours this week, all projects (excl. this entry)
     capacity: float = 40.0
+    day_hours: float = 0.0                   # existing hours on this date, all projects (excl. this entry)
     # integrity
     locked_through: date | None = None
     exact_duplicate: bool = False
@@ -102,6 +103,12 @@ def evaluate(c: Ctx) -> list[Violation]:
         ceiling = c.capacity * c.params["overtime_ceiling_pct"]
         s = BLOCK if total_week > ceiling else sev("R1")
         v.append(Violation("R1", s, f"Weekly capacity exceeded ({total_week:g}/{c.capacity:g} hrs)"))
+
+    # R11 daily hours: soft above daily_soft_hours, hard above daily_max_hours
+    day_total = c.day_hours + c.hours
+    hard, soft = c.params.get("daily_max_hours", 14.0), c.params.get("daily_soft_hours", 10.0)
+    if day_total > soft:
+        v.append(Violation("R11", BLOCK if day_total > hard else sev("R11"), f"Daily hours high ({day_total:g} hrs on {c.entry_date})"))
 
     # R10 weekend / public holiday (recorded, never blocks by default)
     if c.non_working and not c.is_leave:

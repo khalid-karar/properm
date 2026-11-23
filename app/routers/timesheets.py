@@ -72,6 +72,11 @@ def build_ctx(db, user: User, d: EntryIn, exclude_id: int | None, today: date) -
     if exclude_id:
         q = q.filter(TimesheetEntry.id != exclude_id)
     ctx.week_hours = float(q.scalar())
+    qd = db.query(func.coalesce(func.sum(TimesheetEntry.hours), 0.0)).filter(
+        TimesheetEntry.user_id == user.id, TimesheetEntry.status.in_(live), TimesheetEntry.entry_date == d.entry_date)
+    if exclude_id:
+        qd = qd.filter(TimesheetEntry.id != exclude_id)
+    ctx.day_hours = float(qd.scalar())
     lock = db.query(func.max(PeriodLock.locked_through)).scalar()
     ctx.locked_through = lock
 

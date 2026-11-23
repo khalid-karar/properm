@@ -433,6 +433,42 @@
      "s": "todo"
     }
    ]
+  },
+  {
+   "en": "Project book to plan, assistant and role audit",
+   "ar": "من كراسة المشروع إلى الخطة، والمساعد، ومراجعة الأدوار",
+   "subs": [
+    {
+     "en": "Read Arabic/English project books (PDF, Word, text, scan) and draft requirements, tasks and staffing",
+     "ar": "قراءة كراسات المشاريع العربية والإنجليزية واستخراج المتطلبات والمهام والتوظيف",
+     "s": "done"
+    },
+    {
+     "en": "Burn-hours alerts per task",
+     "ar": "تنبيهات استهلاك ساعات المهام",
+     "s": "done"
+    },
+    {
+     "en": "Daily-hours rule (R11)",
+     "ar": "قاعدة الساعات اليومية (R11)",
+     "s": "done"
+    },
+    {
+     "en": "AI assistant widget (answers only from what you may see)",
+     "ar": "مساعد ذكي عائم (يجيب مما يحق لك رؤيته فقط)",
+     "s": "done"
+    },
+    {
+     "en": "Home page, grouped menu and Ctrl+K quick jump",
+     "ar": "صفحة رئيسية وقائمة مجمعة وانتقال سريع Ctrl+K",
+     "s": "done"
+    },
+    {
+     "en": "Live Saudi-hosted model connected and tested",
+     "ar": "ربط النموذج المستضاف في المملكة واختباره",
+     "s": "todo"
+    }
+   ]
   }
  ]
 }

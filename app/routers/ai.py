@@ -142,3 +142,28 @@ def reject_draft(did: int, db=Depends(get_db), user: User = Depends(require_role
     log(db, user.id, "ai.draft_rejected", "ai_draft", d.id, {})
     db.commit()
     return d_out(d)
+
+
+class AskIn(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    lang: str | None = None
+    project_id: int | None = None
+
+
+@router.post("/ask")
+def ask(body: AskIn, db=Depends(get_db), user: User = Depends(current_user)):
+    """Floating assistant. Answers only from what this user may already see; rule-based unless the Saudi-hosted model is live."""
+    params = get_params(db)
+    if not params["ai_enabled"]:
+        raise HTTPException(403, "The AI assistant is switched off by the administrator")
+    from .. import assistant
+    since = datetime.now(timezone.utc) - timedelta(hours=1)
+    n = db.query(AiDraft).filter(AiDraft.created_by == user.id, AiDraft.kind == "ask", AiDraft.created_at >= since).count()
+    if n >= int(params["ai_hourly_limit"]) * 4:
+        raise HTTPException(429, "Assistant limit reached for this hour")
+    out = assistant.ask(db, user, body.question, body.lang, body.project_id)
+    st = ai.status()
+    db.add(AiDraft(kind="ask", project_id=body.project_id, input_text=None, output={"q_len": len(body.question)}, model=st["model"], mode=st["mode"], created_by=user.id))
+    log(db, user.id, "ai.ask", "ai", 0, {"mode": st["mode"]})
+    db.commit()
+    return out

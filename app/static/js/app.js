@@ -1,6 +1,7 @@
 import { api, session } from "./api.js";
 import { applyDir, getLang, setLang, t } from "./i18n.js";
 import { clear, errorBox, h, icon, mount } from "./ui.js";
+import { mountAssistant, unmountAssistant } from "./assistant.js";
 
 applyDir();
 const app = document.getElementById("app");
@@ -14,13 +15,16 @@ const NAV = {
   DECISION_MAKER: ["todo", "executive", "portfolio", "leave", "projects", "load", "dashboard", "decisions", "proposals", "strategy", "compliance", "procurement", "programs", "reports", "lessons", "skills", "alerts", "guide"],
   PROGRAM_MANAGER: ["todo", "executive", "portfolio", "leave", "projects", "load", "dashboard", "decisions", "proposals", "strategy", "compliance", "procurement", "programs", "reports", "lessons", "skills", "alerts", "guide"],
 };
-const HOME = { STAFF: "timesheet", PM: "projects", DECISION_MAKER: "executive" };
-export const homeFor = (role) => HOME[role] || "dashboard";
+for (const r of Object.keys(NAV)) NAV[r] = ["home", ...NAV[r]];
+const GROUPS = [["g_work", ["home", "todo", "timesheet", "leave", "approvals", "mine"]], ["g_projects", ["projects", "load", "proposals", "templates", "programs"]],
+  ["g_insight", ["executive", "portfolio", "dashboard", "decisions", "alerts", "reports"]], ["g_gov", ["strategy", "compliance", "procurement", "lessons", "skills"]], ["g_admin", ["audit", "config", "admin"]], ["", ["guide"]]];
+export const homeFor = () => "home";
 
 async function route() {
   const [name = "", arg] = location.hash.replace(/^#\//, "").split("/");
   const s = session.get();
   if (!s) {
+    unmountAssistant();
     if (name !== "login") { location.hash = "#/login"; return; }
     const mod = await import("./pages/login.js");
     mount(app); mod.default(app);
@@ -37,6 +41,7 @@ async function route() {
   const main = h("main", {}, h("p", { class: "muted" }, t("loading")));
   document.body.classList.remove("nav-open");
   mount(app, shell(page, main));
+  mountAssistant();
   try {
     const mod = await import(`./pages/${page}.js`);
     await mod.default(main, { me, arg, nav: NAV[me.role] || [] });
@@ -51,8 +56,11 @@ const initials = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]
 function shell(active, main) {
   const side = h("aside", { class: "side" },
     h("div", { class: "brand" }, h("span", { class: "logo" }, "P"), t("app")),
-    h("nav", { "aria-label": "Main" }, (NAV[me.role] || []).map(n =>
-      h("a", { href: `#/${n}`, class: n === active ? "active" : "" }, icon(n), t(`nav_${n}`)))),
+    h("nav", { "aria-label": "Main" }, GROUPS.map(([label, items]) => {
+      const mine = items.filter(n => (NAV[me.role] || []).includes(n));
+      return mine.length ? h("div", { class: "navgroup" }, label ? h("div", { class: "navhead" }, t(label)) : null,
+        mine.map(n => h("a", { href: `#/${n}`, class: n === active ? "active" : "" }, icon(n === "home" ? "dashboard" : n), t(`nav_${n}`)))) : null;
+    })),
     h("div", { class: "side-foot" }, "Smart PMO"));
   const top = h("header", { class: "top" },
     h("button", { type: "button", class: "iconbtn menu-btn", "aria-label": "Menu", onClick: () => document.body.classList.toggle("nav-open") }, icon("menu")),
@@ -60,10 +68,10 @@ function shell(active, main) {
       onKeydown: (e) => { const v = e.target.value.trim(); if (e.key === "Enter" && v.length >= 2) location.hash = `#/search/${encodeURIComponent(v)}`; } }),
     h("span", { class: "spacer" }),
     h("a", { href: "#/notifications", class: "bell", id: "bell", "aria-label": t("notifications"), title: t("notifications") }, icon("bell"), h("span", { class: "bellcount" })),
-    h("button", { type: "button", class: "btn-ghost", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); route(); } }, getLang() === "en" ? "العربية" : "English"),
+    h("button", { type: "button", class: "btn-ghost", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); unmountAssistant(); route(); } }, getLang() === "en" ? "العربية" : "English"),
     h("a", { class: "who", href: "#/profile", title: t("nav_profile") }, h("span", { class: "avatar" }, initials(me.full_name)),
       h("span", { class: "tx" }, h("div", { class: "nm" }, me.full_name), h("div", { class: "rl" }, me.role))),
-    h("button", { type: "button", class: "btn-ghost", onClick: () => { session.clear(); me = null; location.hash = "#/login"; } }, t("logout")));
+    h("button", { type: "button", class: "btn-ghost", onClick: () => { session.clear(); me = null; unmountAssistant(); location.hash = "#/login"; } }, t("logout")));
   return h("div", { class: "shell" }, side, h("div", { class: "content" }, top, main));
 }
 

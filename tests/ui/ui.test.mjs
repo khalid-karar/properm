@@ -477,6 +477,18 @@ await step("project book: paste, analyse, review, apply as a plan", async () => 
   await p.waitForSelector("#brief-result td");
 });
 
+p = await newPage("home"); await login(p, "pmo1");
+await step("home page, grouped nav, assistant widget and quick jump", async () => {
+  await p.goto(BASE + "#/home"); await p.waitForSelector(".welcome h1"); await p.waitForSelector(".tiles a.tile"); await p.waitForSelector("aside.side .navhead");
+  await shot(p, "20-home");
+  await p.click("#asst-btn"); await p.waitForSelector("#asst-panel.open .msg.bot");
+  await p.fill("#asst-input", "Any alerts?"); await p.press("#asst-input", "Enter");
+  await p.waitForSelector("#asst-panel .msg.bot:nth-child(4) .bub, #asst-panel .msg.bot:nth-child(3) .bub");
+  await p.waitForFunction(() => /alert/i.test(document.querySelector("#asst-log").textContent) && !/Thinking/.test(document.querySelector("#asst-log").textContent));
+  await p.keyboard.press("Control+k"); await p.waitForSelector("#palette input"); await p.fill("#palette input", "Reports"); await p.waitForSelector("#palette .pal-row"); await p.press("#palette input", "Enter");
+  await p.waitForSelector("h1");
+  if (!p.url().includes("#/reports")) throw new Error("quick jump did not navigate: " + p.url());
+});
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 
