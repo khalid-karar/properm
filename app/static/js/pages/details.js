@@ -50,7 +50,7 @@ export async function details(body, p, { pid, me, dir, canManage, render }) {
     h("p", {}, h("strong", {}, `${t("project_manager")}: `), byId[p.pm_id]?.full_name || p.pm_id),
     ["PMO", "ADMIN"].includes(me.role) ? h("div", { class: "row", style: "margin-bottom:12px" }, field(t("project_manager"), mgr),
       h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, async () => { await api("PUT", `/projects/${pid}/manager`, { user_id: Number(mgr.value) }); toast(t("saved")); await render(); }) }, t("reassign"))) : null,
-    canManage ? [table([t("name"), t("role"), ""], ids.map(id => [byId[id]?.full_name || id, byId[id]?.role || "", id === p.pm_id ? badge(t("project_manager"), "gold") :
+    canManage ? [table([t("name"), t("role"), ""], ids.map(id => [byId[id]?.full_name || `#${id}`, byId[id]?.role || "", id === p.pm_id ? badge(t("project_manager"), "gold") :
       h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/projects/${pid}/assignments/${id}`); await render(); }) }, t("remove"))]), t("none")),
       h("div", { class: "row", style: "margin-top:12px" }, field(t("staff"), who), addBtn)] : null);
 

@@ -9,8 +9,8 @@ let me = null;
 const NAV = {
   STAFF: ["timesheet", "approvals", "projects", "alerts"],
   PM: ["timesheet", "approvals", "projects", "load", "dashboard", "alerts"],
-  PMO: ["timesheet", "approvals", "projects", "load", "dashboard", "programs", "alerts"],
-  ADMIN: ["timesheet", "approvals", "projects", "load", "dashboard", "programs", "alerts", "admin"],
+  PMO: ["timesheet", "approvals", "projects", "load", "dashboard", "programs", "alerts", "audit"],
+  ADMIN: ["timesheet", "approvals", "projects", "load", "dashboard", "programs", "alerts", "audit", "admin"],
   DECISION_MAKER: ["projects", "load", "dashboard", "programs", "alerts"],
   PROGRAM_MANAGER: ["projects", "load", "dashboard", "programs", "alerts"],
 };

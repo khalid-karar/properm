@@ -120,12 +120,19 @@ await step("details tab: edit client, add stakeholder", async () => {
   await p.fill("label:has-text('Client') input", "Ministry X"); await p.click("button:has-text('Save') >> nth=0"); await p.waitForSelector(".toast");
   await p.goto(BASE + "#/projects/1"); await tab(p, "Details"); await p.waitForSelector("label:has-text('Client') input");
   if ((await p.inputValue("label:has-text('Client') input")) !== "Ministry X") throw new Error("client not saved");
-  await p.fill("label:has-text('Name') >> nth=-1 >> input", "Dr Salem"); await p.click("button:has-text('Add') >> nth=-1"); await p.waitForSelector("td:has-text('Dr Salem')");
+  const sc = p.locator(".card:has(h2:has-text('Stakeholders'))"); await sc.locator("label:has-text('Name') input").first().fill("Dr Salem"); await sc.locator("button:has-text('Add')").click(); await p.waitForSelector("td:has-text('Dr Salem')");
 });
 await step("plan tab: milestone and KPI", async () => {
   await p.goto(BASE + "#/projects/1"); await tab(p, "Plan"); await p.waitForSelector("h2:has-text('Milestones')");
   await p.fill("label:has-text('Name') >> nth=0 >> input", "Go-live"); await p.fill("label:has-text('Due date') input", "2027-03-01"); await p.click("button:has-text('Add') >> nth=0"); await p.waitForSelector("td:has-text('Go-live')");
   await p.fill("label:has-text('Name') >> nth=1 >> input", "Uptime"); await p.fill("label:has-text('Target') input", "99"); await p.click("button:has-text('Add') >> nth=1"); await p.waitForSelector("td:has-text('Uptime')");
+});
+
+p = await newPage("audit"); await login(p, "pmo1");
+await step("audit viewer lists and filters; period lock status", async () => {
+  await p.goto(BASE + "#/audit"); await p.waitForSelector("h2:has-text('Audit log')"); await p.waitForSelector("td .badge");
+  await p.waitForSelector("h2:has-text('Period lock')");
+  await p.selectOption("label:has-text('Action') select", { index: 1 }); await p.click("button:has-text('Filter')"); await p.waitForSelector("td .badge");
 });
 
 p = await newPage("ar"); await login(p, "pmo1");

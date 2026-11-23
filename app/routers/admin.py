@@ -79,4 +79,4 @@ def add_rate(body: RateIn, db=Depends(get_db), user: User = Depends(require_role
 @router.get("/rates")
 def list_rates(db=Depends(get_db), _: User = Depends(require_roles("ADMIN", "PMO"))):
     return [{"id": r.id, "grade": r.grade, "hourly_rate": r.hourly_rate, "currency": r.currency,
-             "effective_from": r.effective_from} for r in db.query(RateCard).order_by(RateCard.grade, RateCard.effective_from)]
+             "effective_from": r.effective_from, "future": r.effective_from > date.today()} for r in db.query(RateCard).order_by(RateCard.grade, RateCard.effective_from)]
