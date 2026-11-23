@@ -284,3 +284,6 @@ a.action strong{display:block;font-size:14px}a.action small{display:block;color:
 /* skeleton + friendlier empty states */
 .empty{background:linear-gradient(180deg,#fcfcfd,#f7f8fb)}
 @media print{.asst-btn,.asst-panel{display:none!important}}
+.offsite-banner{background:#b42318;color:#fff;text-align:center;padding:6px 14px;font-weight:600;font-size:13px;position:sticky;top:0;z-index:30}
+.offsite-banner[hidden]{display:none}
+label.check,.check{flex-direction:row}

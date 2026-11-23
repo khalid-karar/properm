@@ -46,12 +46,20 @@ def host_in_kingdom(url: str) -> bool:
         return any(host.endswith(sfx) for sfx in _allowed_suffixes())
 
 
+def offsite_demo_allowed() -> bool:
+    """Demo and test only: PROPERM_AI_DEMO_OFFSITE=1 lets the AI URL point outside the Kingdom (for example OpenRouter).
+    Never honoured when PROPERM_ENV=production. Every page then shows a warning, and each call is written to the audit log."""
+    return os.environ.get("PROPERM_AI_DEMO_OFFSITE", "") == "1" and os.environ.get("PROPERM_ENV", "").lower() != "production"
+
+
 def status() -> dict:
     url = os.environ.get("PROPERM_AI_BASE_URL", "").strip()
     live = bool(url) and sys.platform != "emscripten"
+    inside = host_in_kingdom(url) if url else None
+    blocked = live and inside is False and not offsite_demo_allowed()
     return {"mode": "live" if live else "stub", "model": os.environ.get("PROPERM_AI_MODEL", "qwen") if live else "stub",
-            "host": urlparse(url).hostname if url else None, "in_kingdom": host_in_kingdom(url) if url else None,
-            "configured": bool(url)}
+            "host": urlparse(url).hostname if url else None, "in_kingdom": inside,
+            "configured": bool(url), "offsite_demo": bool(live and inside is False and offsite_demo_allowed()), "blocked": bool(blocked)}
 
 
 def _stub(task: str, payload: dict) -> str:
@@ -73,7 +81,7 @@ def _stub(task: str, payload: dict) -> str:
 
 def _live(task: str, payload: dict, prompt: str) -> str:
     url = os.environ["PROPERM_AI_BASE_URL"].rstrip("/")
-    if not host_in_kingdom(url):
+    if not host_in_kingdom(url) and not offsite_demo_allowed():
         raise AiError(403, "AI host is not inside the Kingdom; refusing to send data. Check PROPERM_AI_BASE_URL / PROPERM_AI_ALLOWED_HOSTS.")
     body = json.dumps({"model": os.environ.get("PROPERM_AI_MODEL", "qwen"), "temperature": 0.2,
                        "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}]}).encode()

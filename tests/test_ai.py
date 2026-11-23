@@ -87,3 +87,23 @@ def test_live_mode_guard_validation_and_injection(c, world, monkeypatch):
     assert c.post("/ai/plans", headers=h["pm1"], json={"project_id": pid, "brief": brief}).status_code == 502
     monkeypatch.setattr(ai, "_live", lambda *a: "I cannot do that")
     assert c.post("/ai/plans", headers=h["pm1"], json={"project_id": pid, "brief": brief}).status_code == 502
+
+
+def test_offsite_model_is_refused_unless_demo_flag_and_never_in_production(monkeypatch):
+    from app import ai
+    monkeypatch.setenv("PROPERM_AI_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.delenv("PROPERM_AI_DEMO_OFFSITE", raising=False)
+    monkeypatch.delenv("PROPERM_ENV", raising=False)
+    s = ai.status()
+    assert s["in_kingdom"] is False and s["blocked"] is True and s["offsite_demo"] is False
+    try:
+        ai._live("plan", {}, "x")
+        assert False, "must refuse"
+    except ai.AiError as e:
+        assert e.status == 403
+    monkeypatch.setenv("PROPERM_AI_DEMO_OFFSITE", "1")
+    s = ai.status()
+    assert s["offsite_demo"] is True and s["blocked"] is False
+    monkeypatch.setenv("PROPERM_ENV", "production")           # the flag is ignored in production
+    s = ai.status()
+    assert s["offsite_demo"] is False and s["blocked"] is True

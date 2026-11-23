@@ -163,7 +163,7 @@ def analyze(pid: int, body: AnalyzeIn, db=Depends(get_db), user: User = Depends(
     d = AiDraft(kind="brief", project_id=pid, input_text=None, output={**result, "notes": notes, "warnings": warnings}, model=st["model"], mode=st["mode"], created_by=user.id)
     db.add(d)
     db.flush()
-    log(db, user.id, "brief.analyzed", "project", pid, {"draft_id": d.id, "pages": len(pages), "requirements": len(result["requirements"]), "tasks": len(result["activities"]), "mode": st["mode"]})
+    log(db, user.id, "brief.analyzed", "project", pid, {"draft_id": d.id, "pages": len(pages), "requirements": len(result["requirements"]), "tasks": len(result["activities"]), "mode": st["mode"], "offsite_demo": st["offsite_demo"]})
     db.commit()
     return {"draft_id": d.id, "mode": st["mode"], "warnings": warnings, "counts": _counts(result)}
 

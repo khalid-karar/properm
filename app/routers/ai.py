@@ -38,7 +38,7 @@ def _run(db, user: User, task: str, payload: dict, kind: str, project_id=None, a
     d = AiDraft(kind=kind, project_id=project_id, alert_id=alert_id, input_text=input_text, output=out, model=st["model"], mode=st["mode"], created_by=user.id)
     db.add(d)
     db.flush()
-    log(db, user.id, "ai.draft", "ai_draft", d.id, {"kind": kind, "project_id": project_id, "mode": st["mode"], "model": st["model"]})
+    log(db, user.id, "ai.draft", "ai_draft", d.id, {"kind": kind, "project_id": project_id, "mode": st["mode"], "model": st["model"], "offsite_demo": st["offsite_demo"]})
     db.commit()
     return d
 
@@ -164,6 +164,6 @@ def ask(body: AskIn, db=Depends(get_db), user: User = Depends(current_user)):
     out = assistant.ask(db, user, body.question, body.lang, body.project_id)
     st = ai.status()
     db.add(AiDraft(kind="ask", project_id=body.project_id, input_text=None, output={"q_len": len(body.question)}, model=st["model"], mode=st["mode"], created_by=user.id))
-    log(db, user.id, "ai.ask", "ai", 0, {"mode": st["mode"]})
+    log(db, user.id, "ai.ask", "ai", 0, {"mode": st["mode"], "offsite_demo": st["offsite_demo"]})
     db.commit()
     return out

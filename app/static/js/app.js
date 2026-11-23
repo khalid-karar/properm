@@ -72,7 +72,9 @@ function shell(active, main) {
     h("a", { class: "who", href: "#/profile", title: t("nav_profile") }, h("span", { class: "avatar" }, initials(me.full_name)),
       h("span", { class: "tx" }, h("div", { class: "nm" }, me.full_name), h("div", { class: "rl" }, me.role))),
     h("button", { type: "button", class: "btn-ghost", onClick: () => { session.clear(); me = null; unmountAssistant(); location.hash = "#/login"; } }, t("logout")));
-  return h("div", { class: "shell" }, side, h("div", { class: "content" }, top, main));
+  const banner = h("div", { class: "offsite-banner", id: "offsite-banner", hidden: true }, t("ai_offsite_banner"));
+  api("GET", "/ai/status").then(s => { if (s.offsite_demo) { banner.hidden = false; banner.setAttribute("role", "alert"); } }).catch(() => {});
+  return h("div", { class: "shell" }, side, h("div", { class: "content" }, banner, top, main));
 }
 
 async function refreshBell() {
