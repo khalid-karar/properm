@@ -15,6 +15,8 @@ export default async function (root, { me }) {
           h("a", { class: "btn small secondary", href: "#/timesheet" }, t("nav_timesheet")),
           h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/timesheets/${e.id}`); toast(t("withdrawn")); await render(); }) }, t("withdraw")))]))) : null,
       d.alerts.length ? h("div", { class: "card" }, h("h2", {}, t("assigned_alerts")), table([t("project"), t("cause"), t("severity"), ""], d.alerts.map(a => [a.project, a.title, badge(a.severity, a.severity), h("a", { href: "#/alerts" }, t("open"))]))) : null,
+      (d.actions || []).length ? h("div", { class: "card" }, h("h2", {}, t("my_actions")), table([t("project"), t("title"), t("due_date"), ""], d.actions.map(a => [a.project, a.title, a.due_date ? h("span", { class: a.overdue ? "neg" : "" }, a.due_date) : "—",
+        h("span", { class: "row", style: "gap:6px" }, link(a.project_id, t("open")), h("button", { class: "btn small", type: "button", onClick: guarded(null, async () => { await api("PATCH", `/projects/${a.project_id}/actions/${a.id}`, { status: "done" }); toast(t("saved")); await render(); }) }, t("mark_done")))]))) : null,
       d.risks.length ? h("div", { class: "card" }, h("h2", {}, t("my_risks")), table([t("project"), t("title"), t("score"), ""], d.risks.map(r => [r.project, r.title, badge(r.score, r.score >= 20 ? "critical" : "warning"), link(r.project_id, t("open"))]))) : null,
       d.issues.length ? h("div", { class: "card" }, h("h2", {}, t("my_issues")), table([t("project"), t("title"), t("severity"), ""], d.issues.map(i => [i.project, i.title, i.severity, link(i.project_id, t("open"))]))) : null);
   }

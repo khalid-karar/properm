@@ -238,6 +238,19 @@ await step("DM: rank proposals, approve with conditions, decide gate", async () 
   await p.goto(BASE + "#/projects/4"); await p.waitForSelector("#decision-log td:has-text('Add the risk register first')");
 });
 
+p = await newPage("ctl-pm"); await login(p, "pm1");
+await step("PM control tab: variance, action, lesson; lessons library", async () => {
+  await p.goto(BASE + "#/projects/2"); await tab(p, "Control"); await p.waitForSelector("#variance-card td");
+  const ac = p.locator("#actions-card"); await ac.getByLabel("Title", { exact: true }).fill("UI follow-up action");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/actions") && r.request().method() === "POST"), ac.locator("button:has-text('Add')").click()]);
+  await p.waitForSelector("#actions-card td:has-text('UI follow-up action')");
+  const lc = p.locator("#lessons-card"); await lc.getByLabel("What happened", { exact: true }).fill("UI lesson happened here");
+  await lc.getByLabel("Recommendation", { exact: true }).fill("Do it differently next time");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/lessons") && r.request().method() === "POST"), lc.locator("button:has-text('Add lesson')").click()]);
+  await p.goto(BASE + "#/lessons"); await p.fill("input[type=search]", "access"); await p.waitForSelector("td:has-text('Name an IT access owner')");
+  await p.goto(BASE + "#/todo"); await p.waitForSelector("h2:has-text('Actions assigned to you')");
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

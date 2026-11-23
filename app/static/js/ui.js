@@ -83,6 +83,7 @@ const ICONS = {
   executive: "M4 20V10M10 20V4M16 20v-8M22 20H2",
   decisions: "M9 11l3 3 8-8M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h9",
   proposals: "M12 3v18M3 12h18M5 5h14v14H5z",
+  lessons: "M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4zM8 9h8M8 13h6",
   guide: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01",
   mine: "M4 7h16M4 12h16M4 17h10",
   audit: "M9 12h6M9 16h6M9 8h3M6 3h9l4 4v14H6z",

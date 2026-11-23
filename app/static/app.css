@@ -191,3 +191,5 @@ ul.checks{list-style:none;margin:6px 0;padding:0;line-height:1.8}
 ul.checks li.ok{color:var(--green)} ul.checks li.bad{color:var(--red)}
 ul.declog{margin:6px 0;padding-inline-start:18px;line-height:1.6}
 .prop h3{margin:14px 0 4px;font-size:14px}
+
+.neg{color:var(--red);font-weight:600}

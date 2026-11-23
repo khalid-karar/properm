@@ -95,6 +95,14 @@ def seed(app, pw, c):
     ok(c.patch(f"/projects/{a_pid}/milestones/{ms[0]['id']}", headers=pm, json={"achieved_on": d(-18)}))
     k = ok(c.post(f"/projects/{a_pid}/kpis", headers=pm, json={"name": "On-time delivery", "unit": "%", "target": 95}))
     ok(c.put(f"/projects/{a_pid}/kpis/{k['id']}/actual", headers=pm, json={"actual": 88}))
+    # PM control: forecasts, actions, lessons
+    ok(c.put(f"/projects/{b_pid}/activities/{b_acts[1]}/forecast", headers=pm, json={"forecast_end": d(40), "note": "Source system access arrived three weeks late"}))
+    ok(c.post(f"/projects/{a_pid}/actions", headers=pm, json={"title": "Circulate steering committee minutes", "owner_id": ids["s1"], "due_date": d(2), "source": "Steering meeting"}))
+    ok(c.post(f"/projects/{b_pid}/actions", headers=pm, json={"title": "Escalate production access to IT director", "owner_id": ids["pm1"], "due_date": d(-2), "source": "Issue review"}))
+    ok(c.post(f"/projects/{b_pid}/lessons", headers=pm, json={"category": "stakeholders", "impact": "negative", "what_happened": "Production access took six weeks because no owner was named in IT.",
+                                                             "recommendation": "Name an IT access owner at kick-off and request access in week one."}))
+    ok(c.post(f"/projects/{a_pid}/lessons", headers=pm, json={"category": "quality", "impact": "positive", "what_happened": "Weekly design walkthroughs with finance users caught gaps early.",
+                                                             "recommendation": "Keep a fixed weekly walkthrough with the business owner during design."}))
     # governance: a planning project waiting at its stage gate, proposals waiting for a decision, one decided proposal
     g_pid = ok(c.post("/projects", headers=pm, json={"number": "GAMMA-04", "name": "Citizen Portal", "planned_start": d(14), "planned_end": d(200), "budget_ceiling": 300000, "sponsor": "Eng. Hind Al-Shehri"}))["id"]
     ok(c.post(f"/projects/{g_pid}/activities", headers=pm, json={"code": "UX", "name": "User research and design", "planned_hours": 200, "baseline_cost": 70000, "planned_start": d(14), "planned_end": d(70)}))

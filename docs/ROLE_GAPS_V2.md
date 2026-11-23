@@ -26,10 +26,10 @@ Best practice: plan against a baseline, forecast honestly, control change, keep 
 | Need | Status | Gap | Pri |
 |---|---|---|---|
 | Plan, baseline, milestones, KPIs, risks, issues, changes, costs, benefits | ✅ | — | |
-| **Baseline vs current** per activity (dates, hours, cost variance) | ⬜ | No variance view; EAC only at project level | P1 |
-| **Estimate to complete** per activity (PM's own forecast, not just formula) | ⬜ | | P1 |
-| **Decision and action log** per project (who decided what, actions with owners and due dates) | 🟡 | Decision log done (Overview tab); action log still to do | P1 |
-| **Lessons learned register** (during and at closure, searchable by other PMs) | ⬜ | Only a closure checkbox | P1 |
+| **Baseline vs current** per activity (dates, hours, cost variance) | ✅ | Control tab | P1 |
+| **Estimate to complete** per activity (PM's own forecast, not just formula) | ✅ | Progress tab hours + forecast end date | P1 |
+| **Decision and action log** per project (who decided what, actions with owners and due dates) | ✅ | Decision log (Overview), action log (Control, feeds My to-do) | P1 |
+| **Lessons learned register** (during and at closure, searchable by other PMs) | ✅ | Control tab + Lessons library | P1 |
 | **Resource request** to PMO/line manager instead of assigning people directly | ⬜ | | P2 |
 | **RACI** and **communication plan** (who is informed, how often) | ⬜ | | P2 |
 | Critical path and dependency arrows on the timeline | ⬜ | Timeline has bars and milestones only | P2 |
@@ -96,7 +96,7 @@ Best practice: secure access, clean organisation data, safe off-boarding, recove
 
 ## Recommended build order
 1. ✅ **Governance core** (done 2026-11-23) — project intake approval, stage gates with criteria, decision options with rationale (Decision Maker + PMO, P1).
-2. **PM control** — baseline vs current variance, estimate to complete, decision & action log, lessons learned register.
+2. ✅ **PM control** (done 2026-11-23) — baseline vs current variance, estimate to complete, decision & action log, lessons learned register.
 3. **Staff weekly cycle** — weekly submission, reminders, planned leave feeding capacity.
 4. **Portfolio planning** — 12-week capacity plan, compliance view, prioritisation scoring.
 5. **Program** — roadmap, inter-project dependencies, program-level risks.

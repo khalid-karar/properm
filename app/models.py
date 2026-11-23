@@ -557,3 +557,39 @@ class DecisionRecord(Base):
     conditions: Mapped[str | None] = mapped_column(Text, nullable=True)
     decided_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ActivityForecast(Base):
+    """PM's forecast finish date for an activity (hours to complete come from the weekly progress update)."""
+    __tablename__ = "activity_forecasts"
+    activity_id: Mapped[int] = mapped_column(ForeignKey("activities.id"), primary_key=True)
+    forecast_end: Mapped[date | None] = mapped_column(Date, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+
+class ProjectAction(Base):
+    """Action log: agreed actions with an owner and a due date."""
+    __tablename__ = "project_actions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    source: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="open")       # open | done | cancelled
+    done_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+
+class Lesson(Base):
+    """Lessons learned register, searchable across projects."""
+    __tablename__ = "lessons"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    category: Mapped[str] = mapped_column(String(40))
+    impact: Mapped[str] = mapped_column(String(10))                       # positive | negative
+    what_happened: Mapped[str] = mapped_column(Text)
+    recommendation: Mapped[str] = mapped_column(Text)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

@@ -108,5 +108,9 @@ def todo(db=Depends(get_db), user: User = Depends(current_user)):
              for r in db.query(Risk).filter(Risk.owner_id == user.id, Risk.status.in_(("open", "mitigating"))).order_by(Risk.id)]
     issues = [{"id": i.id, "project_id": i.project_id, "project": names.get(i.project_id), "title": i.title, "severity": i.severity}
               for i in db.query(Issue).filter(Issue.owner_id == user.id, Issue.status.in_(("open", "in_progress"))).order_by(Issue.id)]
-    return {"rejected_entries": rejected, "approvals_waiting": waiting, "alerts": alerts, "risks": risks, "issues": issues,
-            "total": len(rejected) + (1 if waiting else 0) + len(alerts) + len(risks) + len(issues)}
+    from ..models import ProjectAction
+    actions = [{"id": x.id, "project_id": x.project_id, "project": names.get(x.project_id), "title": x.title, "due_date": x.due_date,
+                "overdue": x.due_date is not None and x.due_date < date.today()}
+               for x in db.query(ProjectAction).filter(ProjectAction.owner_id == user.id, ProjectAction.status == "open").order_by(ProjectAction.due_date)]
+    return {"rejected_entries": rejected, "approvals_waiting": waiting, "alerts": alerts, "risks": risks, "issues": issues, "actions": actions,
+            "total": len(rejected) + (1 if waiting else 0) + len(alerts) + len(risks) + len(issues) + len(actions)}

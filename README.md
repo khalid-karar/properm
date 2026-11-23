@@ -98,6 +98,7 @@ The login page shows milestones with green (done), amber (in progress) and red (
 | Decisions | One set of outcomes everywhere: approve, approve with conditions, reject, defer, request more information. A rationale is required except for a plain approval; conditions for a conditional one. Every decision goes into `decision_records` (`GET /decision-log`) |
 | Project intake | `POST /proposals` with business case and 1-5 scores; score out of 100 (fit and value 35% each, urgency 15%, low risk 15%); ranked list; approval creates the project in planning. Setting `intake_required=1` stops PMs creating projects directly |
 | Stage gates | `POST /projects/{id}/gates` records automatic checks; DECISION_MAKER/PMO/ADMIN decide. With `stage_gates=1`, baseline lock (planning → execution) and execution → closing need an approved gate. A plain approval needs all checks met |
+| PM control | Control tab: plan vs forecast per activity (`GET /projects/{id}/variance`; hours still needed from the weekly progress update, else trend, else plan; forecast end via `PUT .../activities/{aid}/forecast`; cost columns for cost viewers only). Action log (`/projects/{id}/actions`, owners see theirs in My to-do and can mark them done). Lessons learned per project and a library across projects (`GET /lessons?q=`) |
 | Change requests | Same outcomes; deferred or returned requests can be resubmitted (`POST /projects/{id}/changes/{cid}/resubmit`) |
 
 ## Not built yet (next slices)
