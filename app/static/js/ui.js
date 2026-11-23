@@ -68,17 +68,41 @@ export function askText(title, label, { required = true } = {}) {
   });
 }
 
+const ICONS = {
+  timesheet: "M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  approvals: "M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  projects: "M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z",
+  load: "M17 20v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M10 10a4 4 0 100-8 4 4 0 000 8zM21 20v-2a4 4 0 00-3-3.9M16 2.1a4 4 0 010 7.8",
+  dashboard: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+  programs: "M12 2l10 5-10 5L2 7l10-5zM2 12l10 5 10-5M2 17l10 5 10-5",
+  alerts: "M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z",
+  admin: "M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z",
+  bell: "M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0",
+  menu: "M3 6h18M3 12h18M3 18h18",
+  shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  spark: "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z",
+  chart: "M3 3v18h18M7 14l4-4 3 3 5-6",
+};
+/** Inline SVG icon (stroke icons, no external assets). */
+export function icon(name) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("class", "ico"); svg.setAttribute("aria-hidden", "true");
+  const p = document.createElementNS(NS, "path"); p.setAttribute("d", ICONS[name] || ICONS.chart); svg.append(p);
+  return svg;
+}
+
 export const badge = (text, cls) => h("span", { class: `badge ${cls ?? text}` }, text);
 export const field = (label, input) => h("label", {}, label, input);
 export const num = (v, d = 1) => (v == null ? "—" : Number(v).toLocaleString(undefined, { maximumFractionDigits: d }));
 
 export function table(headers, rows, empty) {
-  if (!rows.length && empty) return h("p", { class: "muted" }, empty);
-  return h("table", {}, h("thead", {}, h("tr", {}, headers.map(x => h("th", {}, x)))),
-    h("tbody", {}, rows.map(r => h("tr", {}, r.map(c => h("td", {}, c))))));
+  if (!rows.length && empty) return h("div", { class: "empty" }, empty);
+  return h("div", { class: "table-wrap" }, h("table", {}, h("thead", {}, h("tr", {}, headers.map(x => h("th", {}, x)))),
+    h("tbody", {}, rows.map(r => h("tr", {}, r.map(c => h("td", {}, c)))))));
 }
 
-export function stat(label, value) { return h("div", { class: "stat" }, h("div", { class: "v" }, value), h("div", { class: "l" }, label)); }
+export function stat(label, value) { return h("div", { class: `stat ${{ RED: "red", AMBER: "amber", GREEN: "green", GREY: "grey" }[label] || ""}` }, h("div", { class: "v" }, value), h("div", { class: "l" }, label)); }
 
 export function bar(pct, over = false) { return h("div", { class: `bar ${over ? "over" : ""}` }, h("span", { style: `width:${Math.max(0, Math.min(100, pct || 0))}%` })); }
 

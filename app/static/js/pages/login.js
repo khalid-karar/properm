@@ -1,14 +1,14 @@
 import { api, session } from "../api.js";
 import { getLang, setLang, t } from "../i18n.js";
-import { bar, errorBox, field, guarded, h, mount } from "../ui.js";
+import { bar, errorBox, field, guarded, h, icon, mount } from "../ui.js";
 import { homeFor, resetMe } from "../app.js";
 
 export default function (root) {
   const msg = h("div");
   const id = h("input", { name: "staff_id", autocomplete: "username", required: true });
   const pw = h("input", { name: "password", type: "password", autocomplete: "current-password", required: true });
-  const btn = h("button", { class: "btn", type: "submit" }, t("login"));
-  const form = h("form", { class: "card login", onSubmit: guarded(btn, async (ev) => {
+  const btn = h("button", { class: "btn", type: "submit", style: "width:100%" }, t("login"));
+  const form = h("form", { class: "card", onSubmit: guarded(btn, async (ev) => {
       ev.preventDefault();
       mount(msg);
       try {
@@ -18,14 +18,19 @@ export default function (root) {
         location.hash = `#/${homeFor(r.role)}`;
       } catch (e) { mount(msg, errorBox(e)); }
   }) },
-    h("h1", {}, `${t("app")} — Smart PMO`),
-    field(t("staff_id"), id), field(t("password"), pw), msg,
-    h("div", { class: "row" }, btn,
-      h("button", { class: "btn secondary right", type: "button", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); location.reload(); } }, getLang() === "en" ? "العربية" : "English")));
-  const quick = h("div", { class: "card login", hidden: true });
-  const starting = window.PROPERM_EMBEDDED ? h("div", { class: "card login" }, h("p", { class: "muted" }, t("demo_starting"))) : null;
+    h("h2", { class: "t" }, t("login")),
+    field(t("staff_id"), id), field(t("password"), pw), msg, btn);
+  const quick = h("div", { class: "card", hidden: true });
+  const starting = window.PROPERM_EMBEDDED ? h("div", { class: "card" }, h("p", { class: "muted" }, t("demo_starting"))) : null;
   const board = h("div", { class: "card timeline" });
-  mount(root, form, starting, quick, board);
+  const hero = h("section", { class: "hero" },
+    h("div", { class: "brand" }, h("span", { class: "logo" }, "P"), t("app")),
+    h("div", {}, h("h1", {}, t("hero_title")), h("p", { class: "lead" }, t("hero_lead"))),
+    h("ul", { class: "points" }, [["timesheet", "hero_p1"], ["chart", "hero_p2"], ["shield", "hero_p3"], ["spark", "hero_p4"]].map(([ic, k]) => h("li", {}, icon(ic), h("span", {}, t(k))))),
+    h("div", { class: "foot" }, "Smart PMO · Riyadh"));
+  const side = h("section", { class: "login-side" }, form, starting, quick,
+    h("button", { class: "btn secondary", type: "button", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); location.reload(); } }, getLang() === "en" ? "العربية" : "English"));
+  mount(root, h("div", { class: "login-page" }, hero, side, h("div", { class: "timeline-wrap" }, board)));
   timeline(board);
   id.focus();
   // Demo quick login: the server only answers when PROPERM_DEMO_LOGIN=1, otherwise this stays hidden.
@@ -33,10 +38,10 @@ export default function (root) {
     if (starting) starting.hidden = true;
     if (!users.length) return;
     mount(quick, h("h2", {}, t("quick_login")), h("p", { class: "muted small" }, t("quick_login_note")),
-      h("div", { class: "row" }, users.map(u => h("button", { class: "btn secondary", type: "button", onClick: guarded(null, async () => {
+      h("div", { class: "chips" }, users.map(u => h("button", { class: "btn secondary", type: "button", onClick: guarded(null, async () => {
         const r = await api("POST", "/auth/demo-login", { staff_id: u.staff_id });
         session.set(r.access_token, r.role); resetMe(); location.hash = `#/${homeFor(r.role)}`;
-      }) }, `${u.full_name} · ${u.role}`))));
+      }) }, u.full_name, h("small", {}, u.role)))));
     quick.hidden = false;
   }).catch(() => {});
 }

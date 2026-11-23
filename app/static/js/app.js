@@ -1,6 +1,6 @@
 import { api, session } from "./api.js";
 import { applyDir, getLang, setLang, t } from "./i18n.js";
-import { clear, errorBox, h, mount } from "./ui.js";
+import { clear, errorBox, h, icon, mount } from "./ui.js";
 
 applyDir();
 const app = document.getElementById("app");
@@ -33,7 +33,8 @@ async function route() {
   if (!allowed.includes(page) && page !== "notifications") { location.hash = `#/${homeFor(me.role)}`; return; }
 
   const main = h("main", {}, h("p", { class: "muted" }, t("loading")));
-  mount(app, shell(page), main);
+  document.body.classList.remove("nav-open");
+  mount(app, shell(page, main));
   try {
     const mod = await import(`./pages/${page}.js`);
     await mod.default(main, { me, arg });
@@ -43,15 +44,23 @@ async function route() {
   }
 }
 
-function shell(active) {
-  return h("header", { class: "top" },
-    h("span", { class: "brand" }, t("app")),
-    h("nav", {}, (NAV[me.role] || []).map(n =>
-      h("a", { href: `#/${n}`, class: n === active ? "active" : "" }, t(`nav_${n}`)))),
-    h("a", { href: "#/notifications", class: "bell", id: "bell", "aria-label": t("notifications"), title: t("notifications") }, "🔔", h("span", { class: "bellcount" })),
-    h("span", { class: "who" }, `${me.full_name} · ${me.role}`),
-    h("button", { type: "button", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); route(); } }, getLang() === "en" ? "العربية" : "English"),
-    h("button", { type: "button", onClick: () => { session.clear(); me = null; location.hash = "#/login"; } }, t("logout")));
+const initials = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+
+function shell(active, main) {
+  const side = h("aside", { class: "side" },
+    h("div", { class: "brand" }, h("span", { class: "logo" }, "P"), t("app")),
+    h("nav", { "aria-label": "Main" }, (NAV[me.role] || []).map(n =>
+      h("a", { href: `#/${n}`, class: n === active ? "active" : "" }, icon(n), t(`nav_${n}`)))),
+    h("div", { class: "side-foot" }, "Smart PMO"));
+  const top = h("header", { class: "top" },
+    h("button", { type: "button", class: "iconbtn menu-btn", "aria-label": "Menu", onClick: () => document.body.classList.toggle("nav-open") }, icon("menu")),
+    h("span", { class: "spacer" }),
+    h("a", { href: "#/notifications", class: "bell", id: "bell", "aria-label": t("notifications"), title: t("notifications") }, icon("bell"), h("span", { class: "bellcount" })),
+    h("button", { type: "button", class: "btn-ghost", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); route(); } }, getLang() === "en" ? "العربية" : "English"),
+    h("span", { class: "who" }, h("span", { class: "avatar" }, initials(me.full_name)),
+      h("span", { class: "tx" }, h("div", { class: "nm" }, me.full_name), h("div", { class: "rl" }, me.role))),
+    h("button", { type: "button", class: "btn-ghost", onClick: () => { session.clear(); me = null; location.hash = "#/login"; } }, t("logout")));
+  return h("div", { class: "shell" }, side, h("div", { class: "content" }, top, main));
 }
 
 async function refreshBell() {
