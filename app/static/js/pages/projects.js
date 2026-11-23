@@ -12,7 +12,7 @@ import { engagementCard, reservesCard, riskResponseCards } from "./projdepth.js"
 import { procurement } from "./projprocurement.js";
 import { compliance } from "./projcompliance.js";
 import { briefTab } from "./brief.js";
-import { askText, badge, modal, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
+import { askText, badge, bar, modal, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
 
 const MANAGE = ["PM", "PMO", "ADMIN"];
 const NEXT = { tendering: ["planning", "archived"], execution: ["closing", "on_hold"], closing: ["archived"], planning: ["on_hold"], on_hold: [] };
@@ -59,14 +59,15 @@ export default async function (root, { me, arg }) {
 
 async function detail(root, me, pid) {
   let tab = "overview";
+  const setTab = (x) => { tab = x; render(); };
   const canManage = MANAGE.includes(me.role);
   const dir = await api("GET", "/directory");
   const dirById = Object.fromEntries(dir.map(u => [u.id, u]));
 
   async function render() {
     const p = await api("GET", `/projects/${pid}`);
-    const tabs = ["overview", "details", "scope", "agile", "compliance", "procurement", "team", "brief", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
-    const show = (x) => (x === "costs" || x === "allocations" || x === "procurement") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : x === "brief" ? canManage && ["tendering", "planning"].includes(p.state) : x === "agile" ? p.project_type !== "predictive" : true;
+    const tabs = ["overview", "setup", "details", "scope", "agile", "compliance", "procurement", "team", "brief", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
+    const show = (x) => x === "setup" ? canManage : (x === "costs" || x === "allocations" || x === "procurement") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : x === "brief" ? canManage && ["tendering", "planning"].includes(p.state) : x === "agile" ? p.project_type !== "predictive" : true;
     const body = h("div");
     mount(root,
       h("p", {}, h("a", { href: "#/projects" }, `← ${t("projects")}`)),
@@ -76,12 +77,13 @@ async function detail(root, me, pid) {
         h("button", { class: tab === x ? "active" : "", role: "tab", onClick: () => { tab = x; render(); } }, t(`tab_${x}`)))),
       body);
     try {
-      if (tab === "overview") await overview(body, p);
+      if (tab === "overview") await overview(body, p, "dash");
       else if (tab === "details") { await details(body, p, { pid, me, dir, canManage, render }); body.append(await engagementCard({ pid, canManage, render, p })); }
       else if (tab === "scope") await scope(body, p, { pid, me, dir, canManage, render });
       else if (tab === "compliance") await compliance(body, p, { pid, dir, canManage, render });
       else if (tab === "procurement") await procurement(body, p, { pid, dir, canManage, render });
       else if (tab === "agile") await agile(body, p, { pid, me, dir, canManage, render });
+      else if (tab === "setup") await overview(body, p, "setup");
       else if (tab === "team") await team(body, p, { pid, me, dir, canManage, render });
       else if (tab === "brief") await briefTab(body, p, { pid, dir, canManage, render });
       else if (tab === "plan") await plan(body, p, { pid, dir, canManage, render });
@@ -98,7 +100,36 @@ async function detail(root, me, pid) {
     } catch (e) { mount(body, errorBox(e)); }
   }
 
-  async function overview(body, p) {
+
+  // ---- Overview = a dashboard: status, progress, hours, cost, next milestones, top risks, open actions. Detail lives in the other tabs. ----
+  async function dashPanels(p, goSetup) {
+    const d = await api("GET", `/dashboards/project/${pid}/summary`);
+    const money = (v) => v == null ? "—" : num(v, 0);
+    const link = (tabName, label) => h("a", { href: "#", class: "small", onClick: (e) => { e.preventDefault(); setTab(tabName); } }, label);
+    const tiles = [
+      stat(t("status"), h("span", {}, badge(t(`rag_${d.rag}`), d.rag), " ", t(p.state))),
+      stat(t("overall_progress"), `${num(d.progress_pct, 0)}%`),
+      stat(t("hours_vs_plan"), h("span", { dir: "ltr" }, d.hours.planned ? `${num(d.hours.approved, 0)} / ${num(d.hours.planned, 0)} h` : `${num(d.hours.approved, 0)} h`)),
+      d.cost && d.cost.available ? stat(t("cost_eac"), h("span", { dir: "ltr" }, `${money(d.cost.EAC)} ${d.cost.currency || ""}`)) : null,
+      stat(t("overdue_tasks"), d.overdue_activities),
+    ].filter(Boolean);
+    const list = (id, title, rows, empty, more) => h("div", { class: "card", id }, h("div", { class: "row", style: "justify-content:space-between;align-items:center" }, h("h3", {}, title), more || null),
+      rows.length ? h("ul", { class: "dashlist" }, ...rows) : h("p", { class: "muted small" }, empty));
+    const pctHours = d.hours.pct == null ? 0 : d.hours.pct;
+    return h("div", { id: "proj-dash" },
+      h("div", { class: "grid", style: "margin-bottom:16px" }, ...tiles),
+      h("div", { class: "card" }, h("div", { class: "small muted" }, `${t("overall_progress")} · ${num(d.progress_pct, 0)}%`), bar(d.progress_pct),
+        d.hours.planned ? [h("div", { class: "small muted", style: "margin-top:10px" }, `${t("hours_vs_plan")} · ${num(pctHours, 0)}%`), bar(pctHours, pctHours > 100)] : null,
+        d.cost && d.cost.available ? h("p", { class: "small muted", style: "margin-top:10px" }, `CPI ${d.cost.CPI ?? "—"} · SPI ${d.cost.SPI ?? "—"} · ${t("baseline_cost")} ${money(d.cost.BAC)}`) : null),
+      h("div", { class: "dash2" },
+        list("dash-ms", t("next_milestones"), d.milestones.map(m => h("li", {}, h("span", {}, m.name), h("span", { class: m.days < 0 ? "neg small" : "muted small" }, ` ${m.due_date} · ${m.days < 0 ? `${-m.days} ${t("days_late")}` : `${m.days} ${t("days_left")}`}`))), t("none"), link("plan", t("tab_plan"))),
+        list("dash-risks", `${t("top_risks")} · ${d.risks_open}`, d.risks.map(r => h("li", {}, h("span", {}, r.title), badge(r.score, r.score >= 20 ? "critical" : r.score >= 15 ? "warning" : "info"))), t("none"), link("risks", t("tab_risks"))),
+        list("dash-actions", `${t("open_actions")} · ${d.actions_open}${d.actions_overdue ? ` (${d.actions_overdue} ${t("overdue")})` : ""}`, d.actions.map(a => h("li", {}, h("span", {}, a.title), h("span", { class: a.overdue ? "neg small" : "muted small" }, ` ${a.due_date || ""}`))), t("none"), link("control", t("tab_control")))),
+      d.issues_open ? h("p", { class: "small" }, `${t("issues")}: ${d.issues_open}${d.issues_critical ? ` · ${d.issues_critical} ${t("critical")}` : ""} `, link("risks", t("tab_risks"))) : null,
+      canManage ? h("p", { class: "small muted" }, t("dash_setup_hint"), " ", link("setup", t("tab_setup"))) : null);
+  }
+
+  async function overview(body, p, view = "setup") {
     const acts = p.activities;
     const code = h("input", { style: "width:100px" }), name = h("input"), hrs = h("input", { type: "number", min: "1", style: "width:90px" });
     const bc = h("input", { type: "number", min: "0", style: "width:120px" }), ps = h("input", { type: "date" }), pe = h("input", { type: "date" });
@@ -140,7 +171,7 @@ async function detail(root, me, pid) {
       gates.reviews.length ? [h("h3", {}, t("gate_history")), gates.reviews.map(r => h("div", { class: "small", style: "margin-bottom:8px" }, h("strong", {}, t(`gate_${r.gate}`)), " ", outcomeBadge(r.status), ` · ${r.requested_by || ""} · ${(r.created_at || "").slice(0, 10)}`, decisionList(r.decisions)))] : null) : null;
     const logCard = log_.length ? h("div", { class: "card", id: "decision-log" }, h("h2", {}, t("decision_log")),
       table([t("date"), t("title"), t("outcome"), t("rationale"), t("conditions"), t("decided_by")], log_.map(r => [(r.decided_at || "").slice(0, 10), r.title, t(`oc_${r.outcome}`), r.rationale || "", r.conditions || "", r.decided_by || ""]))) : null;
-    mount(body,
+    const parts = [
       h("div", { class: "grid", style: "margin-bottom:16px" }, stat(t("state"), t(p.state)), stat(t("baseline_version"), p.baseline_version), stat(t("planned_start"), p.planned_start || "—"), stat(t("planned_end"), p.planned_end || "—")),
       progCard, tplCard, gateCard,
       canManage ? h("div", { class: "card" }, h("div", { class: "row" }, moves,
@@ -152,7 +183,9 @@ async function detail(root, me, pid) {
               h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { if (!confirm(t("confirm_delete"))) return; await api("DELETE", `/projects/${pid}/activities/${a.id}`); await render(); }) }, t("remove")))] : [])]), t("none"))),
       canManage && p.state === "planning" ? h("div", { class: "card" }, h("h2", {}, t("add_activity")),
         h("div", { class: "row" }, field(t("code"), code), field(t("name"), name), field(t("planned_hours"), hrs), field(t("baseline_cost"), bc), field(t("planned_start"), ps), field(t("planned_end"), pe), add), err) : null,
-      canManage ? h("div", { class: "card" }, h("h2", {}, t("assigned_staff")), h("div", { class: "row" }, field(t("staff"), who), assignBtn)) : null, logCard);
+      canManage ? h("div", { class: "card" }, h("h2", {}, t("assigned_staff")), h("div", { class: "row" }, field(t("staff"), who), assignBtn)) : null, logCard];
+    if (view === "dash") return mount(body, await dashPanels(p, () => setTab("setup")), parts[3], parts[4], parts[8]);
+    mount(body, parts[1], parts[2], parts[5], parts[6], parts[7]);
   }
 
   async function editActivity(a) {

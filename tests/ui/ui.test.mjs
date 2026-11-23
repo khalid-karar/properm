@@ -310,7 +310,7 @@ await step("PM tools: RACI, comms, resource request, critical path, apply templa
   await p.goto(BASE + "#/projects/1"); await tab(p, "RACI & communication"); await p.waitForSelector("#raci-card table.raci");
   await p.waitForSelector("#comms-card td:has-text('Steering committee')");
   await tab(p, "Plan"); await p.waitForSelector("#critical-path");
-  await p.goto(BASE + "#/projects/4"); await p.waitForSelector("#apply-template");
+  await p.goto(BASE + "#/projects/4"); await tab(p, "Setup"); await p.waitForSelector("#apply-template");
   await Promise.all([p.waitForResponse(r => r.url().includes("/apply-template/")), p.click("#apply-template button:has-text('Apply')")]);
 });
 

@@ -7,8 +7,8 @@ from sqlalchemy import func
 from ..alerts import LIVE, RANK, rag_status
 from ..deps import current_user, get_db
 from ..evm import compute_evm, latest_progress
-from ..models import Activity, Alert, Issue, Project, Risk, TimesheetEntry, User
-from .projects import can_manage, can_view_cost, get_project, p_out
+from ..models import Activity, Alert, Issue, Milestone, Project, ProjectAction, Risk, TimesheetEntry, User
+from .projects import can_manage, can_view, can_view_cost, get_project, p_out
 
 router = APIRouter(prefix="/dashboards", tags=["dashboards (3.4)"])
 EXEC = ("PMO", "ADMIN", "DECISION_MAKER", "PROGRAM_MANAGER")
@@ -96,3 +96,32 @@ def top_risks(limit: int = 10, db=Depends(get_db), user: User = Depends(current_
     rs = db.query(Risk).filter(Risk.status.in_(("open", "mitigating"))).all()
     rs.sort(key=lambda r: (-r.score, r.id))
     return [{"project_id": r.project_id, "risk_id": r.id, "title": r.title, "score": r.score, "status": r.status} for r in rs[:max(1, min(limit, 50))]]
+
+
+@router.get("/project/{pid}/summary")
+def project_summary(pid: int, db=Depends(get_db), user: User = Depends(current_user)):
+    """One-screen view for the project Overview tab: anyone who can see the project may read it; cost only for those allowed to see cost."""
+    p = get_project(db, pid)
+    if not can_view(db, user, p):
+        raise HTTPException(403, "No access to this project")
+    today = date.today()
+    acts = db.query(Activity).filter_by(project_id=pid, phase="execution").all()
+    approved = float(db.query(func.coalesce(func.sum(TimesheetEntry.hours), 0.0)).filter(TimesheetEntry.project_id == pid, TimesheetEntry.status == "approved").scalar() or 0)
+    planned = sum(a.planned_hours or 0 for a in acts)
+    ms = db.query(Milestone).filter(Milestone.project_id == pid, Milestone.achieved_on.is_(None)).order_by(Milestone.due_date).limit(4).all()
+    rs = db.query(Risk).filter(Risk.project_id == pid, Risk.status.in_(("open", "mitigating", "occurred"))).all()
+    rs.sort(key=lambda r: -r.score)
+    acts_open = db.query(ProjectAction).filter(ProjectAction.project_id == pid, ProjectAction.status == "open").order_by(ProjectAction.due_date.is_(None), ProjectAction.due_date).all()
+    issues = db.query(Issue).filter(Issue.project_id == pid, Issue.status.in_(("open", "in_progress"))).all()
+    out = {"project": p_out(p), "rag": rag_status(db, p), "progress_pct": overall_pct(db, p, today) if acts else 0.0,
+           "hours": {"planned": round(planned, 1), "approved": round(approved, 1), "pct": round(100 * approved / planned, 1) if planned else None},
+           "milestones": [{"name": m.name, "due_date": m.due_date, "days": (m.due_date - today).days} for m in ms],
+           "risks": [{"title": r.title, "score": r.score, "status": r.status} for r in rs[:3]], "risks_open": len(rs),
+           "issues_open": len(issues), "issues_critical": sum(1 for i in issues if i.severity == "critical"),
+           "actions": [{"title": a.title, "due_date": a.due_date, "overdue": bool(a.due_date and a.due_date < today)} for a in acts_open[:5]],
+           "actions_open": len(acts_open), "actions_overdue": sum(1 for a in acts_open if a.due_date and a.due_date < today),
+           "overdue_activities": sum(1 for a in acts if a.planned_end and a.planned_end < today and a.locked and (latest_progress(db, a.id, today) is None or latest_progress(db, a.id, today).pct_complete < 100))}
+    if can_view_cost(db, user, p):
+        e = compute_evm(db, p, today)
+        out["cost"] = {k: e.get(k) for k in ("available", "currency", "BAC", "PV", "EV", "AC", "CPI", "SPI", "EAC") if k in e}
+    return out
