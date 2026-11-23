@@ -1,5 +1,5 @@
 from datetime import date, datetime, timezone
-from sqlalchemy import (Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, LargeBinary, String,
+from sqlalchemy import (Index, Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, LargeBinary, String,
                         Text, UniqueConstraint, event)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -1113,3 +1113,18 @@ class JobRun(Base):
     status: Mapped[str] = mapped_column(String(10), default="ok")      # ok | failed
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+# ---- indexes for the queries the screens run all day (added after the 100k-row load test) ----
+_HOT = {
+    TimesheetEntry: [("user_id", "entry_date"), ("project_id", "entry_date"), ("status", "entry_date"), ("activity_id",)],
+    AuditLog: [("entity", "entity_id"), ("action",), ("ts",)],
+    Alert: [("project_id",), ("assignee_id",)], Assignment: [("user_id",)], PlannedAllocation: [("user_id",)],
+    CostEntry: [("project_id",), ("activity_id",)], Risk: [("project_id",)], Issue: [("project_id",)], Milestone: [("project_id",)],
+    Benefit: [("project_id",)], ChangeRequest: [("project_id",)], Project: [("pm_id",), ("program_id",), ("state",)],
+    DecisionRecord: [("project_id",)], GateReview: [("project_id",)], ProjectKpi: [("project_id",)], AiDraft: [("project_id",)],
+    RuleViolation: [("user_id",)], LoginEvent: [("user_id",)], AlertAction: [("alert_id",)], Deliverable: [("activity_id",)],
+}
+HOT_INDEXES = [(f"ix_{m.__tablename__}_{'_'.join(cols)}", m.__tablename__, cols) for m, lst in _HOT.items() for cols in lst]
+for _n, _t, _c in HOT_INDEXES:
+    Index(_n, *[Base.metadata.tables[_t].c[c] for c in _c])

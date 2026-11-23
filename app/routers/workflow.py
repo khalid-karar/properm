@@ -20,17 +20,15 @@ class BulkIn(BaseModel):
 
 
 @router.get("/timesheets/queue/filtered")
-def queue_filtered(project_id: int | None = None, user_id: int | None = None, flagged: bool = False, db=Depends(get_db),
+def queue_filtered(project_id: int | None = None, user_id: int | None = None, flagged: bool = False, limit: int = 300, db=Depends(get_db),
                    user: User = Depends(require_roles("PM", "PMO", "ADMIN", "STAFF"))):
     q = db.query(TimesheetEntry).filter_by(status="submitted")
     if project_id:
         q = q.filter(TimesheetEntry.project_id == project_id)
     if user_id:
         q = q.filter(TimesheetEntry.user_id == user_id)
-    rows = [e for e in q.order_by(TimesheetEntry.entry_date, TimesheetEntry.id) if e.user_id != user.id and can_approve(db, user, e)]
-    if flagged:
-        rows = [e for e in rows if e.overtime_flag or e.flags]
-    return [e_out(e) for e in rows]
+    from .timesheets import approvable
+    return [e_out(e) for e in approvable(db, user, q, max(1, min(limit, 2000)), flagged)]
 
 
 @router.post("/timesheets/bulk-decision")

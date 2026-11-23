@@ -180,12 +180,18 @@ def edit_entry(eid: int, body: EntryIn, db=Depends(get_db), user: User = Depends
 
 
 @router.get("/timesheets/mine")
-def mine(week_of: date | None = None, db=Depends(get_db), user: User = Depends(current_user)):
+def mine(week_of: date | None = None, start: date | None = None, end: date | None = None, limit: int = 500, offset: int = 0,
+         db=Depends(get_db), user: User = Depends(current_user)):
+    """One week (week_of), or a date range; without either, the last 90 days. At most `limit` rows (max 2000), `offset` to page."""
     q = db.query(TimesheetEntry).filter_by(user_id=user.id)
     if week_of:
         ws = rules.week_start(week_of, WEEK_STARTS_ON_SUNDAY)
         q = q.filter(TimesheetEntry.entry_date >= ws, TimesheetEntry.entry_date <= ws + timedelta(days=6))
-    return [e_out(e) for e in q.order_by(TimesheetEntry.entry_date, TimesheetEntry.id).all()]
+    else:
+        q = q.filter(TimesheetEntry.entry_date >= (start or date.today() - timedelta(days=90)))
+        if end:
+            q = q.filter(TimesheetEntry.entry_date <= end)
+    return [e_out(e) for e in q.order_by(TimesheetEntry.entry_date, TimesheetEntry.id).offset(max(0, offset)).limit(max(1, min(limit, 2000)))]
 
 
 @router.get("/me/utilization")
@@ -224,10 +230,31 @@ def can_approve(db, approver: User, e: TimesheetEntry) -> bool:
     return lm.id == approver.id or lm.delegate_id == approver.id
 
 
+QUEUE_LIMIT = 300
+
+
+def approvable(db, user: User, q, limit: int = QUEUE_LIMIT, flagged: bool = False) -> list:
+    """Oldest entries first, only those this person may decide, at most `limit` (the rest appear as these are decided).
+    Approver checks are remembered per project / per person so a long queue does not repeat the same look-ups."""
+    seen: dict = {}
+    out = []
+    for e in q.order_by(TimesheetEntry.entry_date, TimesheetEntry.id).yield_per(500):
+        if e.user_id == user.id or (flagged and not (e.overtime_flag or e.flags)):
+            continue
+        key = ("p", e.project_id) if e.project_id else ("u", e.user_id)
+        if key not in seen:
+            seen[key] = can_approve(db, user, e)
+        if seen[key]:
+            out.append(e)
+            if len(out) >= limit:
+                break
+    return out
+
+
 @router.get("/timesheets/queue")
-def queue(db=Depends(get_db), user: User = Depends(require_roles("PM", "PMO", "ADMIN", "STAFF"))):
-    rows = db.query(TimesheetEntry).filter_by(status="submitted").order_by(TimesheetEntry.entry_date).all()
-    return [e_out(e) for e in rows if e.user_id != user.id and can_approve(db, user, e)]
+def queue(limit: int = QUEUE_LIMIT, db=Depends(get_db), user: User = Depends(require_roles("PM", "PMO", "ADMIN", "STAFF"))):
+    rows = approvable(db, user, db.query(TimesheetEntry).filter_by(status="submitted"), max(1, min(limit, 2000)))
+    return [e_out(e) for e in rows]
 
 
 def apply_decision(db, user: User, e: TimesheetEntry, body: DecisionIn):
