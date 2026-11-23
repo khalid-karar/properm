@@ -7,19 +7,24 @@ export default function (root) {
   const msg = h("div");
   const id = h("input", { name: "staff_id", autocomplete: "username", required: true });
   const pw = h("input", { name: "password", type: "password", autocomplete: "current-password", required: true });
+  const otp = h("input", { name: "otp", inputmode: "numeric", autocomplete: "one-time-code", id: "login-otp" });
+  const otpRow = h("div", { hidden: true }, field(t("twofa_code"), otp), h("p", { class: "muted small" }, t("twofa_login_note")));
   const btn = h("button", { class: "btn", type: "submit", style: "width:100%" }, t("login"));
   const form = h("form", { class: "card", onSubmit: guarded(btn, async (ev) => {
       ev.preventDefault();
       mount(msg);
       try {
-        const r = await api("POST", "/auth/login", { staff_id: id.value.trim(), password: pw.value });
+        const r = await api("POST", "/auth/login", { staff_id: id.value.trim(), password: pw.value, otp: otp.value.trim() || undefined });
         session.set(r.access_token, r.role);
         resetMe();
         location.hash = "#/";
-      } catch (e) { mount(msg, errorBox(e)); }
+      } catch (e) {
+        if (e.message === "otp_required") { otpRow.hidden = false; otp.focus(); return; }
+        mount(msg, errorBox(e));
+      }
   }) },
     h("h2", { class: "t" }, t("login")),
-    field(t("staff_id"), id), field(t("password"), pw), msg, btn);
+    field(t("staff_id"), id), field(t("password"), pw), otpRow, msg, btn);
   const quick = h("div", { class: "card", hidden: true });
   const starting = window.PROPERM_EMBEDDED ? h("div", { class: "card" }, h("p", { class: "muted" }, t("demo_starting"))) : null;
   const board = h("div", { class: "card timeline" });

@@ -207,3 +207,12 @@ table.raci td.rl-A{background:rgba(30,60,120,.15);font-weight:700}table.raci td.
 button.x{border:none;background:none;color:var(--muted);cursor:pointer;margin-inline-start:4px;font-size:14px}
 input.topsearch{max-width:280px;margin-inline-start:8px}@media (max-width:860px){input.topsearch{max-width:140px}}
 .whatif td.better{color:var(--green);font-weight:600}.whatif td.worse{color:var(--red);font-weight:600}
+.kboard{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kcol{background:var(--bg,#f4f6fa);border-radius:var(--radius-s);padding:8px;min-height:120px}
+.kcol h3{font-size:13px;margin:0 0 8px;color:var(--muted)}
+.kcard{background:#fff;border:1px solid var(--line);border-radius:var(--radius-s);padding:8px 10px;margin-bottom:8px}
+.kcard .kt{font-weight:600}
+@media(max-width:800px){.kboard{grid-template-columns:1fr}}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 16px;margin:8px 0}
+.check{display:flex;align-items:center;gap:6px;font-weight:400}
+.check input{width:auto}

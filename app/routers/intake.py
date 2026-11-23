@@ -91,7 +91,8 @@ def list_documents(pid: int, db=Depends(get_db), user: User = Depends(current_us
     p = get_project(db, pid)
     if not can_view(db, user, p):
         raise HTTPException(403, "No access to this project")
-    return [doc_out(d) for d in db.query(Document).filter_by(project_id=pid).order_by(Document.id)]
+    from ..models import DocumentVersion
+    return [{**doc_out(d), "version": db.query(DocumentVersion).filter_by(document_id=d.id).count() + 1} for d in db.query(Document).filter_by(project_id=pid).order_by(Document.id)]
 
 
 @router.post("/{pid}/documents", status_code=201)

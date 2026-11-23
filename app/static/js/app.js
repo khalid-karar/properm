@@ -7,12 +7,12 @@ const app = document.getElementById("app");
 let me = null;
 
 const NAV = {
-  STAFF: ["todo", "timesheet", "leave", "mine", "approvals", "projects", "alerts", "guide"],
-  PM: ["todo", "timesheet", "leave", "approvals", "projects", "load", "dashboard", "decisions", "proposals", "reports", "lessons", "alerts", "guide"],
-  PMO: ["todo", "timesheet", "leave", "approvals", "projects", "load", "executive", "portfolio", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "templates", "alerts", "audit", "guide"],
-  ADMIN: ["todo", "timesheet", "leave", "approvals", "projects", "load", "executive", "portfolio", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "templates", "alerts", "audit", "config", "admin", "guide"],
-  DECISION_MAKER: ["todo", "executive", "portfolio", "leave", "projects", "load", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "alerts", "guide"],
-  PROGRAM_MANAGER: ["todo", "executive", "portfolio", "leave", "projects", "load", "dashboard", "decisions", "proposals", "programs", "reports", "lessons", "alerts", "guide"],
+  STAFF: ["todo", "timesheet", "leave", "mine", "approvals", "projects", "skills", "alerts", "guide"],
+  PM: ["todo", "timesheet", "leave", "approvals", "projects", "load", "dashboard", "decisions", "proposals", "strategy", "reports", "lessons", "skills", "alerts", "guide"],
+  PMO: ["todo", "timesheet", "leave", "approvals", "projects", "load", "executive", "portfolio", "dashboard", "decisions", "proposals", "strategy", "compliance", "procurement", "programs", "reports", "lessons", "templates", "skills", "alerts", "audit", "guide"],
+  ADMIN: ["todo", "timesheet", "leave", "approvals", "projects", "load", "executive", "portfolio", "dashboard", "decisions", "proposals", "strategy", "compliance", "procurement", "programs", "reports", "lessons", "templates", "skills", "alerts", "audit", "config", "admin", "guide"],
+  DECISION_MAKER: ["todo", "executive", "portfolio", "leave", "projects", "load", "dashboard", "decisions", "proposals", "strategy", "compliance", "procurement", "programs", "reports", "lessons", "skills", "alerts", "guide"],
+  PROGRAM_MANAGER: ["todo", "executive", "portfolio", "leave", "projects", "load", "dashboard", "decisions", "proposals", "strategy", "compliance", "procurement", "programs", "reports", "lessons", "skills", "alerts", "guide"],
 };
 const HOME = { STAFF: "timesheet", PM: "projects", DECISION_MAKER: "executive" };
 export const homeFor = (role) => HOME[role] || "dashboard";

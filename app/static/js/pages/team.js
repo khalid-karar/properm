@@ -1,6 +1,7 @@
 // Project "RACI & communication" tab, and the resource-request card used on the Allocations tab.
 import { api } from "../api.js";
 import { t } from "../i18n.js";
+import { registerCard } from "../register.js";
 import { badge, errorBox, field, guarded, h, mount, num, table, toast, today } from "../ui.js";
 
 const LET = ["", "R", "A", "C", "I"];
@@ -34,7 +35,11 @@ export async function team(body, p, { pid, me, dir, canManage, render }) {
         canManage ? h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/projects/${pid}/comms/${x.id}`); await render(); }) }, t("remove")) : null)]), t("none")),
     canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("audience"), c.aud), field(t("information"), c.info), field(t("method"), c.how), field(t("frequency"), c.freq), field(t("owner"), c.owner),
       h("button", { class: "btn", type: "button", onClick: guarded(null, async () => { mount(cerr); try { await api("POST", `/projects/${pid}/comms`, { audience: c.aud.value.trim(), information: c.info.value.trim(), method: c.how.value.trim(), frequency: c.freq.value, owner_id: c.owner.value ? Number(c.owner.value) : null }); toast(t("saved")); await render(); } catch (e) { mount(cerr, errorBox(e)); } }) }, t("add"))) : null, cerr);
-  mount(body, rcard, ccard);
+  const norms = await api("GET", `/projects/${pid}/team-norms`);
+  const ncard = registerCard({ id: "norms-card", title: t("team_charter"), note: t("team_charter_note"), base: `/projects/${pid}/team-norms`, rows: norms, canManage: canManage && p.state !== "archived", render, dir,
+    fields: [{ k: "category", label: t("category"), type: "select", options: ["communication", "meetings", "decisions", "conflict", "quality", "other"].map(x => [x, t(`tn_${x}`)]), def: "communication" }, { k: "text", label: t("text"), type: "textarea", req: true }],
+    columns: [{ h: t("category"), f: r => t(`tn_${r.category}`) }, { h: t("text"), f: r => r.text }] });
+  mount(body, rcard, ccard, ncard);
 }
 
 const RRCLS = { requested: "AMBER", fulfilled: "GREEN", rejected: "RED", cancelled: "GREY" };

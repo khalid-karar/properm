@@ -41,8 +41,8 @@ def seed(app, pw, c):
     T = date.today()
     d = lambda n: str(T + timedelta(days=n))
 
-    def project(number, name, start, end, acts, state="planning"):
-        pid = ok(c.post("/projects", headers=pm, json={"number": number, "name": name, "state": state, "planned_start": d(start), "planned_end": d(end), "budget_ceiling": sum(a[3] for a in acts) if acts else None}))["id"]
+    def project(number, name, start, end, acts, state="planning", ptype=None):
+        pid = ok(c.post("/projects", headers=pm, json={"number": number, "name": name, "state": state, "planned_start": d(start), "planned_end": d(end), "budget_ceiling": sum(a[3] for a in acts) if acts else None, **({"project_type": ptype} if ptype else {})}))["id"]
         for s in ("s1", "s2", "s3"):
             c.post(f"/projects/{pid}/assignments", headers=pm, json={"user_id": ids[s]})
         aids = []
@@ -117,6 +117,50 @@ def seed(app, pw, c):
     ok(c.post(f"/projects/{a_pid}/comms", headers=pm, json={"audience": "Finance users", "information": "What changes next month", "method": "E-mail newsletter", "frequency": "biweekly", "owner_id": ids["s1"]}))
     ok(c.post(f"/projects/{a_pid}/comms/{cm['id']}/sent", headers=pm))
     ok(c.post(f"/projects/{b_pid}/resource-requests", headers=pm, json={"skill": "Senior data engineer", "department": "Data", "hours_per_week": 24, "start": d(7), "end": d(49), "note": "Pipelines are behind; need a second engineer"}))
+    # scope: charter, WBS, requirements, assumptions
+    ok(c.put(f"/projects/{a_pid}/charter", headers=pm, json={"purpose": "Replace the legacy finance system with a single ERP so month-end close is faster and auditable.",
+        "objectives": "Cut month-end close from 10 days to 4. One ledger for all entities.", "success_criteria": "Close in 4 working days for three consecutive months; zero manual journal uploads.",
+        "in_scope": "GL, AP, AR, fixed assets, reporting.", "out_of_scope": "HR and payroll, procurement portal.", "key_risks": "Legacy integration; data quality; user adoption."}))
+    ok(c.post(f"/projects/{a_pid}/charter/decision", headers=pmo, json={"action": "approve"}))
+    w1 = ok(c.post(f"/projects/{a_pid}/wbs", headers=pm, json={"code": "1", "name": "Finance core configured", "acceptance_criteria": "UAT scripts passed with finance sign-off", "owner_id": ids["pm1"], "due_date": d(30)}))
+    ok(c.post(f"/projects/{a_pid}/wbs", headers=pm, json={"code": "1.1", "name": "General ledger set-up", "kind": "work_package", "parent_id": w1["id"], "activity_id": a_acts[0]}))
+    w2 = ok(c.post(f"/projects/{a_pid}/wbs", headers=pm, json={"code": "2", "name": "Data migrated and reconciled", "acceptance_criteria": "Balances match to the riyal", "due_date": d(45)}))
+    ok(c.post(f"/projects/{a_pid}/wbs", headers=pm, json={"code": "3", "name": "Training delivered", "due_date": d(60)}))
+    ok(c.post(f"/projects/{a_pid}/wbs/{w1['id']}/start", headers=pm))
+    ok(c.post(f"/projects/{a_pid}/wbs/{w1['id']}/submit", headers=pm))
+    ok(c.post(f"/projects/{a_pid}/requirements", headers=pm, json={"code": "R-01", "title": "Automatic bank reconciliation", "priority": "must", "status": "approved", "source": "Finance director", "deliverable_id": w1["id"]}))
+    ok(c.post(f"/projects/{a_pid}/requirements", headers=pm, json={"code": "R-02", "title": "Opening balances migrated with audit trail", "priority": "must", "deliverable_id": w2["id"]}))
+    ok(c.post(f"/projects/{a_pid}/requirements", headers=pm, json={"code": "R-03", "title": "Arabic statutory reports", "priority": "should"}))
+    ok(c.post(f"/projects/{a_pid}/assumptions", headers=pm, json={"kind": "assumption", "text": "Legacy vendor provides a data export by week 3", "validate_by": d(10)}))
+    ok(c.post(f"/projects/{a_pid}/assumptions", headers=pm, json={"kind": "constraint", "text": "Go-live must avoid the fiscal year-end freeze"}))
+    ok(c.post(f"/projects/{a_pid}/assumptions", headers=pm, json={"kind": "exclusion", "text": "Payroll integration is not part of this release"}))
+    # strategy alignment and compliance
+    o1 = ok(c.post("/objectives", headers=pmo, json={"code": "SO-1", "name": "Digitise government services", "horizon": "2030", "owner_id": ids["dm1"]}))
+    o2 = ok(c.post("/objectives", headers=pmo, json={"code": "SO-2", "name": "Build national data capability", "horizon": "2030", "owner_id": ids["dm1"]}))
+    ok(c.post("/objectives", headers=pmo, json={"code": "SO-3", "name": "Localise critical supply chains", "horizon": "2030"}))
+    ok(c.put(f"/projects/{a_pid}/objectives", headers=pm, json={"objective_ids": [o1["id"]]}))
+    ok(c.put(f"/projects/{b_pid}/objectives", headers=pm, json={"objective_ids": [o2["id"]]}))
+    for code, fw, title in [("PDPL-01", "PDPL", "Lawful basis and consent recorded for each data category"), ("PDPL-02", "PDPL", "Data subject request process in place"), ("PDPL-03", "PDPL", "Data protection impact assessment completed"),
+                            ("ECC-01", "NCA-ECC", "Role-based access control and periodic access review"), ("ECC-02", "NCA-ECC", "Vulnerability assessment before go-live"), ("POL-01", "Internal policy", "Data hosted inside the Kingdom")]:
+        ok(c.post("/compliance-library", headers=pmo, json={"code": code, "framework": fw, "title": title}))
+    ok(c.post(f"/projects/{a_pid}/compliance/apply-framework", headers=pm, json={"framework": "PDPL"}))
+    ok(c.post(f"/projects/{a_pid}/compliance/apply-framework", headers=pm, json={"framework": "NCA-ECC"}))
+    rows = ok(c.get(f"/projects/{a_pid}/compliance", headers=pm))
+    ok(c.patch(f"/projects/{a_pid}/compliance/{rows[0]['id']}", headers=pm, json={"status": "compliant", "evidence": "Consent register v3, approved by DPO"}))
+    ok(c.patch(f"/projects/{a_pid}/compliance/{rows[1]['id']}", headers=pm, json={"status": "in_progress", "due_date": d(-5), "owner_id": ids["s1"]}))
+    ok(c.patch(f"/projects/{a_pid}/compliance/{rows[3]['id']}", headers=pm, json={"status": "compliant", "evidence": "Access matrix signed off by security"}))
+    # procurement
+    k1 = ok(c.post(f"/projects/{a_pid}/contracts", headers=pm, json={"number": "CT-101", "title": "ERP licences and implementation partner", "vendor": "Najd Systems", "value": 240000, "status": "active",
+                                                                    "start_date": d(-60), "end_date": d(50), "owner_id": ids["pm1"]}))
+    for nm, amt, due, st in [("Mobilisation", 48000, -55, "paid"), ("Design sign-off", 72000, -15, "invoiced"), ("Build complete", 72000, 10, "planned"), ("Go-live and handover", 48000, 45, "planned")]:
+        pay = ok(c.post(f"/projects/{a_pid}/payments", headers=pm, json={"contract_id": k1["id"], "name": nm, "amount": amt, "due_date": d(due)}))
+        if st in ("invoiced", "paid"):
+            ok(c.patch(f"/projects/{a_pid}/payments/{pay['id']}", headers=pm, json={"status": "invoiced", "invoice_no": f"INV-{pay['id']:03d}"}))
+        if st == "paid":
+            ok(c.patch(f"/projects/{a_pid}/payments/{pay['id']}", headers=pm, json={"status": "paid"}))
+    ok(c.post(f"/projects/{a_pid}/vendor-reviews", headers=pm, json={"contract_id": k1["id"], "review_date": d(-20), "quality": 4, "schedule": 3, "communication": 4, "note": "Design delivered four days late"}))
+    k2 = ok(c.post(f"/projects/{b_pid}/contracts", headers=pm, json={"number": "CT-207", "title": "Cloud hosting (Saudi region)", "vendor": "Hosting Co", "value": 90000, "status": "active", "start_date": d(-80), "end_date": d(25)}))
+    ok(c.post(f"/projects/{b_pid}/payments", headers=pm, json={"contract_id": k2["id"], "name": "Quarterly fee", "amount": 30000, "due_date": d(-4)}))
     # a couple of failed sign-ins so the security history has something to show
     for _ in range(2):
         c.post("/auth/login", json={"staff_id": "s3", "password": "wrong-password-1"})
@@ -175,6 +219,51 @@ def seed(app, pw, c):
             db.add(Snapshot(project_id=a_pid, snap_date=_d.today() - _td(days=7 * w), rag="GREEN" if w > 3 else "AMBER", progress_pct=round(45 - 5 * w, 1) if w < 8 else 0.0,
                             cpi=round(1.1 - 0.02 * w, 2), spi=round(0.85 + 0.02 * w, 2), open_risks=1, open_alerts=0 if w > 3 else 1))
         db.commit()
+    # skills
+    for sid, items in {"s1": [("Data engineering", 4, 4, 6), ("Python", 4, None, 7)], "s2": [("Data engineering", 2, 4, 2), ("Business analysis", 3, None, 4)], "s3": [("Solution architecture", 3, 4, 5), ("Data engineering", 3, None, 3)]}.items():
+        for sk, lv, tg, yr in items:
+            ok(c.post("/me/skills", headers=tok(sid), json={"skill": sk, "level": lv, "target_level": tg, "years": yr}))
+    ok(c.post("/me/certs", headers=tok("s3"), json={"name": "TOGAF 9 Certified", "issuer": "The Open Group", "expires_on": d(45)}))
+    ok(c.post("/me/certs", headers=tok("s1"), json={"name": "AWS Data Analytics Specialty", "issuer": "AWS", "expires_on": d(400)}))
+    ok(c.post(f"/projects/{a_pid}/team-norms", headers=pm, json={"category": "meetings", "text": "Weekly stand-up on Sundays at 9:30, 15 minutes, camera optional"}))
+    ok(c.post(f"/projects/{a_pid}/team-norms", headers=pm, json={"category": "decisions", "text": "Scope or date changes only through change control; everything else the team lead decides"}))
+    # depth: risk responses, opportunities, reserves, quality, stakeholder engagement, document versions
+    rks = ok(c.get(f"/projects/{a_pid}/risks", headers=pm))
+    if rks:
+        ok(c.put(f"/projects/{a_pid}/risks/{rks[0]['id']}/response", headers=pm, json={"strategy": "mitigate", "plan": "Run the legacy integration as a two-week spike before build and keep the old interface alive for one more quarter.",
+            "trigger": "Spike shows more than 5 undocumented interfaces", "contingency_amount": 40000, "residual_probability": 2, "residual_impact": 3, "owner_id": ids["pm1"]}))
+    ok(c.post(f"/projects/{a_pid}/opportunities", headers=pm, json={"title": "Partner can reuse its reconciliation module", "probability": 4, "impact": 3, "strategy": "exploit", "owner_id": ids["pm1"]}))
+    ok(c.put(f"/projects/{a_pid}/reserves", headers=pmo, json={"contingency": 60000}))
+    ok(c.put(f"/projects/{a_pid}/reserves", headers=tok("dm1"), json={"management": 120000}))
+    ok(c.post(f"/projects/{a_pid}/reserves/drawdowns", headers=pm, json={"kind": "contingency", "amount": 15000, "reason": "Extra data-migration test cycle"}))
+    ok(c.post(f"/projects/{a_pid}/reserves/drawdowns", headers=pm, json={"kind": "management", "amount": 50000, "reason": "Regulator asked for extra reports not in scope"}))
+    for kind, title, sev_, st in [("defect", "Trial balance does not agree after migration", "high", "open"), ("defect", "Arabic labels truncated on invoice screen", "low", "fixed"), ("inspection", "Peer review of data model", "medium", "closed")]:
+        ok(c.post(f"/projects/{a_pid}/quality", headers=pm, json={"kind": kind, "title": title, "severity": sev_, "status": st, "found_on": d(-6)}))
+    sks = ok(c.get(f"/projects/{a_pid}/stakeholders", headers=pm))
+    for sk, cur, des, plan in list(zip(sks, ["resistant", "neutral"], ["supportive", "neutral"], ["Monthly walk-through of savings with the finance director", None])):
+        ok(c.put(f"/projects/{a_pid}/stakeholders/{sk['id']}/engagement", headers=pm, json={"current": cur, "desired": des, "plan": plan}))
+    import base64 as _b
+    dd_ = ok(c.post(f"/projects/{a_pid}/documents", headers=pm, json={"kind": "scope", "filename": "scope-statement.txt", "content_b64": _b.b64encode(b"Scope statement v1: GL, AP, AR, assets.").decode()}))
+    ok(c.post(f"/projects/{a_pid}/documents/{dd_['id']}/versions", headers=pm, json={"filename": "scope-statement.txt", "content_b64": _b.b64encode(b"Scope statement v2: adds statutory reports.").decode(), "note": "Change CR-1"}))
+    # the agile project is created last so earlier projects keep their order; governance switches are paused while it is set up
+    for k in ("intake_required", "stage_gates"):
+        ok(c.put(f"/admin/settings/{k}", headers=admin, json={"value": 0}))
+    # agile project with a running sprint
+    ag_pid, _ = project("AGILE-01", "Citizen services app", -14, 70, [("SPR", "Delivery sprints", 600, 200000, -14, 70)], ptype="adaptive")
+    s1_ = ok(c.post(f"/projects/{ag_pid}/sprints", headers=pm, json={"name": "Sprint 1", "goal": "Sign-in and profile", "start_date": d(-9), "end_date": d(4)}))
+    ok(c.post(f"/projects/{ag_pid}/sprints", headers=pm, json={"name": "Sprint 2", "goal": "Payments", "start_date": d(5), "end_date": d(18)}))
+    bl = [("Sign in with national ID", 5, 1, "done"), ("Profile page", 3, 2, "done"), ("Arabic and English UI", 5, 3, "review"), ("Notification preferences", 3, 4, "in_progress"), ("Accessibility audit fixes", 2, 5, "ready")]
+    bids = [ok(c.post(f"/projects/{ag_pid}/backlog", headers=pm, json={"title": t_, "points": pt, "rank": rk, "sprint_id": s1_["id"], "kind": "story"}))["id"] for t_, pt, rk, _ in bl]
+    ok(c.post(f"/projects/{ag_pid}/sprints/{s1_['id']}/start", headers=pm))
+    for bid, (_, _, _, st) in zip(bids, bl):
+        if st != "ready":
+            ok(c.post(f"/projects/{ag_pid}/backlog/{bid}/move", headers=pm, json={"status": st}))
+    ok(c.post(f"/projects/{ag_pid}/backlog", headers=pm, json={"title": "Online payment of fees", "points": 8, "rank": 10}))
+    ok(c.post(f"/projects/{ag_pid}/backlog", headers=pm, json={"title": "Appointment booking", "rank": 11}))
+    ok(c.put(f"/projects/{ag_pid}/objectives", headers=pm, json={"objective_ids": [o1["id"]]}))
+    ok(c.post(f"/projects/{ag_pid}/compliance/apply-framework", headers=pm, json={"framework": "PDPL"}))
+    for k in ("intake_required", "stage_gates"):
+        ok(c.put(f"/admin/settings/{k}", headers=admin, json={"value": 1}))
     print("Demo data ready. Users: admin, pm1, pmo1, dm1, pg1, s1, s2, s3 (all with the demo password).")
 
 

@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 // End-to-end UI test against a freshly seeded demo server. Run with: bash tests/ui/run.sh
 // Needs Playwright (npm i playwright) and Chrome. Override with PLAYWRIGHT_PATH and CHROME_PATH.
 const { chromium } = await import(process.env.PLAYWRIGHT_PATH || "playwright");
@@ -345,6 +346,120 @@ await step("admin: mail settings test, backup download, department list, start p
 p = await newPage("c-pg"); await login(p, "pg1");
 await step("program page: envelope, program issues, benefits plan", async () => {
   await p.goto(BASE + "#/programs/1"); await p.waitForSelector("#envelope .stat"); await p.waitForSelector("#pissues td:has-text('Shared test environment')"); await p.waitForSelector("#benefits-plan td");
+});
+
+p = await newPage("d-pmo"); await login(p, "pmo1");
+await step("scope tab: charter approved, accept a deliverable, add a requirement", async () => {
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Scope"); await p.waitForSelector("#charter-card .badge:has-text('Approved')");
+  await p.waitForSelector("#wbs-card td:has-text('Finance core configured')");
+  await p.locator("#wbs-card tr:has(td:has-text('Finance core configured')) button:has-text('Accept')").click();
+  await p.waitForSelector(".modal textarea"); await p.fill(".modal textarea", "Signed off by finance"); await Promise.all([p.waitForResponse(r => r.url().includes("/decision")), p.click(".modal button:has-text('Submit')")]);
+  await p.waitForSelector("#wbs-card tr:has(td:has-text('Finance core configured')) .badge:has-text('Accepted')");
+  await p.waitForSelector("#req-card .warn");
+});
+
+p = await newPage("d-pm2"); await login(p, "pm1");
+await step("agile tab: board, burndown, move a card, close sprint", async () => {
+  await p.goto(BASE + "#/projects"); await p.click("tr:has(td:has-text('AGILE-01')) a:has-text('Open')"); await tab(p, "Agile");
+  await p.waitForSelector("#board-card .kcard:has-text('Accessibility audit fixes')"); await p.waitForSelector("#burndown-card svg");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/move")), p.locator("#board-card .kcard:has-text('Accessibility audit fixes') button:has-text('→')").click()]);
+  await p.waitForSelector("#backlog-card td:has-text('Online payment of fees')");
+  await p.locator("#sprints-card tr:has(td:has-text('Sprint 1')) button:has-text('Close sprint')").click();
+  await p.waitForSelector(".modal select"); await p.selectOption(".modal select", { label: "Sprint 2" });
+  await Promise.all([p.waitForResponse(r => r.url().includes("/close")), p.click(".modal button:has-text('Close sprint')")]);
+  await p.waitForSelector("#sprints-card tr:has(td:has-text('Sprint 1')) .badge:has-text('Closed')");
+});
+
+p = await newPage("e-pmo"); await login(p, "pmo1");
+await step("strategy coverage and compliance overview", async () => {
+  await p.goto(BASE + "#/strategy"); await p.waitForSelector("#objectives-card tr:has(td:has-text('SO-3')) .badge:has-text('No project')"); await p.waitForSelector("#orphans-card li");
+  await p.goto(BASE + "#/compliance"); await p.waitForSelector("#compliance-overview td:has-text('PDPL')"); await p.waitForSelector("#library-card td:has-text('PDPL-01')");
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Compliance"); await p.waitForSelector("#pcompliance-card tr:has(td:has-text('PDPL-01')) .badge:has-text('Compliant')");
+  await p.waitForSelector("#pcompliance-card button:has-text('Apply framework')");
+});
+
+p = await newPage("f-pm"); await login(p, "pm1");
+await step("procurement tab: contracts, record an invoice, vendor review", async () => {
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Procurement"); await p.waitForSelector("#contracts-card td:has-text('Najd Systems')");
+  await p.waitForSelector("#payments-card tr:has(td:has-text('Build complete')) .badge:has-text('Planned')");
+  await p.locator("#payments-card tr:has(td:has-text('Build complete')) button:has-text('Mark achieved')").click();
+  await p.waitForSelector("#payments-card tr:has(td:has-text('Build complete')) .badge:has-text('Achieved')");
+  await p.locator("#payments-card tr:has(td:has-text('Build complete')) button:has-text('Record invoice')").click();
+  await p.fill(".modal textarea", "INV-777"); await Promise.all([p.waitForResponse(r => r.url().includes("/payments/")), p.click(".modal button:has-text('Submit')")]);
+  await p.waitForSelector("#payments-card tr:has(td:has-text('Build complete')) td:has-text('INV-777')");
+  await p.waitForSelector("#reviews-card td:has-text('Design delivered four days late')");
+});
+p = await newPage("f-pmo"); await login(p, "pmo1");
+await step("procurement overview", async () => { await p.goto(BASE + "#/procurement"); await p.waitForSelector("#po-contracts td:has-text('Hosting Co')"); });
+
+p = await newPage("g-staff"); await login(p, "s3");
+await step("skills page: add a skill and a certificate", async () => {
+  await p.goto(BASE + "#/skills"); await p.waitForSelector("#my-skills td:has-text('Data engineering')");
+  await p.locator("#my-skills input").first().fill("Power BI"); await Promise.all([p.waitForResponse(r => r.url().includes("/me/skills")), p.click("#my-skills button:has-text('Add')")]);
+  await p.waitForSelector("#my-skills td:has-text('Power BI')");
+  await p.locator("#my-certs input").first().fill("PMP"); await Promise.all([p.waitForResponse(r => r.url().includes("/me/certs")), p.click("#my-certs button:has-text('Add')")]);
+  await p.waitForSelector("#my-certs td:has-text('PMP')");
+});
+p = await newPage("g-pmo"); await login(p, "pmo1");
+await step("PMO: skills directory, development gaps, best matches for a request", async () => {
+  await p.goto(BASE + "#/skills"); await p.waitForSelector("#skills-dir td"); await p.fill("#skill-q", "TOGAF"); await p.waitForSelector("#skills-dir td:has-text('Khaled')");
+  await p.waitForSelector("#dev-gaps td");
+  await p.evaluate(async () => {
+    const tok = JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage)[0])).token;
+    const H = { "Content-Type": "application/json", Authorization: "Bearer " + tok };
+    const ps = await (await fetch("/projects", { headers: H })).json();
+    await fetch(`/projects/${ps[0].id}/resource-requests`, { method: "POST", headers: H, body: JSON.stringify({ skill: "Senior data engineer", hours_per_week: 8, start: "2026-12-01", end: "2027-01-15" }) });
+  });
+  await p.goto(BASE + "#/load"); await p.waitForSelector("#rr-queue");
+  await p.locator("#rr-queue button:has-text('Best matches')").first().click(); await p.waitForSelector("#matches td:has-text('Faisal')");
+  await p.click(".modal button:has-text('Close')");
+});
+
+p = await newPage("h-pm"); await login(p, "pm1");
+await step("depth: risk responses, reserves, quality, engagement, document versions", async () => {
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Risks"); await p.waitForSelector("#responses-card td:has-text('Mitigate')"); await p.waitForSelector("#opps-card td:has-text('reconciliation module')");
+  await tab(p, "Cost"); await p.waitForSelector("#reserves-card td:has-text('Regulator asked')");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/reserves")), p.click("#reserves-card button:has-text('Use contingency')").then(() => p.waitForSelector(".modal textarea")).then(async () => { await p.locator(".modal input").first().fill("1000"); await p.fill(".modal textarea", "UI test draw"); await p.click(".modal button:has-text('Submit')"); })]);
+  await p.waitForSelector("#reserves-card td:has-text('UI test draw')");
+  await tab(p, "Scope"); await p.waitForSelector("#quality-card td:has-text('Trial balance')");
+  await tab(p, "Details"); await p.waitForSelector("#engagement-card td .badge");
+  await p.locator("tr:has(td:has-text('scope-statement.txt')) button:has-text('Versions')").click(); await p.waitForSelector("#versions td:has-text('v1')"); await p.click(".modal button:has-text('Close')");
+});
+p = await newPage("h-pmo"); await login(p, "pmo1");
+await step("depth: PMO approves a management reserve request", async () => {
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Cost");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/decision")), p.locator("#reserves-card tr:has(td:has-text('Regulator asked')) button:has-text('Approve')").click()]);
+  await p.waitForSelector("#reserves-card tr:has(td:has-text('Regulator asked')) .badge:has-text('Approved')");
+});
+
+p = await newPage("ops-admin"); await login(p, "admin");
+await step("admin: restore check and apply, retention preview", async () => {
+  await p.goto(BASE + "#/admin"); await p.waitForSelector("#restore-card");
+  const backup = await p.evaluate(async () => {
+    const tok = JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage)[0])).token;
+    return await (await fetch("/admin/export?include_documents=true", { headers: { Authorization: "Bearer " + tok } })).json();
+  });
+  await p.setInputFiles("#restore-file", { name: "b.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
+  await p.click("#restore-card button:has-text('Check the file')"); await p.waitForSelector("#restore-out td:has-text('projects')");
+  await p.fill("#restore-word", "RESTORE");
+  await p.click("#restore-card button:has-text('Restore now')"); await p.waitForSelector(".toast:has-text('Restore complete'), #restore-out td");
+  await p.waitForSelector("#retention-out strong");
+});
+p = await newPage("ops-2fa"); await login(p, "s3");
+await step("profile: set up two-factor, then sign in with a code", async () => {
+  await p.goto(BASE + "#/profile"); await p.click("#twofa-start"); await p.waitForSelector("#twofa-secret");
+  const secret = await p.textContent("#twofa-secret");
+  const code = (sec, ts = Date.now()) => {
+    const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"; let bits = ""; for (const ch of sec) bits += A.indexOf(ch).toString(2).padStart(5, "0");
+    const key = Buffer.from(bits.match(/.{8}/g).map(b => parseInt(b, 2)));
+    const c = Buffer.alloc(8); c.writeBigUInt64BE(BigInt(Math.floor(ts / 30000)));
+    const mac = createHmac("sha1", key).update(c).digest(); const o = mac[19] & 15;
+    return String((mac.readUInt32BE(o) & 0x7fffffff) % 1000000).padStart(6, "0");
+  };
+  await p.fill("#twofa-confirm", code(secret)); await p.click("#twofa-card button:has-text('Turn on')"); await p.waitForSelector("#twofa-backup");
+  await p.click("button:has-text('Sign out')"); await p.waitForSelector("input[name=staff_id]");
+  await p.fill("input[name=staff_id]", "s3"); await p.fill("input[name=password]", "demo-pass-1"); await p.click("button[type=submit]");
+  await p.waitForSelector("#login-otp:visible"); await p.fill("#login-otp", code(secret)); await p.click("button[type=submit]"); await p.waitForSelector("header.top");
 });
 
 p = await newPage("ar"); await login(p, "pmo1");

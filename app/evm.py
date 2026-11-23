@@ -94,9 +94,11 @@ def compute_evm(db, p: Project, as_of: date) -> dict:
     cpi = ev / ac if ac > 0 else None
     spi = ev / pv if pv and pv > 0 else None
     eac = bac / cpi if cpi else None
+    tcpi = (bac - ev) / (bac - ac) if bac - ac > 0.005 else None       # efficiency needed on the remaining work to finish on budget
     r = lambda x: None if x is None else round(x, 2)
     return {"available": True, "as_of": as_of, "currency": p.currency, "BAC": r(bac), "PV": r(pv), "EV": r(ev),
             "AC": r(ac), "AC_labor": r(labor), "AC_nonlabor": r(nonlabor),
             "CPI": None if cpi is None else round(cpi, 3), "SPI": None if spi is None else round(spi, 3),
+            "CV": r(ev - ac), "SV": r(ev - pv), "TCPI": None if tcpi is None else round(tcpi, 3),
             "EAC": r(eac), "ETC": r(eac - ac) if eac is not None else None, "VAC": r(bac - eac) if eac is not None else None,
             "warnings": warnings}

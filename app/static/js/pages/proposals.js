@@ -2,6 +2,7 @@
 import { api } from "../api.js";
 import { decide, decisionList, outcomeBadge } from "../decide.js";
 import { t } from "../i18n.js";
+import { objectivePicker } from "../register.js";
 import { bar, errorBox, field, guarded, h, modal, mount, num, table, toast } from "../ui.js";
 
 const DECIDERS = ["DECISION_MAKER", "PMO", "ADMIN"];
@@ -37,13 +38,15 @@ export default async function (root, { me }) {
     const f = { num: h("input", { style: "width:120px" }), name: h("input", { style: "min-width:220px" }), bc: h("textarea", { rows: 4 }), ben: h("textarea", { rows: 2 }),
       sponsor: h("input"), client: h("input"), cost: h("input", { type: "number", min: "0", style: "width:130px" }), ccy: h("input", { value: "SAR", maxlength: "3", style: "width:70px" }),
       s: h("input", { type: "date" }), e: h("input", { type: "date" }), fit: scoreSel(), val: scoreSel(), urg: scoreSel(), risk: scoreSel() };
+    const objs = (await api("GET", "/objectives")).filter(o => o.active).map(o => ({ id: o.id, code: o.code, name: o.name })), pick = objectivePicker(objs);
     const err = h("div"), btn = h("button", { class: "btn", type: "button" }, t("submit_proposal"));
     btn.addEventListener("click", guarded(btn, async () => {
       mount(err);
       try {
-        await api("POST", "/proposals", { number: f.num.value.trim(), name: f.name.value.trim(), business_case: f.bc.value.trim(), expected_benefits: f.ben.value.trim() || null,
+        const created = await api("POST", "/proposals", { number: f.num.value.trim(), name: f.name.value.trim(), business_case: f.bc.value.trim(), expected_benefits: f.ben.value.trim() || null,
           sponsor: f.sponsor.value.trim() || null, client: f.client.value.trim() || null, est_cost: f.cost.value ? Number(f.cost.value) : null, currency: f.ccy.value.toUpperCase(),
           est_start: f.s.value || null, est_end: f.e.value || null, strategic_fit: Number(f.fit.value), value: Number(f.val.value), urgency: Number(f.urg.value), risk_level: Number(f.risk.value) });
+        if (pick.ids().length) await api("PUT", `/proposals/${created.id}/objectives`, { objective_ids: pick.ids() });
         toast(t("saved")); await render();
       } catch (e) { mount(err, errorBox(e)); }
     }));
@@ -55,6 +58,7 @@ export default async function (root, { me }) {
       CAN_SUBMIT.includes(me.role) ? h("div", { class: "card", id: "new-proposal" }, h("h2", {}, t("new_proposal")),
         h("div", { class: "row" }, field(t("number"), f.num), field(t("name"), f.name), field(t("sponsor"), f.sponsor), field(t("client"), f.client), field(t("est_cost"), f.cost), field(t("currency"), f.ccy), field(t("planned_start"), f.s), field(t("planned_end"), f.e)),
         field(t("business_case"), f.bc), field(t("expected_benefits"), f.ben),
+        h("h3", {}, t("nav_strategy")), pick.node,
         h("p", { class: "muted small" }, t("scoring_note")),
         h("div", { class: "row" }, field(t("strategic_fit"), f.fit), field(t("value_score"), f.val), field(t("urgency"), f.urg), field(t("risk_level"), f.risk), btn), err) : null);
   }

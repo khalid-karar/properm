@@ -33,7 +33,16 @@ def ensure_closure_items(db, pid: int) -> None:
     db.flush()
 
 
+def _has_deliverables(db, pid: int) -> bool:
+    from ..models import Deliverable
+    return db.query(Deliverable).filter_by(project_id=pid, kind="deliverable").count() > 0
+
+
 def _auto_check(db, pid: int, key: str) -> tuple[bool, str]:
+    if key == "deliverables_accepted":
+        from ..models import Deliverable
+        n = db.query(func.count(Deliverable.id)).filter(Deliverable.project_id == pid, Deliverable.kind == "deliverable", Deliverable.status != "accepted").scalar()
+        return n == 0, f"{n} deliverables not yet accepted" if n else "All deliverables accepted"
     if key == "timesheets_approved":
         n = db.query(func.count(TimesheetEntry.id)).filter_by(project_id=pid, status="submitted").scalar()
         return n == 0, f"{n} timesheet entries awaiting approval" if n else "No entries awaiting approval"
@@ -51,7 +60,10 @@ def closure_status(db, pid: int) -> list[dict]:
     for i in db.query(ClosureItem).filter_by(project_id=pid).order_by(ClosureItem.id):
         if i.key.startswith("x:") and i.key not in custom:
             continue                                   # switched off by the administrator
-        if auto.get(i.key):
+        if i.key == "deliverables_accepted" and _has_deliverables(db, pid):
+            ok, detail = _auto_check(db, pid, i.key)
+            out.append({"key": i.key, "auto": True, "satisfied": ok, "done": ok, "detail": detail, "note": i.note})
+        elif auto.get(i.key):
             ok, detail = _auto_check(db, pid, i.key)
             out.append({"key": i.key, "auto": True, "satisfied": ok, "done": ok, "detail": detail, "note": i.note})
         else:

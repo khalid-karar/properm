@@ -776,3 +776,326 @@ class UserHome(Base):
     __tablename__ = "user_home"
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
     page: Mapped[str] = mapped_column(String(40))
+
+
+# ---------------- V3 step 1: scope and acceptance ----------------
+class ProjectCharter(Base):
+    """Structured project charter (one per project)."""
+    __tablename__ = "project_charters"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), unique=True)
+    purpose: Mapped[str | None] = mapped_column(Text, nullable=True)
+    objectives: Mapped[str | None] = mapped_column(Text, nullable=True)
+    success_criteria: Mapped[str | None] = mapped_column(Text, nullable=True)
+    in_scope: Mapped[str | None] = mapped_column(Text, nullable=True)
+    out_of_scope: Mapped[str | None] = mapped_column(Text, nullable=True)
+    key_risks: Mapped[str | None] = mapped_column(Text, nullable=True)
+    approval_requirements: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="draft")     # draft | approved
+    approved_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    approved_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Assumption(Base):
+    """Assumption / constraint / dependency / exclusion log."""
+    __tablename__ = "assumptions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(20), default="assumption")   # assumption | constraint | dependency | exclusion
+    text: Mapped[str] = mapped_column(String(600))
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    validate_by: Mapped[date | None] = mapped_column(Date, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="open")       # open | validated | invalid
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class Deliverable(Base):
+    """WBS node: a deliverable or a work package under one, with its own acceptance."""
+    __tablename__ = "deliverables"
+    __table_args__ = (UniqueConstraint("project_id", "code"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey("deliverables.id"), nullable=True)
+    code: Mapped[str] = mapped_column(String(40))
+    name: Mapped[str] = mapped_column(String(300))
+    kind: Mapped[str] = mapped_column(String(20), default="deliverable")  # deliverable | work_package
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    acceptance_criteria: Mapped[str | None] = mapped_column(Text, nullable=True)
+    activity_id: Mapped[int | None] = mapped_column(ForeignKey("activities.id"), nullable=True)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="planned")    # planned | in_progress | submitted | accepted | rejected
+    decided_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    decided_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class Requirement(Base):
+    __tablename__ = "requirements"
+    __table_args__ = (UniqueConstraint("project_id", "code"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    code: Mapped[str] = mapped_column(String(40))
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    priority: Mapped[str] = mapped_column(String(10), default="must")      # must | should | could | wont
+    status: Mapped[str] = mapped_column(String(20), default="proposed")    # proposed | approved | implemented | verified | dropped
+    deliverable_id: Mapped[int | None] = mapped_column(ForeignKey("deliverables.id"), nullable=True)
+    test_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+
+# ---------------- V3 step 2: agile / hybrid delivery ----------------
+class Sprint(Base):
+    __tablename__ = "sprints"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    goal: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(20), default="planned")   # planned | active | closed
+    committed_points: Mapped[float | None] = mapped_column(Float, nullable=True)
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retro_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class BacklogItem(Base):
+    __tablename__ = "backlog_items"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    acceptance_criteria: Mapped[str | None] = mapped_column(Text, nullable=True)
+    kind: Mapped[str] = mapped_column(String(10), default="story")        # story | bug | task | epic
+    points: Mapped[float | None] = mapped_column(Float, nullable=True)
+    rank: Mapped[int] = mapped_column(Integer, default=100)               # lower = higher priority
+    status: Mapped[str] = mapped_column(String(20), default="backlog")    # backlog | ready | in_progress | review | done
+    sprint_id: Mapped[int | None] = mapped_column(ForeignKey("sprints.id"), nullable=True)
+    assignee_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    done_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    deliverable_id: Mapped[int | None] = mapped_column(ForeignKey("deliverables.id"), nullable=True)
+
+
+# ---------------- V3 step 3: strategy alignment and compliance ----------------
+class StrategicObjective(Base):
+    __tablename__ = "strategic_objectives"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(40), unique=True)
+    name: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    horizon: Mapped[str | None] = mapped_column(String(40), nullable=True)      # e.g. "2030", "FY2027"
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ObjectiveLink(Base):
+    """A project or a proposal that contributes to a strategic objective."""
+    __tablename__ = "objective_links"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    objective_id: Mapped[int] = mapped_column(ForeignKey("strategic_objectives.id"), index=True)
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True, index=True)
+    proposal_id: Mapped[int | None] = mapped_column(ForeignKey("proposals.id"), nullable=True, index=True)
+
+
+class ComplianceRequirement(Base):
+    """Library of regulatory / policy requirements (PDPL, NCA ECC, internal policy...) that projects can be held to."""
+    __tablename__ = "compliance_requirements"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(40), unique=True)
+    framework: Mapped[str] = mapped_column(String(60))
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ProjectCompliance(Base):
+    __tablename__ = "project_compliance"
+    __table_args__ = (UniqueConstraint("project_id", "requirement_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    requirement_id: Mapped[int] = mapped_column(ForeignKey("compliance_requirements.id"))
+    status: Mapped[str] = mapped_column(String(20), default="not_started")   # not_started | in_progress | compliant | exception | n_a
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    evidence: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+
+# ---------------- V3 step 4: procurement ----------------
+class Contract(Base):
+    __tablename__ = "contracts"
+    __table_args__ = (UniqueConstraint("project_id", "number"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    number: Mapped[str] = mapped_column(String(60))
+    title: Mapped[str] = mapped_column(String(300))
+    vendor: Mapped[str] = mapped_column(String(200))
+    value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    currency: Mapped[str] = mapped_column(String(3), default="SAR")
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="draft")      # draft | active | completed | terminated
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ContractPayment(Base):
+    """Payment milestone of a contract, through to invoice and payment."""
+    __tablename__ = "contract_payments"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    contract_id: Mapped[int] = mapped_column(ForeignKey("contracts.id"), index=True)
+    name: Mapped[str] = mapped_column(String(300))
+    amount: Mapped[float] = mapped_column(Float)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="planned")    # planned | achieved | invoiced | paid
+    invoice_no: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    invoiced_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    paid_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+
+class VendorReview(Base):
+    __tablename__ = "vendor_reviews"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    contract_id: Mapped[int] = mapped_column(ForeignKey("contracts.id"), index=True)
+    review_date: Mapped[date] = mapped_column(Date)
+    quality: Mapped[int] = mapped_column(Integer)           # 1-5
+    schedule: Mapped[int] = mapped_column(Integer)
+    communication: Mapped[int] = mapped_column(Integer)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+# ---------------- V3 step 5: skills and team ----------------
+class UserSkill(Base):
+    __tablename__ = "user_skills"
+    __table_args__ = (UniqueConstraint("user_id", "skill"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    skill: Mapped[str] = mapped_column(String(120))
+    level: Mapped[int] = mapped_column(Integer, default=2)                      # 1 beginner | 2 working | 3 advanced | 4 expert
+    target_level: Mapped[int | None] = mapped_column(Integer, nullable=True)    # level the person is developing towards
+    years: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class UserCert(Base):
+    __tablename__ = "user_certs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    issuer: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    issued_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    expires_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+
+class TeamNorm(Base):
+    """Team charter: how this team agrees to work together."""
+    __tablename__ = "team_norms"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    category: Mapped[str] = mapped_column(String(20), default="communication")   # communication | meetings | decisions | conflict | quality | other
+    text: Mapped[str] = mapped_column(String(600))
+
+
+# ---------------- V3 step 6: depth (risk response, reserves, quality, document versions, stakeholder engagement) ----------------
+class RiskResponse(Base):
+    """Response plan for a risk (PMBOK strategies) with trigger, contingency and residual rating."""
+    __tablename__ = "risk_responses"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    risk_id: Mapped[int] = mapped_column(ForeignKey("risks.id"), unique=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    strategy: Mapped[str] = mapped_column(String(20))                        # avoid | mitigate | transfer | accept | escalate
+    trigger: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    plan: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contingency_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    residual_probability: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    residual_impact: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+
+class Opportunity(Base):
+    __tablename__ = "opportunities"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    probability: Mapped[int] = mapped_column(Integer, default=3)
+    impact: Mapped[int] = mapped_column(Integer, default=3)
+    strategy: Mapped[str] = mapped_column(String(20), default="enhance")      # exploit | enhance | share | accept
+    status: Mapped[str] = mapped_column(String(20), default="open")           # open | pursuing | realized | closed
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ProjectReserve(Base):
+    __tablename__ = "project_reserves"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), unique=True)
+    contingency: Mapped[float] = mapped_column(Float, default=0.0)
+    management: Mapped[float] = mapped_column(Float, default=0.0)
+
+
+class ReserveDrawdown(Base):
+    __tablename__ = "reserve_drawdowns"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(20))                             # contingency | management
+    amount: Mapped[float] = mapped_column(Float)
+    reason: Mapped[str] = mapped_column(String(600))
+    risk_id: Mapped[int | None] = mapped_column(ForeignKey("risks.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="requested")      # requested | approved | rejected
+    requested_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    decided_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    decided_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_on: Mapped[date] = mapped_column(Date, default=date.today)
+
+
+class QualityItem(Base):
+    __tablename__ = "quality_items"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(20), default="defect")           # defect | inspection | audit | test
+    title: Mapped[str] = mapped_column(String(300))
+    severity: Mapped[str] = mapped_column(String(10), default="medium")       # low | medium | high | critical
+    status: Mapped[str] = mapped_column(String(20), default="open")           # open | fixed | verified | closed
+    deliverable_id: Mapped[int | None] = mapped_column(ForeignKey("deliverables.id"), nullable=True)
+    found_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    closed_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class DocumentVersion(Base):
+    """Earlier versions of a project document (the current one stays on the document itself)."""
+    __tablename__ = "document_versions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    filename: Mapped[str] = mapped_column(String(200))
+    size: Mapped[int] = mapped_column(Integer)
+    content: Mapped[bytes] = mapped_column(LargeBinary)
+    note: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    uploaded_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class StakeholderEngagement(Base):
+    __tablename__ = "stakeholder_engagement"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    stakeholder_id: Mapped[int] = mapped_column(ForeignKey("stakeholders.id"), unique=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    current: Mapped[str] = mapped_column(String(12), default="neutral")       # unaware | resistant | neutral | supportive | leading
+    desired: Mapped[str] = mapped_column(String(12), default="supportive")
+    plan: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+
+class TwoFactor(Base):
+    """Optional TOTP second factor per user. Backup codes are stored hashed."""
+    __tablename__ = "two_factor"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    secret: Mapped[str] = mapped_column(String(64))
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    backup_hashes: Mapped[str | None] = mapped_column(Text, nullable=True)   # JSON list of sha256 hex
+    enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

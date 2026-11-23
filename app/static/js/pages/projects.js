@@ -5,6 +5,11 @@ import { plan } from "./plan.js";
 import { control } from "./control.js";
 import { requestCard, team } from "./team.js";
 import { decide, decisionList, outcomeBadge } from "../decide.js";
+import { scope } from "./scope.js";
+import { agile } from "./agile.js";
+import { engagementCard, reservesCard, riskResponseCards } from "./projdepth.js";
+import { procurement } from "./projprocurement.js";
+import { compliance } from "./projcompliance.js";
 import { askText, badge, modal, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
 
 const MANAGE = ["PM", "PMO", "ADMIN"];
@@ -58,8 +63,8 @@ async function detail(root, me, pid) {
 
   async function render() {
     const p = await api("GET", `/projects/${pid}`);
-    const tabs = ["overview", "details", "team", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
-    const show = (x) => (x === "costs" || x === "allocations") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : true;
+    const tabs = ["overview", "details", "scope", "agile", "compliance", "procurement", "team", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
+    const show = (x) => (x === "costs" || x === "allocations" || x === "procurement") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : x === "agile" ? p.project_type !== "predictive" : true;
     const body = h("div");
     mount(root,
       h("p", {}, h("a", { href: "#/projects" }, `← ${t("projects")}`)),
@@ -70,13 +75,17 @@ async function detail(root, me, pid) {
       body);
     try {
       if (tab === "overview") await overview(body, p);
-      else if (tab === "details") await details(body, p, { pid, me, dir, canManage, render });
+      else if (tab === "details") { await details(body, p, { pid, me, dir, canManage, render }); body.append(await engagementCard({ pid, canManage, render, p })); }
+      else if (tab === "scope") await scope(body, p, { pid, me, dir, canManage, render });
+      else if (tab === "compliance") await compliance(body, p, { pid, dir, canManage, render });
+      else if (tab === "procurement") await procurement(body, p, { pid, dir, canManage, render });
+      else if (tab === "agile") await agile(body, p, { pid, me, dir, canManage, render });
       else if (tab === "team") await team(body, p, { pid, me, dir, canManage, render });
       else if (tab === "plan") await plan(body, p, { pid, dir, canManage, render });
       else if (tab === "progress") await progress(body, p);
       else if (tab === "control") await control(body, p, { pid, me, dir, canManage, render });
-      else if (tab === "risks") await risks(body, p);
-      else if (tab === "costs") await costs(body, p);
+      else if (tab === "risks") { await risks(body, p); body.append(...await riskResponseCards({ pid, dir, canManage, render, p })); }
+      else if (tab === "costs") { await costs(body, p); body.append(await reservesCard({ pid, me, p, render, canManage })); }
       else if (tab === "changes") await changes(body, p);
       else if (tab === "allocations") await allocations(body, p);
       else if (tab === "benefits") await benefits(body, p);
@@ -289,7 +298,7 @@ async function detail(root, me, pid) {
     btn.addEventListener("click", guarded(btn, async () => { mount(err); try { await api("POST", `/projects/${pid}/costs`, { category: cat.value.trim(), amount: Number(amt.value), entry_date: date.value, vendor: vendor.value.trim() || null, cost_status: stSel.value, currency: p.currency }); await render(); } catch (e) { mount(err, errorBox(e)); } }));
     const approve = (c) => ["PMO", "ADMIN"].includes(me.role) && c.approval === "pending" ? h("button", { class: "btn small", onClick: guarded(null, async () => { await api("POST", `/projects/${pid}/costs/${c.id}/approve`); await render(); }) }, t("approve")) : "";
     mount(body, h("div", { class: "card" }, h("h2", {}, t("evm")),
-      evm.available ? h("div", { class: "grid" }, ["BAC", "PV", "EV", "AC", "CPI", "SPI", "EAC", "VAC"].map(k => stat(k, num(evm[k], k === "CPI" || k === "SPI" ? 2 : 0)))) : h("p", { class: "muted" }, `${t("not_available")}: ${evm.reason || ""}`),
+      evm.available ? h("div", { class: "grid" }, ["BAC", "PV", "EV", "AC", "CV", "SV", "CPI", "SPI", "TCPI", "EAC", "VAC"].map(k => stat(k, num(evm[k], ["CPI", "SPI", "TCPI"].includes(k) ? 2 : 0)))) : h("p", { class: "muted" }, `${t("not_available")}: ${evm.reason || ""}`),
       (evm.warnings || []).length ? h("div", { class: "warn" }, h("ul", {}, evm.warnings.map(w => h("li", {}, w)))) : null),
       h("div", { class: "card" }, h("h2", {}, t("costs")), h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv(`/projects/${pid}/export/costs.csv`, `${p.number}-costs.csv`)) }, t("export_csv"))), table([t("date"), t("category"), t("vendor"), t("amount"), t("cost_status"), t("approval"), ""], list.map(c => [c.entry_date, c.category, c.vendor || "", `${num(c.amount, 0)} ${c.currency}`, st(c.cost_status), badge(c.approval === "pending" ? t("pending") : t("approved"), c.approval === "pending" ? "warning" : "approved"), approve(c)]), t("none")),
         h("div", { class: "row", style: "margin-top:12px" }, field(t("category"), cat), field(t("vendor"), vendor), field(t("amount"), amt), field(t("date"), date), field(t("cost_status"), stSel), btn), err));

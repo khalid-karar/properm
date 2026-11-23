@@ -373,6 +373,47 @@
    ]
   },
   {
+   "en": "Role gaps V3 (PMBOK / PMP review)",
+   "ar": "فجوات الأدوار V3 (مراجعة PMBOK / PMP)",
+   "subs": [
+    {
+     "en": "Scope and acceptance: charter, WBS, requirements, deliverable acceptance",
+     "ar": "النطاق والقبول: الميثاق وهيكل تقسيم العمل والمتطلبات وقبول المخرجات",
+     "s": "done"
+    },
+    {
+     "en": "Agile and hybrid: backlog, sprints, velocity, burndown",
+     "ar": "الرشيق والهجين: السجل المتراكم والسباقات والسرعة والاحتراق",
+     "s": "done"
+    },
+    {
+     "en": "Strategy alignment and compliance register",
+     "ar": "المواءمة الاستراتيجية وسجل الامتثال",
+     "s": "done"
+    },
+    {
+     "en": "Procurement: contracts, payment milestones, vendor reviews",
+     "ar": "المشتريات: العقود ودفعات الإنجاز وتقييم الموردين",
+     "s": "done"
+    },
+    {
+     "en": "Skills register, matching on requests, team charter",
+     "ar": "سجل المهارات والمطابقة مع الطلبات وميثاق الفريق",
+     "s": "done"
+    },
+    {
+     "en": "Risk responses, reserves, quality log, document versions, engagement",
+     "ar": "استجابات المخاطر والاحتياطيات وسجل الجودة وإصدارات المستندات والإشراك",
+     "s": "done"
+    },
+    {
+     "en": "Restore from backup, retention rules, two-factor sign-in",
+     "ar": "الاستعادة من نسخة احتياطية وقواعد الاحتفاظ والدخول بخطوتين",
+     "s": "done"
+    }
+   ]
+  },
+  {
    "en": "Production readiness",
    "ar": "الجاهزية للإنتاج",
    "subs": [

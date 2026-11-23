@@ -3,7 +3,7 @@ import { api } from "../api.js";
 import { t } from "../i18n.js";
 import { badge, errorBox, field, guarded, h, mount, num, table, toast } from "../ui.js";
 
-const LISTS = ["nonproject_code", "risk_category", "kpi_template", "closure_item", "department"];
+const LISTS = ["nonproject_code", "risk_category", "kpi_template", "closure_item", "department", "skill"];
 
 export default async function (root) {
   async function render() {

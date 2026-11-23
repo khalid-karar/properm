@@ -39,6 +39,7 @@ DEFAULT_PARAMS = {
     "lockout_attempts": 5.0,        # failed sign-ins in a row before the account is locked
     "lockout_minutes": 15.0,        # how long a locked account stays locked (an admin can unlock earlier)
     "session_hours": 8.0,           # sign-in lifetime
+    "require_2fa_privileged": 0.0,  # 1 = ADMIN, PMO and DECISION_MAKER must turn on two-factor sign-in before using the system
     "force_password_change": 0.0,   # 1 = new users and admin-set passwords must be changed at next sign-in             # 1 = planning->execution and execution->closing need an approved gate review       # a dismissed alert is not re-raised within this many days
 }
 

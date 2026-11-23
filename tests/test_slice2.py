@@ -48,6 +48,7 @@ def test_evm_numbers(c, costed):
     assert (e["BAC"], e["PV"], e["EV"], e["AC"]) == (100000, 50000, 40000, 10000)
     assert (e["AC_labor"], e["AC_nonlabor"]) == (4000, 6000)
     assert (e["CPI"], e["SPI"], e["EAC"], e["VAC"]) == (4.0, 0.8, 25000, 75000)
+    assert (e["CV"], e["SV"], e["TCPI"]) == (30000, -10000, 0.667)
 
 
 def test_evm_unavailable_without_baseline_cost(c, world):

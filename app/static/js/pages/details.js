@@ -1,6 +1,7 @@
 // Project "Details" tab: intake fields, team, documents and stakeholders.
 import { api, fileToB64, saveDocument } from "../api.js";
 import { t } from "../i18n.js";
+import { versionsButton } from "./projdepth.js";
 import { badge, errorBox, field, guarded, h, mount, table, toast } from "../ui.js";
 
 const KINDS = ["contract", "charter", "scope", "other"];
@@ -65,7 +66,7 @@ export async function details(body, p, { pid, me, dir, canManage, render }) {
   }));
   const documents = h("div", { class: "card" }, h("h2", {}, t("documents")),
     table([t("type"), t("file"), t("size"), t("date"), ""], docs.map(d => [t(`doc_${d.kind}`), d.filename, fmtSize(d.size), String(d.uploaded_at).slice(0, 10),
-      h("span", { class: "row", style: "gap:6px" }, h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, () => saveDocument(`/projects/${pid}/documents/${d.id}/content`, d.filename)) }, t("download")),
+      h("span", { class: "row", style: "gap:6px" }, h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, () => saveDocument(`/projects/${pid}/documents/${d.id}/content`, d.filename)) }, t("download")), versionsButton(pid, d, { canManage: editable, render }),
         canManage ? h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/projects/${pid}/documents/${d.id}`); await render(); }) }, t("remove")) : null)]), t("none")),
     editable ? h("div", { class: "row", style: "margin-top:12px" }, field(t("type"), kind), field(t("file"), file), up) : null, derr);
 

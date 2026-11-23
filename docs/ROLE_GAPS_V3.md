@@ -108,10 +108,12 @@ Status: ✅ covered · 🟡 partly · ⬜ missing. Priority: **P1** = a PMP-trai
 ---
 
 ## 5. Recommended build order
-1. **Scope and acceptance**: structured charter and assumption log, WBS (deliverables → work packages), requirements with traceability, deliverable acceptance by the sponsor or client.
-2. **Agile and hybrid delivery**: backlog, sprints, task board for staff, velocity, burndown. Switched on when the project type is adaptive or hybrid.
-3. **Strategy and compliance**: strategic objectives register with project/proposal links and a coverage view; compliance requirements register with evidence.
-4. **Procurement**: contract register, payment milestones, invoices against contract value, vendor performance.
-5. **People**: skills and certifications, matching on resource requests, team charter, training needs.
-6. **Risk, cost and quality depth**: response strategies, triggers, opportunities, reserves with drawdown, TCPI/CV/SV, quality log, document versions, engagement matrix.
-7. **Admin**: restore from backup, retention rules. SSO and two-factor sign-in once hosting is decided.
+
+**Status 2026-11-23: all seven steps are built** (tables, API, UI, EN/AR, demo data, tests). Single sign-on is the only item left, because it needs real hosting and an identity provider.
+1. ✅ **Scope and acceptance**: structured charter and assumption log, WBS (deliverables → work packages), requirements with traceability, deliverable acceptance by the sponsor or client.
+2. ✅ **Agile and hybrid delivery**: backlog, sprints, task board for staff, velocity, burndown. Switched on when the project type is adaptive or hybrid.
+3. ✅ **Strategy and compliance**: strategic objectives register with project/proposal links and a coverage view; compliance requirements register with evidence.
+4. ✅ **Procurement**: contract register, payment milestones, invoices against contract value, vendor performance.
+5. ✅ **People**: skills and certifications, matching on resource requests, team charter, training needs.
+6. ✅ **Risk, cost and quality depth**: response strategies, triggers, opportunities, reserves with drawdown, TCPI/CV/SV, quality log, document versions, engagement matrix.
+7. ✅ **Admin**: restore from backup, retention rules. Two-factor sign-in (TOTP) is built; SSO is not (needs hosting and an identity provider).

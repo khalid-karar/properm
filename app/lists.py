@@ -9,6 +9,7 @@ DEFAULTS = {
                      ("CSAT", "Customer satisfaction", {"unit": "/5", "higher_is_better": True})],
     "closure_item": [],
     "department": [],
+    "skill": [],
 }
 PROTECTED = {("nonproject_code", "LEAVE")}          # leave logic (R10 / capacity) depends on this code
 LIST_KEYS = tuple(DEFAULTS)
@@ -44,3 +45,11 @@ def check_department(db, value) -> None:
     if labels and value not in labels:
         from fastapi import HTTPException
         raise HTTPException(422, f"Department must be one of: {', '.join(sorted(labels))}")
+
+
+def check_skill(db, value) -> None:
+    """When the administrator keeps a skills list, skills must come from it."""
+    labels = {x["label"] for x in active(db, "skill")}
+    if labels and value not in labels:
+        from fastapi import HTTPException
+        raise HTTPException(422, f"Skill must be one of: {', '.join(sorted(labels))}")

@@ -1,6 +1,7 @@
 // My profile: contact e-mail, delegate, password, notification choices.
 import { api } from "../api.js";
 import { t } from "../i18n.js";
+import { twoFactorCard } from "./ops.js";
 import { errorBox, field, guarded, h, mount, toast } from "../ui.js";
 
 export default async function (root, { me, nav }) {
@@ -36,6 +37,7 @@ export default async function (root, { me, nav }) {
         try { await api("POST", "/me/password", { current_password: cur.value, new_password: nw.value }); cur.value = nw.value = ""; toast(t("password_changed")); if (me.must_change_password) { location.hash = "#/"; location.reload(); } }
         catch (e) { perr.append(errorBox(e)); }
       } }, t("change_password"))));
+  root.append(await twoFactorCard());
   const hsel = h("select", { id: "home-page", onChange: guarded(null, async (e) => { await api("PUT", "/me/home", { page: e.target.value || null }); me.home_page = e.target.value || null; toast(t("profile_saved")); }) },
     h("option", { value: "" }, t("default_page")), (nav || []).map(n => h("option", { value: n, selected: n === me.home_page }, t(`nav_${n}`))));
   root.append(h("div", { class: "card" }, h("h2", {}, t("start_page")), h("p", { class: "muted small" }, t("start_page_note")), hsel));

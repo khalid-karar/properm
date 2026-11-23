@@ -12,6 +12,7 @@ router = APIRouter(tags=["auth & users"])
 class LoginIn(BaseModel):
     staff_id: str
     password: str
+    otp: str | None = None
 
 
 class DemoLoginIn(BaseModel):
@@ -59,6 +60,15 @@ def login(body: LoginIn, db=Depends(get_db)):
         acct.record(db, body.staff_id, u, False, "inactive" if u and not u.active else "locked_now" if locked else "bad_password" if u else "unknown_user")
         db.commit()
         raise HTTPException(401, "Invalid credentials")
+    from .ops import check_otp, two_factor_on
+    if two_factor_on(db, u):
+        if not body.otp:
+            raise HTTPException(401, "otp_required")
+        if not check_otp(db, u, body.otp):
+            locked = acct.on_failure(db, u)
+            acct.record(db, body.staff_id, u, False, "locked_now" if locked else "bad_otp")
+            db.commit()
+            raise HTTPException(401, "Invalid code")
     s = acct.on_success(db, u)
     acct.record(db, body.staff_id, u, True)
     db.commit()

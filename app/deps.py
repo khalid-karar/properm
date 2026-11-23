@@ -49,10 +49,15 @@ def current_user(request: Request, creds: HTTPAuthorizationCredentials = Depends
         s = db.get(AccountSecurity, user.id)
         if s and s.must_change_password:
             raise HTTPException(403, "Change your password first (My profile)")
+        if user.role in ("ADMIN", "PMO", "DECISION_MAKER") and get_params(db).get("require_2fa_privileged"):
+            from .models import TwoFactor
+            tf = db.get(TwoFactor, user.id)
+            if not (tf and tf.enabled):
+                raise HTTPException(403, "Turn on two-factor sign-in first (My profile)")
     return user
 
 
-MUST_CHANGE_ALLOWED = {"/me", "/me/password", "/me/profile", "/directory", "/notifications/count", "/config/governance"}
+MUST_CHANGE_ALLOWED = {"/me", "/me/password", "/me/profile", "/directory", "/notifications/count", "/config/governance", "/me/2fa", "/me/2fa/setup", "/me/2fa/enable"}
 
 
 def require_roles(*roles):
