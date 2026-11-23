@@ -248,6 +248,24 @@ class ClosureNote(Base):
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class Tender(Base):
+    """The bid stage of a project in tendering: go/no-go, estimate settings, submission checklist and the win/lose result."""
+    __tablename__ = "tenders"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), unique=True)
+    deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
+    scores: Mapped[dict] = mapped_column(JSON, default=dict)          # criterion key -> {"score": 1-5, "note": str}
+    checklist: Mapped[dict] = mapped_column(JSON, default=dict)       # item key -> {"done": bool, "note": str}
+    margin_pct: Mapped[float] = mapped_column(Float, default=20.0)
+    decision: Mapped[str] = mapped_column(String(10), default="open")        # open | go | no_go
+    decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decided_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    outcome: Mapped[str] = mapped_column(String(10), default="pending")      # pending | won | lost
+    outcome_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    outcome_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class WeeklyReport(Base):
     __tablename__ = "weekly_reports"
     __table_args__ = (UniqueConstraint("project_id", "week_start"),)

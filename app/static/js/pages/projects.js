@@ -13,6 +13,7 @@ import { procurement } from "./projprocurement.js";
 import { compliance } from "./projcompliance.js";
 import { briefTab } from "./brief.js";
 import { documentsTab } from "./docs.js";
+import { tenderTab } from "./tender.js";
 import { bookStartCard } from "./bookstart.js";
 import { askText, badge, bar, modal, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
 
@@ -70,8 +71,8 @@ async function detail(root, me, pid) {
 
   async function render() {
     const p = await api("GET", `/projects/${pid}`);
-    const tabs = ["overview", "setup", "details", "documents", "scope", "agile", "compliance", "procurement", "team", "brief", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
-    const show = (x) => x === "setup" ? canManage : (x === "costs" || x === "allocations" || x === "procurement") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : x === "brief" ? canManage && ["tendering", "planning"].includes(p.state) : x === "agile" ? p.project_type !== "predictive" : true;
+    const tabs = ["overview", "tender", "setup", "details", "documents", "scope", "agile", "compliance", "procurement", "team", "brief", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
+    const show = (x) => x === "tender" ? p.state === "tendering" : x === "setup" ? canManage : (x === "costs" || x === "allocations" || x === "procurement") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : x === "brief" ? canManage && ["tendering", "planning"].includes(p.state) : x === "agile" ? p.project_type !== "predictive" : true;
     const body = h("div");
     mount(root,
       h("p", {}, h("a", { href: "#/projects" }, `← ${t("projects")}`)),
@@ -88,6 +89,7 @@ async function detail(root, me, pid) {
       else if (tab === "procurement") await procurement(body, p, { pid, dir, canManage, render });
       else if (tab === "agile") await agile(body, p, { pid, me, dir, canManage, render });
       else if (tab === "setup") await overview(body, p, "setup");
+      else if (tab === "tender") await tenderTab(body, p, { pid, me, canManage, render });
       else if (tab === "documents") await documentsTab(body, p, { pid, canManage, render });
       else if (tab === "team") await team(body, p, { pid, me, dir, canManage, render });
       else if (tab === "brief") await briefTab(body, p, { pid, dir, canManage, render });

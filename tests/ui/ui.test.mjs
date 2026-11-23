@@ -512,6 +512,20 @@ await step("arabic book viewed in English: shows the original and says it is not
   await q.click("#tr-go"); await q.waitForSelector("#tr-box .warn:has-text('Not translated')");
 });
 
+await step("tendering: score, decide go, checklist, submit, win moves the project to planning", async () => {
+  const q = await newPage("tender"); await login(q, "pmo1");
+  await q.goto(BASE + "#/projects/3"); await tab(q, "Tender"); await q.waitForSelector("#tn-score");
+  const patch = (fn) => Promise.all([q.waitForResponse(r => r.request().method() === "PATCH" && r.url().includes("/tender")), fn()]);
+  for (const k of ["strategic_fit", "capability", "capacity", "margin", "client", "competition", "delivery_risk"]) await patch(() => q.selectOption(`#tn-sc-${k}`, "4"));
+  await q.waitForSelector("#tn-score :text('80')");
+  await q.screenshot({ path: "/tmp/shots/tender-top.png", fullPage: true });
+  await Promise.all([q.waitForResponse(r => r.url().includes("/tender/decision")), q.click("#tn-go")]); await q.waitForSelector("#tn-score .badge:has-text('Go')");
+  for (const k of ["read_book", "clarifications", "technical", "financial", "guarantee", "forms", "pmo_review", "signed"]) await patch(() => q.check(`#tn-ck-${k}`));
+  await Promise.all([q.waitForResponse(r => r.url().includes("/tender/submit")), q.click("#tn-submit")]); await q.waitForSelector("#tn-checklist .badge:has-text('submitted')");
+  await q.fill("#tn-onote", "Awarded by the client"); await Promise.all([q.waitForResponse(r => r.url().includes("/tender/outcome")), q.click("#tn-won")]);
+  await q.waitForSelector("h1 .badge:has-text('Planning')");
+});
+
 await step("project book: paste, analyse, review, apply as a plan", async () => {
   const pid = await p.evaluate(async () => {
     const tok = JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage)[0])).token;
