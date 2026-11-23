@@ -4,7 +4,7 @@
 set -e
 cd "$(dirname "$0")/../.."
 DB=$(mktemp -u /tmp/properm-ui-XXXXXX.db)
-export DATABASE_URL="sqlite:///$DB" PROPERM_SECRET="ui-test-secret-ui-test-secret-1234567" PROPERM_DEMO=1 PROPERM_DEMO_PASSWORD="demo-pass-1" PROPERM_DEMO_LOGIN=1
+export PROPERM_LOGIN_MAX_PER_WINDOW=100000 DATABASE_URL="sqlite:///$DB" PROPERM_SECRET="ui-test-secret-ui-test-secret-1234567" PROPERM_DEMO=1 PROPERM_DEMO_PASSWORD="demo-pass-1" PROPERM_DEMO_LOGIN=1
 PORT=${PORT:-8765}
 python3 -m app.demo >/dev/null
 uvicorn app.main:app_from_env --factory --port "$PORT" >/dev/null 2>&1 &

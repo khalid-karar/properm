@@ -1,6 +1,7 @@
 """Project book -> reviewed plan (flow chart 1.2 and 1.3). Analyze a tender book or brief (Arabic or English, text, DOCX, PDF or scan),
 review the draft, then apply: requirements, deliverables, milestones, tasks with hours, staff proposals, risks and compliance items."""
 import calendar
+import copy
 import json
 import re
 from datetime import date, datetime, timedelta, timezone
@@ -9,12 +10,12 @@ from math import ceil
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from .. import ai, brief, docread, rules
+from .. import ai, brief, docread, plandomains, rules
 from ..audit import log
 from ..config import WEEK_STARTS_ON_SUNDAY
 from ..deps import current_user, get_db, get_params, require_roles
 from ..models import (Activity, ActivityStaffLimit, AiDraft, Assignment, Assumption, ComplianceRequirement, Deliverable, Document, Milestone, PlannedAllocation,
-                      Project, ProjectCharter, ProjectCompliance, Requirement, ResourceRequest, Risk, User, UserSkill)
+                      Project, ProjectCharter, ProjectCompliance, QualityItem, CommItem, Requirement, ResourceRequest, Risk, Stakeholder, StakeholderEngagement, User, UserSkill)
 from ..workcal import effective_capacity
 from .projects import can_manage, get_project, need_manage
 from .skills import _like
@@ -154,6 +155,7 @@ def analyze(pid: int, body: AnalyzeIn, db=Depends(get_db), user: User = Depends(
         raise HTTPException(422, "Give a document_id of an uploaded file, or paste at least a few lines of text")
     result = brief.analyze(pages, body.lang)
     result["meta"]["source"] = source
+    result["domains"] = plandomains.generate(result)
     notes = _refine(db, result, result["meta"]["language"])
     for ph in result["phases"]:
         ph.pop("text", None)
@@ -197,6 +199,9 @@ def list_drafts(pid: int, db=Depends(get_db), user: User = Depends(require_roles
 def get_draft(pid: int, did: int, start: date | None = None, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE))):
     p, d = _draft(db, user, pid, did)
     s = _start(p, start)
+    if "domains" not in d.output:
+        d.output = {**d.output, "domains": plandomains.generate(d.output)}
+        db.commit()
     return {"id": d.id, "status": d.status, "start": s, "draft": d.output, "staffing": propose(db, s, d.output["activities"])}
 
 
@@ -214,12 +219,56 @@ def staffing(pid: int, did: int, body: StaffingIn, db=Depends(get_db), user: Use
     return propose(db, _start(p, body.start), body.activities)
 
 
+class DomainIn(BaseModel):
+    action: str = Field(pattern="^(accept|modify|reject)$")
+    items: list[dict] | None = None
+    feedback: str | None = Field(default=None, max_length=1000)
+
+
+def _domain_model(lang):
+    if ai.status()["mode"] != "live":
+        return None
+
+    def run(name, before, feedback):
+        prompt = (f"Rewrite this {name} plan list for a project. Return JSON {{\"items\": [...]}} with the same fields per item. "
+                  f"Reviewer feedback to apply: {feedback}\nCurrent list: {json.dumps(before, ensure_ascii=False)[:6000]}\nLanguage: {lang}")
+        return ai.extract_json(ai._live("brief", {}, prompt)).get("items", [])
+    return run
+
+
+@router.post("/projects/{pid}/brief/{did}/domains/{name}")
+def review_domain(pid: int, did: int, name: str, body: DomainIn, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE))):
+    p, d = _draft(db, user, pid, did)
+    if d.status != "draft":
+        raise HTTPException(409, f"Draft already {d.status}")
+    if name not in plandomains.DOMAINS:
+        raise HTTPException(404, "Unknown plan domain")
+    out = copy.deepcopy(d.output)
+    doms = out.get("domains") or plandomains.generate(out)
+    dom = doms[name]
+    if body.action == "accept":
+        plandomains.accept(dom, user.id)
+    elif body.action == "modify":
+        if body.items is None:
+            raise HTTPException(422, "Send the edited items")
+        plandomains.modify(name, dom, body.items, user.id)
+    else:
+        if not (body.feedback or "").strip():
+            raise HTTPException(422, "Tell the assistant what was wrong so the new version is better")
+        plandomains.reject(name, dom, out, body.feedback.strip(), user.id, _domain_model(out.get("meta", {}).get("language")))
+    out["domains"] = doms
+    d.output = out
+    log(db, user.id, f"brief.domain.{body.action}", "project", pid, {"draft_id": d.id, "domain": name})
+    db.commit()
+    return {"domain": name, **dom}
+
+
 # ---------------- apply ----------------
 class ApplyIn(BaseModel):
     draft: dict | None = None                # the reviewer's edited version; omit to accept as drafted
     start: date | None = None
     assignments: dict[str, int | None] | None = None      # task code -> user id; null = unassigned. Omit to accept the proposals
-    sections: list[str] = ["requirements", "deliverables", "activities", "milestones", "risks", "compliance", "charter", "assumptions"]
+    sections: list[str] = ["requirements", "deliverables", "activities", "milestones", "risks", "compliance", "charter", "assumptions", "domains"]
 
 
 @router.post("/projects/{pid}/brief/{did}/apply")
@@ -349,6 +398,27 @@ def apply(pid: int, did: int, body: ApplyIn, db=Depends(get_db), user: User = De
             if t["kind"] in ("acceptance", "penalty"):
                 db.add(Assumption(project_id=pid, kind="constraint", text=f"{t['text']} (book p.{t['page']})"[:600]))
                 n["assumptions"] += 1
+    n["domain_items"], n["domains_skipped"] = 0, 0
+    if "domains" in secs:
+        for dn, dom in (out.get("domains") or {}).items():
+            if dom["status"] not in ("accepted", "modified"):
+                n["domains_skipped"] += 1
+                continue
+            for it in dom["items"]:
+                if dn == "stakeholders":
+                    st = Stakeholder(project_id=pid, name=it["name"][:200], organisation=it.get("organisation"), role=it.get("role"), power=it.get("power") or 3, interest=it.get("interest") or 3, engagement=it.get("engagement"))
+                    db.add(st)
+                    db.flush()
+                    db.add(StakeholderEngagement(stakeholder_id=st.id, project_id=pid, plan=it.get("engagement")))
+                elif dn == "communication":
+                    db.add(CommItem(project_id=pid, audience=it["audience"][:200], information=(it.get("information") or "")[:300], method=(it.get("method") or "")[:100], frequency=it.get("frequency") or "monthly"))
+                elif dn == "quality":
+                    db.add(QualityItem(project_id=pid, kind=it.get("kind") or "inspection", title=it["title"][:300], severity="low", status="open", note=it.get("note")))
+                else:
+                    label = {"cost": "Cost plan", "procurement": "Procurement and payment", "change": "Change control"}[dn]
+                    body_t = (f"{it['name']}: {it.get('hours', 0)} h. {it.get('note') or ''}" if dn == "cost" else f"{it.get('kind', '')}: {it['text']}" if dn == "procurement" else it["text"])
+                    db.add(Assumption(project_id=pid, kind="constraint", text=f"[{label}] {body_t}"[:600]))
+                n["domain_items"] += 1
     d.output = {**out}
     d.status, d.reviewed_by, d.reviewed_at = "applied", user.id, datetime.now(timezone.utc)
     log(db, user.id, "brief.applied", "project", pid, {"draft_id": d.id, **n, "edited": body.draft is not None})

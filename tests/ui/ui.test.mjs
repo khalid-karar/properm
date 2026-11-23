@@ -473,6 +473,9 @@ await step("project book: paste, analyse, review, apply as a plan", async () => 
   await p.goto(BASE + "#/projects/" + pid); await tab(p, "Project book"); await p.waitForSelector("#brief-card");
   await p.fill("#brief-text", "Project scope\nPhase 1: Discovery (2 months)\n1. Document all source systems and databases\n2. Prepare the data flow diagram\n3. Assess the current infrastructure\nPhase 1 deliverables: Data inventory, Data flow diagram, Discovery report.\nPhase 2: Build (3 months)\n1. Configure the platform\n2. Build the data pipelines\nPhase 2 deliverables: Configured platform, Pipeline documentation.\nThe contractor must deliver within 5 months.");
   await p.click("#brief-go"); await p.waitForSelector("#brief-review");
+  await p.waitForSelector("#brief-domains #dom-cost");
+  await p.fill("#dom-fb-cost", "add travel"); await p.click("#dom-reject-cost"); await p.waitForSelector("#dom-cost .diff", { state: "attached" });
+  await p.click("#dom-accept-communication"); await p.waitForSelector("#dom-communication summary:has-text('Accepted')");
   await p.waitForSelector("#brief-apply:not([disabled])"); await p.click("#brief-apply"); await p.waitForSelector(".toast:has-text('Plan created')");
   await p.waitForSelector("#brief-result td");
 });

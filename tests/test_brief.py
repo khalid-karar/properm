@@ -225,3 +225,37 @@ def test_book_to_plan_to_close(c, world):
     assert next(i for i in cl["items"] if i["key"] == "deliverables_accepted")["satisfied"] is True         # automatic: every deliverable accepted
     r = c.post(f"/projects/{pid}/transition", headers=pmo, json={"to_state": "archived"})
     assert r.status_code == 200, r.text
+
+
+
+def test_plan_domains_review_and_apply(c, world):
+    h = world["h"]
+    pm, s1 = h["pm1"], h["s1"]
+    r = c.post("/projects", headers=pm, json={"number": "TND-D", "name": "Domains", "state": "planning", "planned_start": str(TODAY), "planned_end": str(TODAY + timedelta(days=185)), "project_type": "hybrid"})
+    assert r.status_code == 201, r.text
+    pid = r.json()["id"]
+    a = c.post(f"/projects/{pid}/brief/analyze", headers=pm, json={"text": AR_BOOK})
+    assert a.status_code == 201, a.text
+    did = a.json()["draft_id"]
+    g = c.get(f"/projects/{pid}/brief/{did}", headers=pm).json()["draft"]
+    assert set(g["domains"]) == {"stakeholders", "communication", "quality", "cost", "procurement", "change"}
+    assert all(d["status"] == "proposed" and d["items"] for d in g["domains"].values())
+    url = f"/projects/{pid}/brief/{did}/domains"
+    assert c.post(f"{url}/cost", headers=s1, json={"action": "accept"}).status_code == 403
+    assert c.post(f"{url}/nope", headers=pm, json={"action": "accept"}).status_code == 404
+    assert c.post(f"{url}/cost", headers=pm, json={"action": "reject"}).status_code == 422        # needs feedback
+    # modify: tracked diff
+    items = g["domains"]["communication"]["items"]
+    items[0]["frequency"] = "weekly"
+    m = c.post(f"{url}/communication", headers=pm, json={"action": "modify", "items": items}).json()
+    assert m["status"] == "modified" and m["history"][-1]["diff"]
+    # reject and regenerate with feedback: feedback is kept visible, status goes back to proposed
+    rj = c.post(f"{url}/cost", headers=pm, json={"action": "reject", "feedback": "add travel costs"}).json()
+    assert rj["status"] == "proposed" and any("travel" in str(i) for i in rj["items"]) and rj["history"][-1]["feedback"] == "add travel costs"
+    assert c.post(f"{url}/stakeholders", headers=pm, json={"action": "accept"}).status_code == 200
+    ap = c.post(f"/projects/{pid}/brief/{did}/apply", headers=pm, json={"sections": ["domains"]})
+    assert ap.status_code == 200, ap.text
+    n = ap.json()
+    assert n["domains_skipped"] == 4 and n["domain_items"] > 3          # only the two reviewed domains were applied
+    st = c.get(f"/projects/{pid}/stakeholders", headers=pm)
+    assert st.status_code == 200 and len(st.json()) >= 3

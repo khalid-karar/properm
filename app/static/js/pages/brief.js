@@ -3,7 +3,7 @@ import { api, fileToB64 } from "../api.js";
 import { t } from "../i18n.js";
 import { badge, errorBox, field, guarded, h, mount, num, stat, table, toast } from "../ui.js";
 
-const SECTIONS = ["requirements", "deliverables", "activities", "milestones", "risks", "compliance", "charter", "assumptions"];
+const SECTIONS = ["requirements", "deliverables", "activities", "milestones", "risks", "compliance", "charter", "assumptions", "domains"];
 
 export async function briefTab(body, p, { pid, dir, canManage, render }) {
   const out = h("div", { id: "brief-out" });
@@ -27,6 +27,36 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
       await review(r.draft_id);
     } catch (e) { mount(err, errorBox(e)); }
   });
+
+  function domainsCard(did, dr) {
+    const box = h("div", { class: "card", id: "brief-domains" }, h("h3", {}, t("dom_title")), h("p", { class: "muted small" }, t("dom_note")));
+    const COLS = { stakeholders: ["name", "organisation", "role", "power", "interest", "engagement"], communication: ["audience", "information", "method", "frequency"],
+      quality: ["title", "kind", "note"], cost: ["name", "hours", "note"], procurement: ["kind", "text"], change: ["text"] };
+    const NUM = new Set(["power", "interest", "hours"]);
+    const names = Object.keys(COLS);
+    const drawOne = (name) => {
+      const dom = dr.domains[name];
+      const rows = dom.items.map(it => ({ it, inp: COLS[name].map(k => { const i = h("input", { value: it[k] ?? "", "aria-label": k, style: NUM.has(k) ? "width:70px" : "width:100%" }); if (NUM.has(k)) i.type = "number"; return [k, i]; }) }));
+      const fb = h("input", { placeholder: t("dom_feedback"), id: `dom-fb-${name}`, style: "width:100%" });
+      const hist = dom.history.slice(-3).reverse();
+      const post = async (action, extra = {}) => {
+        const r = await api("POST", `/projects/${pid}/brief/${did}/domains/${name}`, { action, ...extra });
+        dr.domains[name] = { status: r.status, items: r.items, history: r.history };
+        wrap.replaceWith(drawOne(name));
+      };
+      const wrap = h("details", { class: "dom", id: `dom-${name}`, open: dom.status === "proposed" },
+        h("summary", {}, `${t("dom_" + name)} · `, badge(t("dom_s_" + dom.status), dom.status === "proposed" ? "warning" : "ok"), ` · ${dom.items.length}`),
+        h("div", { style: "overflow-x:auto" }, table(COLS[name].map(k => t("dom_f_" + k)), rows.map(r => r.inp.map(([, i]) => i)), t("none"))),
+        h("div", { class: "row" },
+          h("button", { class: "btn small", type: "button", id: `dom-accept-${name}`, onClick: guarded(null, () => post("accept")) }, t("dom_accept")),
+          h("button", { class: "btn small secondary", type: "button", id: `dom-save-${name}`, onClick: guarded(null, () => post("modify", { items: rows.map(r => Object.fromEntries(r.inp.map(([k, i]) => [k, NUM.has(k) ? Number(i.value) : i.value]))) })) }, t("dom_save"))),
+        h("div", { class: "row" }, fb, h("button", { class: "btn small secondary", type: "button", id: `dom-reject-${name}`, onClick: guarded(null, async () => { if (!fb.value.trim()) return toast(t("dom_need_feedback")); await post("reject", { feedback: fb.value.trim() }); }) }, t("dom_reject"))),
+        ...hist.map(x => h("details", { class: "small muted" }, h("summary", {}, `${x.at.slice(0, 16).replace("T", " ")} · ${x.action}${x.feedback ? " · " + x.feedback : ""}`), h("pre", { class: "diff" }, (x.diff || []).join("\n") || "—"))));
+      return wrap;
+    };
+    names.forEach(n => box.append(drawOne(n)));
+    return box;
+  }
 
   async function review(did) {
     const r = await api("GET", `/projects/${pid}/brief/${did}`);
@@ -64,6 +94,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
       h("div", { class: "card" }, h("h3", {}, t("brief_tasks")), h("div", { style: "overflow-x:auto" },
         table([t("code"), t("name"), t("role"), t("planned_hours"), t("brief_page"), t("assignee"), ""], rows.map(x => [x.a.code, x.name, x.role, x.hrs, x.a.page, x.who, x.pr.user_id ? "" : badge(t("brief_unassigned"), "warning")]), t("none")))),
       h("div", { class: "card" }, h("h3", {}, t("requirements")), table([t("code"), t("title"), t("brief_page")], dr.requirements.slice(0, 200).map(x => [x.code, x.title, x.page]), t("none"))),
+      domainsCard(did, dr),
       h("div", { class: "card" }, h("h3", {}, t("brief_also")), table([t("type"), t("title")], [...dr.team.map(x => [t("tab_team"), `${x.title}${x.min_years ? ` · ${x.min_years}y` : ""}`]), ...dr.risks.map(x => [t("risks"), x.title]), ...dr.compliance.map(x => [x.framework, x.title]), ...dr.terms.map(x => [x.kind, x.text])])),
       h("div", { class: "card" }, h("h3", {}, t("brief_apply")),
         h("div", { class: "row" }, field(t("planned_start"), start), ...SECTIONS.map(s => h("label", { class: "small" }, chk[s], ` ${s}`))),
