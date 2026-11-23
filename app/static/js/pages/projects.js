@@ -11,7 +11,11 @@ export default async function (root, { me, arg }) {
   if (arg) return detail(root, me, Number(arg));
   const canManage = MANAGE.includes(me.role);
   async function render() {
-    const list = await api("GET", "/projects");
+    const [all, dirAll, progs] = await Promise.all([api("GET", "/projects"), api("GET", "/directory"), me.role === "STAFF" ? [] : api("GET", "/programs").catch(() => [])]);
+    const F = (render.F = render.F || { state: "", pm: "", program: "" });
+    const list = all.filter(p => (!F.state || p.state === F.state) && (!F.pm || String(p.pm_id) === F.pm) && (!F.program || String(p.program_id) === F.program));
+    const sel = (key, opts) => h("select", { onChange: (ev) => { F[key] = ev.target.value; render(); } }, h("option", { value: "" }, t("all")), opts.map(([v, l]) => h("option", { value: v, selected: F[key] === String(v) }, l)));
+    const pmName = (id) => (dirAll.find(u => u.id === id) || {}).full_name || "—";
     const num_ = h("input", { required: true }), name = h("input", { required: true, style: "min-width:220px" });
     const state = h("select", {}, h("option", { value: "planning" }, t("planning")), h("option", { value: "tendering" }, t("tendering")));
     const start = h("input", { type: "date" }), end = h("input", { type: "date" });
@@ -31,8 +35,11 @@ export default async function (root, { me, arg }) {
     mount(root, h("h1", {}, t("projects")),
       canManage ? h("div", { class: "card" }, h("h2", {}, t("new_project")),
         h("div", { class: "row" }, field(t("number"), num_), field(t("name"), name), field(t("state"), state), field(t("planned_start"), start), field(t("planned_end"), end), field(t("budget"), budget), field(t("currency"), ccy), field(t("client"), client), field(t("sponsor"), sponsor), btn), err) : null,
-      h("div", { class: "card" }, table([t("number"), t("name"), t("state"), t("planned_start"), t("planned_end"), ""],
-        list.map(p => [p.number, p.name, badge(t(p.state), "gold"), p.planned_start || "—", p.planned_end || "—",
+      me.role === "STAFF" ? null : h("div", { class: "card" }, h("div", { class: "row" }, field(t("filter_state"), sel("state", [...new Set(all.map(p => p.state))].map(x => [x, t(x)]))),
+        field(t("filter_pm"), sel("pm", [...new Set(all.map(p => p.pm_id))].map(x => [x, pmName(x)]))), progs.length ? field(t("filter_program"), sel("program", progs.map(g => [g.id, g.code]))) : null,
+        h("button", { class: "btn secondary small", type: "button", onClick: () => { render.F = { state: "", pm: "", program: "" }; render(); } }, t("clear_filters")))),
+      h("div", { class: "card" }, table([t("number"), t("name"), t("manager"), t("state"), t("planned_start"), t("planned_end"), ""],
+        list.map(p => [p.number, p.name, pmName(p.pm_id), badge(t(p.state), "gold"), p.planned_start || "—", p.planned_end || "—",
           h("span", {}, h("a", { href: `#/projects/${p.id}` }, t("open")), " ", ["execution", "closing"].includes(p.state) && me.role !== "STAFF" ? h("a", { href: `#/dashboard/${p.id}` }, t("nav_dashboard")) : null)]), t("none"))));
   }
   await render();
@@ -218,19 +225,37 @@ async function detail(root, me, pid) {
 
   async function risks(body, p) {
     const [rs, is, lists] = await Promise.all([api("GET", `/projects/${pid}/risks`), api("GET", `/projects/${pid}/issues`), api("GET", "/config/lists")]);
+    const who = (id) => (dir.find(u => u.id === id) || {}).full_name || "—";
+    const ownerSel = (v) => h("select", {}, h("option", { value: "" }, "—"), dir.map(u => h("option", { value: u.id, selected: u.id === v }, u.full_name)));
     const rcat = h("select", {}, h("option", { value: "" }, "—"), lists.risk_category.map(x => h("option", { value: x.code }, x.label)));
     const rt = h("input"), rp = h("input", { type: "number", min: "1", max: "5", value: "3", style: "width:70px" }), ri = h("input", { type: "number", min: "1", max: "5", value: "3", style: "width:70px" });
     const it = h("input"), isv = h("select", {}, ["low", "medium", "high", "critical"].map(s => h("option", { value: s }, st(s)))), idue = h("input", { type: "date" });
+    const rown = ownerSel(null), iown = ownerSel(null);
     const err = h("div");
     const addR = h("button", { class: "btn", type: "button" }, t("add_risk")), addI = h("button", { class: "btn", type: "button" }, t("add_issue"));
-    addR.addEventListener("click", guarded(addR, async () => { mount(err); try { await api("POST", `/projects/${pid}/risks`, { title: rt.value.trim(), probability: Number(rp.value), impact: Number(ri.value), category: rcat.value || null }); await render(); } catch (e) { mount(err, errorBox(e)); } }));
-    addI.addEventListener("click", guarded(addI, async () => { mount(err); try { await api("POST", `/projects/${pid}/issues`, { title: it.value.trim(), severity: isv.value, due_date: idue.value || null }); await render(); } catch (e) { mount(err, errorBox(e)); } }));
+    addR.addEventListener("click", guarded(addR, async () => { mount(err); try { await api("POST", `/projects/${pid}/risks`, { title: rt.value.trim(), probability: Number(rp.value), impact: Number(ri.value), category: rcat.value || null, owner_id: rown.value ? Number(rown.value) : null }); await render(); } catch (e) { mount(err, errorBox(e)); } }));
+    addI.addEventListener("click", guarded(addI, async () => { mount(err); try { await api("POST", `/projects/${pid}/issues`, { title: it.value.trim(), severity: isv.value, due_date: idue.value || null, owner_id: iown.value ? Number(iown.value) : null }); await render(); } catch (e) { mount(err, errorBox(e)); } }));
+    const editItem = (kind, item) => {
+      const f = { title: h("input", { value: item.title }), owner: ownerSel(item.owner_id) };
+      const extra = kind === "risks"
+        ? { cat: h("select", {}, h("option", { value: "" }, "—"), lists.risk_category.map(x => h("option", { value: x.code, selected: x.code === item.category }, x.label))), p: h("input", { type: "number", min: "1", max: "5", value: item.probability }), i: h("input", { type: "number", min: "1", max: "5", value: item.impact }), resp: h("textarea", { rows: 3 }, item.response || "") }
+        : { sev: h("select", {}, ["low", "medium", "high", "critical"].map(s => h("option", { value: s, selected: s === item.severity }, st(s)))), due: h("input", { type: "date", value: item.due_date || "" }), desc: h("textarea", { rows: 3 }, item.description || "") };
+      const e2 = h("div");
+      modal({ title: t("edit"), body: h("div", {}, e2, h("div", { class: "row" }, field(t("title"), f.title), field(t("owner"), f.owner),
+        kind === "risks" ? [field(t("category"), extra.cat), field(t("probability"), extra.p), field(t("impact"), extra.i), field(t("response"), extra.resp)] : [field(t("severity"), extra.sev), field(t("due_date"), extra.due), field(t("description"), extra.desc)])),
+        actions: [{ label: t("cancel"), class: "secondary", onClick: (c) => c() }, { label: t("save"), onClick: async (c) => {
+          const body = { title: f.title.value.trim(), owner_id: f.owner.value ? Number(f.owner.value) : null };
+          if (kind === "risks") Object.assign(body, { category: extra.cat.value || null, probability: Number(extra.p.value), impact: Number(extra.i.value), response: extra.resp.value.trim() || null });
+          else Object.assign(body, { severity: extra.sev.value, due_date: extra.due.value || null, description: extra.desc.value.trim() || null });
+          try { await api("PATCH", `/projects/${pid}/${kind}/${item.id}`, body); c(); await render(); } catch (e) { mount(e2, errorBox(e)); } } }] });
+    };
+    const editBtn = (kind, item) => canManage ? h("button", { class: "btn small secondary", type: "button", onClick: () => editItem(kind, item) }, t("edit")) : "";
     const statusSel = (kind, item, options) => canManage ? h("select", { value: item.status, onChange: guarded(null, async (ev) => { await api("PATCH", `/projects/${pid}/${kind}/${item.id}`, { status: ev.target.value }); await render(); }) }, options.map(o => h("option", { value: o }, st(o)))) : st(item.status);
     mount(body,
-      h("div", { class: "card" }, h("h2", {}, t("risks")), table([t("title"), t("category"), t("probability"), t("impact"), t("score"), t("status")], rs.map(r => [r.title, r.category || "—", r.probability, r.impact, badge(r.score, r.score >= 20 ? "critical" : r.score >= 15 ? "warning" : "info"), statusSel("risks", r, ["open", "mitigating", "occurred", "closed"])]), t("none")),
-        canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("title"), rt), field(t("category"), rcat), field(t("probability"), rp), field(t("impact"), ri), addR) : null),
-      h("div", { class: "card" }, h("h2", {}, t("issues")), table([t("title"), t("severity"), t("due_date"), t("status")], is.map(i => [i.title, badge(st(i.severity), i.severity === "critical" ? "critical" : i.severity === "high" ? "warning" : "info"), i.due_date || "—", statusSel("issues", i, ["open", "in_progress", "resolved", "closed"])]), t("none")),
-        canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("title"), it), field(t("severity"), isv), field(t("due_date"), idue), addI) : null), err);
+      h("div", { class: "card" }, h("h2", {}, t("risks")), table([t("title"), t("category"), t("owner"), t("probability"), t("impact"), t("score"), t("status"), ""], rs.map(r => [r.title, r.category || "—", who(r.owner_id), r.probability, r.impact, badge(r.score, r.score >= 20 ? "critical" : r.score >= 15 ? "warning" : "info"), statusSel("risks", r, ["open", "mitigating", "occurred", "closed"]), editBtn("risks", r)]), t("none")),
+        canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("title"), rt), field(t("category"), rcat), field(t("owner"), rown), field(t("probability"), rp), field(t("impact"), ri), addR) : null),
+      h("div", { class: "card" }, h("h2", {}, t("issues")), table([t("title"), t("severity"), t("owner"), t("due_date"), t("status"), ""], is.map(i => [i.title, badge(st(i.severity), i.severity === "critical" ? "critical" : i.severity === "high" ? "warning" : "info"), who(i.owner_id), i.due_date || "—", statusSel("issues", i, ["open", "in_progress", "resolved", "closed"]), editBtn("issues", i)]), t("none")),
+        canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("title"), it), field(t("severity"), isv), field(t("due_date"), idue), field(t("owner"), iown), addI) : null), err);
   }
 
   async function costs(body, p) {

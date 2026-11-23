@@ -201,10 +201,13 @@ def prog_out(g: Program) -> dict:
 
 
 @router.get("/programs")
-def list_programs(db=Depends(get_db), user: User = Depends(current_user)):
+def list_programs(mine: bool = False, db=Depends(get_db), user: User = Depends(current_user)):
     if user.role == "STAFF":
         raise HTTPException(403, "Programs are for managers and portfolio roles")
-    return [prog_out(g) for g in db.query(Program).order_by(Program.code)]
+    q = db.query(Program).order_by(Program.code)
+    if mine:
+        q = q.filter(Program.manager_id == user.id)
+    return [prog_out(g) for g in q]
 
 
 @router.post("/programs", status_code=201)
@@ -222,11 +225,15 @@ def create_program(body: ProgramIn, db=Depends(get_db), user: User = Depends(req
 
 
 @router.patch("/programs/{gid}")
-def update_program(gid: int, body: ProgramPatch, db=Depends(get_db), user: User = Depends(require_roles("PMO", "ADMIN"))):
+def update_program(gid: int, body: ProgramPatch, db=Depends(get_db), user: User = Depends(require_roles("PMO", "ADMIN", "PROGRAM_MANAGER"))):
     g = db.get(Program, gid)
     if not g:
         raise HTTPException(404, "Program not found")
     ch = body.model_dump(exclude_unset=True)
+    if user.role == "PROGRAM_MANAGER":
+        if g.manager_id != user.id:
+            raise HTTPException(403, "You can only edit programs you manage")
+        ch.pop("manager_id", None)
     if ch.get("manager_id") is not None and not db.get(User, ch["manager_id"]):
         raise HTTPException(422, "manager_id is not a user")
     for k, v in ch.items():
@@ -241,10 +248,14 @@ class ProgramLink(BaseModel):
 
 
 @router.put("/projects/{pid}/program")
-def set_project_program(pid: int, body: ProgramLink, db=Depends(get_db), user: User = Depends(require_roles("PMO", "ADMIN"))):
+def set_project_program(pid: int, body: ProgramLink, db=Depends(get_db), user: User = Depends(require_roles("PMO", "ADMIN", "PROGRAM_MANAGER"))):
     p = get_project(db, pid)
     if body.program_id is not None and not db.get(Program, body.program_id):
         raise HTTPException(404, "Program not found")
+    if user.role == "PROGRAM_MANAGER":
+        mine = {g.id for g in db.query(Program).filter_by(manager_id=user.id)}
+        if (body.program_id is not None and body.program_id not in mine) or (p.program_id is not None and p.program_id not in mine):
+            raise HTTPException(403, "You can only move projects into or out of programs you manage")
     p.program_id = body.program_id
     log(db, user.id, "project.program_set", "project", pid, {"program_id": body.program_id})
     db.commit()
@@ -330,3 +341,20 @@ def calendar_week(week_of: date | None = None, db=Depends(get_db), user: User = 
     from ..rules import week_start
     from ..config import WEEK_STARTS_ON_SUNDAY
     return week_info(db, week_start(week_of or date.today(), WEEK_STARTS_ON_SUNDAY))
+
+
+@router.get("/programs/{gid}/rollup")
+def program_rollup(gid: int, db=Depends(get_db), user: User = Depends(current_user)):
+    """Open risks and all benefits across the program's projects."""
+    if user.role not in EXEC:
+        raise HTTPException(403, "Program roll-up requires PMO, ADMIN, DECISION_MAKER or PROGRAM_MANAGER")
+    if not db.get(Program, gid):
+        raise HTTPException(404, "Program not found")
+    from ..models import Risk
+    projs = {p.id: p for p in db.query(Project).filter_by(program_id=gid)}
+    risks = db.query(Risk).filter(Risk.project_id.in_(list(projs)), Risk.status.in_(("open", "mitigating"))).all() if projs else []
+    risks.sort(key=lambda r: -r.score)
+    bens = db.query(Benefit).filter(Benefit.project_id.in_(list(projs))).all() if projs else []
+    return {"risks": [{"id": r.id, "project_id": r.project_id, "project": projs[r.project_id].number, "title": r.title, "score": r.score,
+                       "status": r.status} for r in risks[:50]],
+            "benefits": [{**b_out(b), "project": projs[b.project_id].number} for b in bens]}

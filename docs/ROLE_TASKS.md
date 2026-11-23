@@ -22,9 +22,9 @@ Legend: ✅ done in UI · 🟡 partly · ⬜ missing (scheduled in Batch 1/2 bel
 | Create/edit project, details, stakeholders, documents | Projects → Details | ✅ |
 | Plan: activities, milestones, KPIs, dependencies | Projects → Plan | ✅ |
 | Approve/reject timesheets (single, bulk, history) | Approvals | ✅ |
-| Risks & issues: add, edit owner/response/due/category | Projects → Risks | 🟡 B2 edit form |
+| Risks & issues: add, edit owner/response/due/category | Projects → Risks | ✅ |
 | Costs, changes, benefits, closure checklist | Projects tabs | ✅ |
-| Timeline (Gantt) view of the plan | Projects → Plan | ⬜ B2 |
+| Timeline (Gantt) view of the plan | Projects → Plan | ✅ |
 | Reports (monthly/quarterly/annual, Excel/PDF) | Reports | ✅ |
 | Resource load of my team | Projects → Allocations | ✅ |
 
@@ -34,32 +34,32 @@ Legend: ✅ done in UI · 🟡 partly · ⬜ missing (scheduled in Batch 1/2 bel
 | Portfolio health, executive view, programs | Executive, Programs | ✅ |
 | Alerts workflow with actions | Alerts | ✅ |
 | Audit trail with filters, period lock | Audit | ✅ |
-| Portfolio filters (state, PM, program, RAG) | Projects | ⬜ B2 |
-| Cross-project resource conflicts | Executive | ⬜ B2 |
+| Portfolio filters (state, PM, program) | Projects | ✅ |
+| Cross-project resource conflicts | Executive | ✅ |
 | Reports for portfolio | Reports | ✅ |
 
 ## PROGRAM_MANAGER
 | Task | Where | Status |
 |---|---|---|
-| See my programs and their projects | Programs | 🟡 B2 (own-programs filter) |
+| See my programs and their projects | Programs | ✅ |
 | Program-level report | Reports | ✅ |
-| Program risks / benefits roll-up | Programs | ⬜ B2 |
+| Program risks / benefits roll-up | Programs | ✅ |
 
 ## DECISION_MAKER
 | Task | Where | Status |
 |---|---|---|
 | Executive dashboard with trends | Executive | ✅ |
 | Decisions queue (change requests) | Decisions | ✅ |
-| Investment vs return, drill-down to activity | Executive | ⬜ B2 |
+| Investment vs return, drill-down to activity | Executive | ✅ |
 
 ## ADMIN
 | Task | Where | Status |
 |---|---|---|
 | Users, rates, delegates, roles | Admin | ✅ |
 | Configurable lists, AI controls | Config | ✅ |
-| User form: job title, department, e-mail | Admin | ⬜ B2 |
-| Bulk import users (CSV) | Admin | ⬜ B2 |
-| Read-only permission matrix | Admin | ⬜ B2 |
+| User form: job title, department, e-mail | Admin | ✅ |
+| Bulk import users (CSV) | Admin | ✅ |
+| Read-only permission matrix | Admin | ✅ |
 | Reset another user's password | Admin → edit user | ✅ |
 
 ## Everyone
@@ -68,3 +68,7 @@ Legend: ✅ done in UI · 🟡 partly · ⬜ missing (scheduled in Batch 1/2 bel
 | Profile page (avatar menu) | ✅ |
 | "What can I do?" role guide with links | ✅ |
 | Arabic/English | ✅ |
+
+## Not built (deliberate)
+- Alert comment threads, login lockout/security policy, full data export, drag-and-drop Gantt editing, dependency arrows on the timeline.
+  They need design decisions (retention, lockout policy) and are listed for the next round.

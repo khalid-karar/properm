@@ -26,6 +26,8 @@ class RiskIn(BaseModel):
 
 
 class RiskPatch(BaseModel):
+    title: str | None = Field(None, min_length=1)
+    category: str | None = None
     probability: int | None = Field(None, ge=1, le=5)
     impact: int | None = Field(None, ge=1, le=5)
     response: str | None = None
@@ -42,6 +44,8 @@ class IssueIn(BaseModel):
 
 
 class IssuePatch(BaseModel):
+    title: str | None = Field(None, min_length=1)
+    description: str | None = None
     severity: str | None = None
     owner_id: int | None = None
     due_date: date | None = None
@@ -88,6 +92,8 @@ def patch_risk(pid: int, rid: int, body: RiskPatch, db=Depends(get_db), user: Us
     data = body.model_dump(exclude_unset=True)
     if "status" in data and data["status"] not in RISK_STATUS:
         raise HTTPException(422, f"status must be one of {RISK_STATUS}")
+    if data.get("owner_id") is not None and not db.get(User, data["owner_id"]):
+        raise HTTPException(422, "owner_id must be an existing user")
     was = r.status
     for k, v in data.items():
         setattr(r, k, v)
@@ -138,6 +144,8 @@ def patch_issue(pid: int, iid: int, body: IssuePatch, db=Depends(get_db), user: 
         raise HTTPException(422, f"status must be one of {ISSUE_STATUS}")
     if "severity" in data and data["severity"] not in SEVERITY:
         raise HTTPException(422, f"severity must be one of {SEVERITY}")
+    if data.get("owner_id") is not None and not db.get(User, data["owner_id"]):
+        raise HTTPException(422, "owner_id must be an existing user")
     for k, v in data.items():
         setattr(i, k, v)
     log(db, user.id, "issue.updated", "issue", i.id, data)

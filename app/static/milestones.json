@@ -1,315 +1,356 @@
 {
-  "updated": "2026-11-23",
-  "milestones": [
+ "updated": "2026-11-23",
+ "milestones": [
+  {
+   "en": "Foundation and access",
+   "ar": "الأساس والصلاحيات",
+   "subs": [
     {
-      "en": "Foundation and access",
-      "ar": "الأساس والصلاحيات",
-      "subs": [
-        {
-          "en": "Sign-in, roles, row-level access",
-          "ar": "الدخول والأدوار وصلاحيات الصفوف",
-          "s": "done"
-        },
-        {
-          "en": "Append-only audit log and event outbox",
-          "ar": "سجل تدقيق غير قابل للتعديل وصندوق الأحداث",
-          "s": "done"
-        }
-      ]
+     "en": "Sign-in, roles, row-level access",
+     "ar": "الدخول والأدوار وصلاحيات الصفوف",
+     "s": "done"
     },
     {
-      "en": "Project setup and baseline",
-      "ar": "إعداد المشروع وخط الأساس",
-      "subs": [
-        {
-          "en": "Project states and activities",
-          "ar": "حالات المشروع والأنشطة",
-          "s": "done"
-        },
-        {
-          "en": "Baseline lock and staff assignment",
-          "ar": "قفل خط الأساس وإسناد الموظفين",
-          "s": "done"
-        },
-        {
-          "en": "Change control (request, decide, revise baseline)",
-          "ar": "التحكم في التغيير (طلب، قرار، مراجعة خط الأساس)",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Time and approvals",
-      "ar": "الوقت والموافقات",
-      "subs": [
-        {
-          "en": "Timesheet entry with rule engine (R1-R9)",
-          "ar": "إدخال الساعات مع محرك القواعد",
-          "s": "done"
-        },
-        {
-          "en": "Approval queue, overtime flow, period lock",
-          "ar": "طابور الموافقات والعمل الإضافي وإقفال الفترة",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Delivery tracking",
-      "ar": "متابعة التنفيذ",
-      "subs": [
-        {
-          "en": "Weekly progress, costs, risks, issues",
-          "ar": "التقدم الأسبوعي والتكاليف والمخاطر والمشكلات",
-          "s": "done"
-        },
-        {
-          "en": "Planned allocations and resource load",
-          "ar": "التخصيصات المخططة وتحميل الموارد",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Performance and reporting",
-      "ar": "الأداء والتقارير",
-      "subs": [
-        {
-          "en": "Versioned rate card and earned value (CPI, SPI, EAC)",
-          "ar": "جدول أسعار بإصدارات والقيمة المكتسبة",
-          "s": "done"
-        },
-        {
-          "en": "Weekly PM report with auto-filled snapshot",
-          "ar": "تقرير المدير الأسبوعي بلقطة تلقائية",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Dashboards and alerts",
-      "ar": "لوحات المتابعة والتنبيهات",
-      "subs": [
-        {
-          "en": "Project and portfolio health (RAG)",
-          "ar": "صحة المشروع والمحفظة (أحمر/برتقالي/أخضر)",
-          "s": "done"
-        },
-        {
-          "en": "Rule-based alerts with triage lifecycle",
-          "ar": "تنبيهات قائمة على القواعد مع دورة المعالجة",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Web app and demo",
-      "ar": "تطبيق الويب والنسخة التجريبية",
-      "subs": [
-        {
-          "en": "Web UI in English and Arabic (RTL)",
-          "ar": "واجهة ويب بالعربية والإنجليزية",
-          "s": "done"
-        },
-        {
-          "en": "Netlify demo with one-click role login",
-          "ar": "نسخة نتلايفاي التجريبية بدخول سريع حسب الدور",
-          "s": "done"
-        },
-        {
-          "en": "Edit and deactivate users",
-          "ar": "تعديل المستخدمين وإيقافهم",
-          "s": "done"
-        },
-        {
-          "en": "Automated UI tests",
-          "ar": "اختبارات آلية للواجهة",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Governance and closure",
-      "ar": "الحوكمة والإقفال",
-      "subs": [
-        {
-          "en": "Closure checklist",
-          "ar": "قائمة مراجعة الإقفال",
-          "s": "done"
-        },
-        {
-          "en": "Benefits register",
-          "ar": "سجل الفوائد",
-          "s": "done"
-        },
-        {
-          "en": "Program and portfolio grouping",
-          "ar": "تجميع البرامج والمحافظ",
-          "s": "done"
-        },
-        {
-          "en": "Work calendars and holidays",
-          "ar": "تقاويم العمل والإجازات",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Notifications and exports",
-      "ar": "الإشعارات والتصدير",
-      "subs": [
-        {
-          "en": "In-app notifications with bell",
-          "ar": "إشعارات داخل التطبيق مع جرس التنبيه",
-          "s": "done"
-        },
-        {
-          "en": "E-mail delivery (SMTP, not yet tried on a real mail server)",
-          "ar": "إرسال البريد الإلكتروني (لم يُجرَّب على خادم بريد حقيقي)",
-          "s": "progress"
-        },
-        {
-          "en": "CSV exports and printable project report",
-          "ar": "تصدير CSV وتقرير مشروع للطباعة",
-          "s": "done"
-        },
-        {
-          "en": "Scheduled report delivery (needs a cron to trigger)",
-          "ar": "تسليم التقارير المجدولة (يحتاج جدولة خارجية للتشغيل)",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "AI layer",
-      "ar": "طبقة الذكاء الاصطناعي",
-      "subs": [
-        {
-          "en": "In-Kingdom host guard, audit and human review of every draft",
-          "ar": "ضابط الاستضافة داخل المملكة والتدقيق ومراجعة بشرية لكل مسودة",
-          "s": "done"
-        },
-        {
-          "en": "AI plan drafting from a brief (offline stub until a Saudi-hosted model is connected)",
-          "ar": "صياغة الخطة بالذكاء الاصطناعي (تجريبي حتى يُربط نموذج مستضاف في المملكة)",
-          "s": "progress"
-        },
-        {
-          "en": "AI status narratives and alert suggestions (same stub limit)",
-          "ar": "ملخصات الحالة واقتراحات التنبيهات (بالقيد نفسه)",
-          "s": "progress"
-        },
-        {
-          "en": "Forecasting models",
-          "ar": "نماذج التنبؤ",
-          "s": "todo"
-        }
-      ]
-    },
-    {
-      "en": "Project intake and plan depth",
-      "ar": "استلام المشروع وعمق الخطة",
-      "subs": [
-        {
-          "en": "Client, sponsor, scope, documents, stakeholders, team and manager reassignment",
-          "ar": "العميل والراعي والنطاق والمستندات وأصحاب المصلحة والفريق وإعادة تعيين المدير",
-          "s": "done"
-        },
-        {
-          "en": "Edit and delete activities in planning",
-          "ar": "تعديل الأنشطة وحذفها في مرحلة التخطيط",
-          "s": "done"
-        },
-        {
-          "en": "Milestones, KPIs, dependencies and per-person activity limits",
-          "ar": "المراحل ومؤشرات الأداء والاعتمادية وحدود الساعات لكل شخص",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Oversight and insight",
-      "ar": "الرقابة والرؤية",
-      "subs": [
-        {
-          "en": "Audit log viewer and period lock screen",
-          "ar": "عرض سجل التدقيق وشاشة إقفال الفترة",
-          "s": "done"
-        },
-        {
-          "en": "Charts: S-curve, CPI/SPI trend, heat map, hours vs plan",
-          "ar": "الرسوم: منحنى S واتجاه CPI/SPI وخريطة المخاطر والساعات مقابل الخطة",
-          "s": "done"
-        },
-        {
-          "en": "Executive summary and decision queue",
-          "ar": "الملخص التنفيذي وقائمة القرارات",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Daily work",
-      "ar": "العمل اليومي",
-      "subs": [
-        {
-          "en": "My to-do page",
-          "ar": "صفحة مهامي",
-          "s": "done"
-        },
-        {
-          "en": "Approvals: filters, bulk approve, decision history",
-          "ar": "الموافقات: تصفية واعتماد جماعي وسجل القرارات",
-          "s": "done"
-        },
-        {
-          "en": "Withdraw an entry, activity cap hints, weekly project breakdown",
-          "ar": "سحب إدخال وتلميحات حد النشاط وتوزيع الأسبوع حسب المشروع",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Reporting and configuration",
-      "ar": "التقارير والإعدادات",
-      "subs": [
-        {
-          "en": "Monthly, quarterly and annual reports with Excel, CSV and print/PDF",
-          "ar": "تقارير شهرية وربع سنوية وسنوية مع Excel وCSV وطباعة/PDF",
-          "s": "done"
-        },
-        {
-          "en": "Configurable lists (time codes, risk categories, KPI library, closure items)",
-          "ar": "قوائم قابلة للضبط (رموز الوقت وفئات المخاطر ومكتبة المؤشرات وبنود الإقفال)",
-          "s": "done"
-        },
-        {
-          "en": "AI administration (status, on/off, limit, connection test, usage)",
-          "ar": "إدارة الذكاء الاصطناعي (الحالة والتشغيل والحد واختبار الاتصال والاستخدام)",
-          "s": "done"
-        }
-      ]
-    },
-    {
-      "en": "Production readiness",
-      "ar": "الجاهزية للإنتاج",
-      "subs": [
-        {
-          "en": "Postgres and database migrations",
-          "ar": "بوستجرس وترحيلات قاعدة البيانات",
-          "s": "todo"
-        },
-        {
-          "en": "Real hosting with a server",
-          "ar": "استضافة فعلية بخادم",
-          "s": "todo"
-        },
-        {
-          "en": "Database-level row security and security review",
-          "ar": "أمان الصفوف في قاعدة البيانات ومراجعة أمنية",
-          "s": "todo"
-        }
-      ]
+     "en": "Append-only audit log and event outbox",
+     "ar": "سجل تدقيق غير قابل للتعديل وصندوق الأحداث",
+     "s": "done"
     }
-  ]
+   ]
+  },
+  {
+   "en": "Project setup and baseline",
+   "ar": "إعداد المشروع وخط الأساس",
+   "subs": [
+    {
+     "en": "Project states and activities",
+     "ar": "حالات المشروع والأنشطة",
+     "s": "done"
+    },
+    {
+     "en": "Baseline lock and staff assignment",
+     "ar": "قفل خط الأساس وإسناد الموظفين",
+     "s": "done"
+    },
+    {
+     "en": "Change control (request, decide, revise baseline)",
+     "ar": "التحكم في التغيير (طلب، قرار، مراجعة خط الأساس)",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Time and approvals",
+   "ar": "الوقت والموافقات",
+   "subs": [
+    {
+     "en": "Timesheet entry with rule engine (R1-R9)",
+     "ar": "إدخال الساعات مع محرك القواعد",
+     "s": "done"
+    },
+    {
+     "en": "Approval queue, overtime flow, period lock",
+     "ar": "طابور الموافقات والعمل الإضافي وإقفال الفترة",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Delivery tracking",
+   "ar": "متابعة التنفيذ",
+   "subs": [
+    {
+     "en": "Weekly progress, costs, risks, issues",
+     "ar": "التقدم الأسبوعي والتكاليف والمخاطر والمشكلات",
+     "s": "done"
+    },
+    {
+     "en": "Planned allocations and resource load",
+     "ar": "التخصيصات المخططة وتحميل الموارد",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Performance and reporting",
+   "ar": "الأداء والتقارير",
+   "subs": [
+    {
+     "en": "Versioned rate card and earned value (CPI, SPI, EAC)",
+     "ar": "جدول أسعار بإصدارات والقيمة المكتسبة",
+     "s": "done"
+    },
+    {
+     "en": "Weekly PM report with auto-filled snapshot",
+     "ar": "تقرير المدير الأسبوعي بلقطة تلقائية",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Dashboards and alerts",
+   "ar": "لوحات المتابعة والتنبيهات",
+   "subs": [
+    {
+     "en": "Project and portfolio health (RAG)",
+     "ar": "صحة المشروع والمحفظة (أحمر/برتقالي/أخضر)",
+     "s": "done"
+    },
+    {
+     "en": "Rule-based alerts with triage lifecycle",
+     "ar": "تنبيهات قائمة على القواعد مع دورة المعالجة",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Web app and demo",
+   "ar": "تطبيق الويب والنسخة التجريبية",
+   "subs": [
+    {
+     "en": "Web UI in English and Arabic (RTL)",
+     "ar": "واجهة ويب بالعربية والإنجليزية",
+     "s": "done"
+    },
+    {
+     "en": "Netlify demo with one-click role login",
+     "ar": "نسخة نتلايفاي التجريبية بدخول سريع حسب الدور",
+     "s": "done"
+    },
+    {
+     "en": "Edit and deactivate users",
+     "ar": "تعديل المستخدمين وإيقافهم",
+     "s": "done"
+    },
+    {
+     "en": "Automated UI tests",
+     "ar": "اختبارات آلية للواجهة",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Governance and closure",
+   "ar": "الحوكمة والإقفال",
+   "subs": [
+    {
+     "en": "Closure checklist",
+     "ar": "قائمة مراجعة الإقفال",
+     "s": "done"
+    },
+    {
+     "en": "Benefits register",
+     "ar": "سجل الفوائد",
+     "s": "done"
+    },
+    {
+     "en": "Program and portfolio grouping",
+     "ar": "تجميع البرامج والمحافظ",
+     "s": "done"
+    },
+    {
+     "en": "Work calendars and holidays",
+     "ar": "تقاويم العمل والإجازات",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Notifications and exports",
+   "ar": "الإشعارات والتصدير",
+   "subs": [
+    {
+     "en": "In-app notifications with bell",
+     "ar": "إشعارات داخل التطبيق مع جرس التنبيه",
+     "s": "done"
+    },
+    {
+     "en": "E-mail delivery (SMTP, not yet tried on a real mail server)",
+     "ar": "إرسال البريد الإلكتروني (لم يُجرَّب على خادم بريد حقيقي)",
+     "s": "progress"
+    },
+    {
+     "en": "CSV exports and printable project report",
+     "ar": "تصدير CSV وتقرير مشروع للطباعة",
+     "s": "done"
+    },
+    {
+     "en": "Scheduled report delivery (needs a cron to trigger)",
+     "ar": "تسليم التقارير المجدولة (يحتاج جدولة خارجية للتشغيل)",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "AI layer",
+   "ar": "طبقة الذكاء الاصطناعي",
+   "subs": [
+    {
+     "en": "In-Kingdom host guard, audit and human review of every draft",
+     "ar": "ضابط الاستضافة داخل المملكة والتدقيق ومراجعة بشرية لكل مسودة",
+     "s": "done"
+    },
+    {
+     "en": "AI plan drafting from a brief (offline stub until a Saudi-hosted model is connected)",
+     "ar": "صياغة الخطة بالذكاء الاصطناعي (تجريبي حتى يُربط نموذج مستضاف في المملكة)",
+     "s": "progress"
+    },
+    {
+     "en": "AI status narratives and alert suggestions (same stub limit)",
+     "ar": "ملخصات الحالة واقتراحات التنبيهات (بالقيد نفسه)",
+     "s": "progress"
+    },
+    {
+     "en": "Forecasting models",
+     "ar": "نماذج التنبؤ",
+     "s": "todo"
+    }
+   ]
+  },
+  {
+   "en": "Project intake and plan depth",
+   "ar": "استلام المشروع وعمق الخطة",
+   "subs": [
+    {
+     "en": "Client, sponsor, scope, documents, stakeholders, team and manager reassignment",
+     "ar": "العميل والراعي والنطاق والمستندات وأصحاب المصلحة والفريق وإعادة تعيين المدير",
+     "s": "done"
+    },
+    {
+     "en": "Edit and delete activities in planning",
+     "ar": "تعديل الأنشطة وحذفها في مرحلة التخطيط",
+     "s": "done"
+    },
+    {
+     "en": "Milestones, KPIs, dependencies and per-person activity limits",
+     "ar": "المراحل ومؤشرات الأداء والاعتمادية وحدود الساعات لكل شخص",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Oversight and insight",
+   "ar": "الرقابة والرؤية",
+   "subs": [
+    {
+     "en": "Audit log viewer and period lock screen",
+     "ar": "عرض سجل التدقيق وشاشة إقفال الفترة",
+     "s": "done"
+    },
+    {
+     "en": "Charts: S-curve, CPI/SPI trend, heat map, hours vs plan",
+     "ar": "الرسوم: منحنى S واتجاه CPI/SPI وخريطة المخاطر والساعات مقابل الخطة",
+     "s": "done"
+    },
+    {
+     "en": "Executive summary and decision queue",
+     "ar": "الملخص التنفيذي وقائمة القرارات",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Daily work",
+   "ar": "العمل اليومي",
+   "subs": [
+    {
+     "en": "My to-do page",
+     "ar": "صفحة مهامي",
+     "s": "done"
+    },
+    {
+     "en": "Approvals: filters, bulk approve, decision history",
+     "ar": "الموافقات: تصفية واعتماد جماعي وسجل القرارات",
+     "s": "done"
+    },
+    {
+     "en": "Withdraw an entry, activity cap hints, weekly project breakdown",
+     "ar": "سحب إدخال وتلميحات حد النشاط وتوزيع الأسبوع حسب المشروع",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Reporting and configuration",
+   "ar": "التقارير والإعدادات",
+   "subs": [
+    {
+     "en": "Monthly, quarterly and annual reports with Excel, CSV and print/PDF",
+     "ar": "تقارير شهرية وربع سنوية وسنوية مع Excel وCSV وطباعة/PDF",
+     "s": "done"
+    },
+    {
+     "en": "Configurable lists (time codes, risk categories, KPI library, closure items)",
+     "ar": "قوائم قابلة للضبط (رموز الوقت وفئات المخاطر ومكتبة المؤشرات وبنود الإقفال)",
+     "s": "done"
+    },
+    {
+     "en": "AI administration (status, on/off, limit, connection test, usage)",
+     "ar": "إدارة الذكاء الاصطناعي (الحالة والتشغيل والحد واختبار الاتصال والاستخدام)",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Role completeness",
+   "ar": "اكتمال أدوار المستخدمين",
+   "subs": [
+    {
+     "en": "Role task checklists and in-app role guide",
+     "ar": "قوائم مهام الأدوار ودليل الدور داخل التطبيق",
+     "s": "done"
+    },
+    {
+     "en": "Profile: password, e-mail, delegate, notification choices",
+     "ar": "الملف الشخصي: كلمة المرور والبريد والنائب والإشعارات",
+     "s": "done"
+    },
+    {
+     "en": "Staff: my projects, copy last week",
+     "ar": "الموظف: مشاريعي ونسخ الأسبوع الماضي",
+     "s": "done"
+    },
+    {
+     "en": "PM: risk and issue editing, timeline view",
+     "ar": "مدير المشروع: تعديل المخاطر والمشكلات وعرض الجدول الزمني",
+     "s": "done"
+    },
+    {
+     "en": "PMO and program manager: filters, own programs, roll-ups",
+     "ar": "المكتب والبرنامج: التصفية والبرامج الخاصة والتجميع",
+     "s": "done"
+    },
+    {
+     "en": "Decision maker: investment versus return",
+     "ar": "صانع القرار: الاستثمار مقابل العائد",
+     "s": "done"
+    },
+    {
+     "en": "Admin: bulk import, permission matrix",
+     "ar": "المدير: الاستيراد الجماعي ومصفوفة الصلاحيات",
+     "s": "done"
+    }
+   ]
+  },
+  {
+   "en": "Production readiness",
+   "ar": "الجاهزية للإنتاج",
+   "subs": [
+    {
+     "en": "Postgres and database migrations",
+     "ar": "بوستجرس وترحيلات قاعدة البيانات",
+     "s": "todo"
+    },
+    {
+     "en": "Real hosting with a server",
+     "ar": "استضافة فعلية بخادم",
+     "s": "todo"
+    },
+    {
+     "en": "Database-level row security and security review",
+     "ar": "أمان الصفوف في قاعدة البيانات ومراجعة أمنية",
+     "s": "todo"
+    }
+   ]
+  }
+ ]
 }

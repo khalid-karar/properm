@@ -165,3 +165,21 @@ def _decisions(db, user: User) -> dict:
 @router.get("/decisions")
 def decisions(db=Depends(get_db), user: User = Depends(current_user)):
     return _decisions(db, user)
+
+
+@router.get("/investment")
+def investment_vs_return(db=Depends(get_db), user: User = Depends(current_user)):
+    """Per project: what it costs (budget, actual, forecast) against what it is meant to return (benefits)."""
+    if user.role not in EXEC:
+        raise HTTPException(403, "Investment view requires PMO, ADMIN, DECISION_MAKER or PROGRAM_MANAGER")
+    from ..models import Benefit
+    from .governance import realization_pct
+    today, rows = date.today(), []
+    for p in db.query(Project).filter(Project.state.notin_(("archived", "cancelled"))).order_by(Project.id):
+        e = compute_evm(db, p, today) if p.state in ("execution", "closing") else {}
+        bens = db.query(Benefit).filter_by(project_id=p.id).all()
+        reals = [x for x in (realization_pct(b) for b in bens) if x is not None]
+        rows.append({"project_id": p.id, "number": p.number, "name": p.name, "state": p.state, "rag": rag_status(db, p),
+                     "currency": e.get("currency"), "budget": e.get("BAC"), "actual": e.get("AC"), "forecast": e.get("EAC"),
+                     "benefits": len(bens), "benefit_realization_pct": round(sum(reals) / len(reals), 1) if reals else None})
+    return rows

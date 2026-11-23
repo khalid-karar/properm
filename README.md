@@ -16,7 +16,7 @@ Server messages (rule explanations) are shown in English even in Arabic mode. No
 
 ### Demo data
     PROPERM_DEMO=1 PROPERM_DEMO_PASSWORD="<pw>" python -m app.demo      # empty database only
-Creates users admin, pm1, pmo1, dm1, s1, s2, s3 and a few projects in different health states.
+Creates users admin, pm1, pmo1, dm1, pg1, s1, s2, s3 and a few projects in different health states.
 
 Set `PROPERM_DEMO_LOGIN=1` to show one-click role buttons on the login page (no password needed). **Demo databases only: never enable it on a deployment with real data.**
 
@@ -82,6 +82,15 @@ The login page shows milestones with green (done), amber (in progress) and red (
 | Daily work | `GET /me/todo`; approvals filter/bulk approve/decision history; staff can withdraw a pending or rejected entry (`DELETE /timesheets/{id}`, audited); remaining hours against the activity cap beside the hours box; this week by project |
 | Period reports | `GET /reports/period?scope=project|program|portfolio&period=month|quarter|year&format=json|html|csv|xlsx`. Excel is written by `app/xlsx.py` (standard library only, also works in the browser demo). PDF = print the HTML report and choose Save as PDF. Cost columns appear only for cost viewers |
 | Configuration | `ConfigItem` lists for non-project time codes (Leave is protected), risk categories, KPI templates and extra closure items; built-ins can be switched off but not deleted. Project types stay fixed because rules depend on them. AI administration: mode, host, in-Kingdom check, on/off switch, hourly limit, connection test, 30-day use, recent failures |
+
+## Role completeness (added 2026-11-23, from `docs/ROLE_TASKS.md`)
+| Area | Notes |
+|---|---|
+| Self-service | Profile page from the avatar: e-mail, delegate, password change (`POST /me/password`), notification choices (`UserPref`, honoured by `notify.py`). Role guide page lists each role's tasks with links |
+| Staff | My projects with activity caps and hours used (`GET /me/projects`); copy last week (`POST /timesheets/copy-week`, skips duplicates and anything the rules reject) |
+| PM | Edit risks and issues (title, category, owner, response, due date); timeline (Gantt) on the Plan tab with milestones and a today line |
+| PMO / program / decision | Portfolio filters; program managers see and edit only their own programs and move projects in and out; program roll-up of risks and benefits; investment-versus-return table with drill-down; resource load shows the projects behind each person's hours |
+| Admin | Job title and department on users; bulk CSV import with one-time generated passwords (`POST /admin/users/import`); read-only permission matrix |
 
 ## Not built yet (next slices)
 A rate card per role and project (rates are per grade only), forecasting models, PDF/DOCX parsing for the AI brief (paste text for now), a real mail-server test, a built-in scheduler for reports and alert evaluation (call the endpoints from a cron), Postgres with migrations and row-level security (access control is enforced in the API layer today), remaining UI polish (see Web UI).

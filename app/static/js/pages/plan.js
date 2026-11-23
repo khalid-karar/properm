@@ -1,6 +1,7 @@
 // Project "Plan" tab: milestones, KPIs, dependencies, per-person activity limits.
 import { api } from "../api.js";
 import { t } from "../i18n.js";
+import { gantt } from "../charts.js";
 import { badge, bar, errorBox, field, guarded, h, mount, num, table, toast } from "../ui.js";
 
 const RAG = { green: "GREEN", amber: "AMBER", red: "RED" };
@@ -61,5 +62,8 @@ export async function plan(body, p, { pid, dir, canManage, render }) {
     editable && acts.length ? form([field(t("activity"), l.a), field(t("staff"), l.u), field(t("max_hours"), l.hrs)],
       () => api("PUT", `/projects/${pid}/activities/${l.a.value}/limits`, { user_id: Number(l.u.value), max_hours: Number(l.hrs.value) }), t("save")) : null) : null;
 
-  mount(body, mcard, kcard, dcard, lcard);
+  const g = acts.filter(a => a.planned_start && a.planned_end);
+  const gcard = h("div", { class: "card", id: "gantt-card" }, h("h2", {}, t("timeline")),
+    g.length ? gantt({ rows: g.map(a => ({ label: `${a.code} ${a.name}`, start: a.planned_start, end: a.planned_end })), marks: ms.map(x => ({ label: x.name, date: x.due_date, done: !!x.achieved_on })), todayLabel: t("today") }) : h("p", { class: "muted" }, t("timeline_empty")));
+  mount(body, gcard, mcard, kcard, dcard, lcard);
 }

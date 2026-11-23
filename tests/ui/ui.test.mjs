@@ -185,6 +185,33 @@ await step("profile, my projects, role guide, copy week", async () => {
   await Promise.all([p.waitForResponse(r => r.url().includes("/timesheets/copy-week")), p.click("#copy-week")]);
 });
 
+p = await newPage("pm-risk"); await login(p, "pm1");
+await step("risk edit, timeline, portfolio filters, investment table", async () => {
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Risks"); await p.waitForSelector("h2:has-text('Risks')");
+  await p.locator(".card:has(h2:has-text('Risks')) tbody tr").first().locator("button:has-text('Edit')").click();
+  await p.locator(".modal input").first().fill("Edited risk title");
+  await Promise.all([p.waitForResponse(r => r.request().method() === "PATCH" && r.url().includes("/risks/")), p.click(".modal button:has-text('Save')")]);
+  await p.waitForSelector("td:has-text('Edited risk title')");
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Plan"); await p.waitForSelector("#gantt-card svg.chart");
+  await p.goto(BASE + "#/projects"); await p.waitForSelector("h1:has-text('Projects')"); await p.selectOption("label:has-text('State') select", { index: 1 }); await p.waitForSelector("td");
+});
+p = await newPage("pmo-inv"); await login(p, "pmo1");
+await step("executive investment table", async () => { await p.goto(BASE + "#/executive"); await p.waitForSelector("#investment td"); });
+
+p = await newPage("progmgr"); await login(p, "pg1");
+await step("program manager sees own program and can edit", async () => {
+  await p.goto(BASE + "#/programs"); await p.waitForSelector("h1:has-text('Programs')"); await p.waitForSelector("h2:has-text('DX-2026')");
+  await p.waitForSelector("h3:has-text('Open risks across the program')").catch(() => {}); await p.waitForSelector("button:has-text('Remove')");
+});
+
+p = await newPage("admin2"); await login(p, "admin");
+await step("admin bulk import and permission matrix", async () => {
+  await p.goto(BASE + "#/admin"); await p.waitForSelector("#import-card textarea");
+  await p.fill("#import-card textarea", "staff_id,full_name,role\nuiimp1,UI Import,STAFF");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/admin/users/import")), p.click("#import-card button:has-text('Import')")]);
+  await p.waitForSelector("#import-card code"); await p.waitForSelector("h2:has-text('Who can do what')");
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

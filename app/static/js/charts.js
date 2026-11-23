@@ -91,3 +91,37 @@ export function ragStack(history, height = 150) {
   });
   return el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img" }, g);
 }
+
+/** Timeline. rows: [{label, start:'YYYY-MM-DD', end, pct?}], marks: [{label, date, done?}]. */
+export function gantt({ rows, marks = [], todayLabel = "" }) {
+  const D = (s) => new Date(s + "T00:00:00").getTime();
+  const all = [...rows.flatMap(r => [D(r.start), D(r.end)]), ...marks.map(m => D(m.date))];
+  if (!rows.length || !all.length) return h("p", { class: "muted" }, "—");
+  const now = Date.now();
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (now > lo - 864e5 * 30 && now < hi + 864e5 * 30) { lo = Math.min(lo, now); hi = Math.max(hi, now); }
+  const span = Math.max(hi - lo, 864e5), W = 860, L = 170, R = 20, RH = 26, T = 28, H = T + (rows.length + (marks.length ? 1 : 0)) * RH + 10;
+  const x = (ms) => L + ((ms - lo) / span) * (W - L - R);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", style: "width:100%;height:auto" });
+  const months = Math.max(1, Math.round(span / (864e5 * 30)));
+  const stepM = Math.max(1, Math.ceil(months / 10));
+  const d0 = new Date(lo); d0.setDate(1);
+  for (let d = new Date(d0); d.getTime() <= hi; d.setMonth(d.getMonth() + stepM)) {
+    const gx = x(Math.max(d.getTime(), lo));
+    svg.append(el("line", { x1: gx, x2: gx, y1: T - 6, y2: H - 6, stroke: "var(--line)" }), txt(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, { x: gx + 3, y: T - 10, class: "ct", fill: "var(--muted)" }));
+  }
+  rows.forEach((r, i) => {
+    const y = T + i * RH, x1 = x(D(r.start)), w = Math.max(4, x(D(r.end)) - x1);
+    svg.append(txt(r.label.length > 24 ? r.label.slice(0, 23) + "…" : r.label, { x: 4, y: y + 16, class: "ct", fill: "var(--text)" }),
+      el("rect", { x: x1, y: y + 4, width: w, height: 14, rx: 3, fill: "var(--grey)", opacity: 0.45 }),
+      r.pct ? el("rect", { x: x1, y: y + 4, width: w * Math.min(1, r.pct / 100), height: 14, rx: 3, fill: "var(--navy2)" }) : null);
+  });
+  const my = T + rows.length * RH;
+  marks.forEach(m => {
+    const cx = x(D(m.date));
+    svg.append(el("path", { d: `M${cx} ${my + 4} l7 7 l-7 7 l-7 -7 z`, fill: m.done ? "var(--green)" : "var(--gold)" }, el("title", {}, `${m.label} ${m.date}`)));
+  });
+  if (marks.length) svg.append(txt("◆", { x: 4, y: my + 17, class: "ct", fill: "var(--gold)" }));
+  if (now >= lo && now <= hi) svg.append(el("line", { x1: x(now), x2: x(now), y1: T - 6, y2: H - 6, stroke: "var(--red)", "stroke-dasharray": "4 3" }), txt(todayLabel, { x: x(now) + 3, y: H - 1, class: "ct", fill: "var(--red)" }));
+  return h("div", { style: "overflow-x:auto" }, svg);
+}

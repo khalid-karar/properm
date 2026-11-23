@@ -34,7 +34,7 @@ def seed(app, pw, c):
     ok(c.post("/admin/rates", headers=admin, json={"grade": "G2", "hourly_rate": 320, "currency": "SAR", "effective_from": "2024-01-01"}))
     ids = {}
     for sid, name, role, kw in [("pm1", "Sara Al-Harbi", "PM", {"rate_grade": "G2", "is_ccb": True}), ("pmo1", "Omar Al-Qahtani", "PMO", {}),
-                                ("dm1", "Layla Al-Otaibi", "DECISION_MAKER", {}), ("s1", "Faisal Nasser", "STAFF", {"rate_grade": "G1"}),
+                                ("dm1", "Layla Al-Otaibi", "DECISION_MAKER", {}), ("pg1", "Nasser Al-Dosari", "PROGRAM_MANAGER", {}), ("s1", "Faisal Nasser", "STAFF", {"rate_grade": "G1"}),
                                 ("s2", "Huda Saleh", "STAFF", {"rate_grade": "G1"}), ("s3", "Khaled Mansour", "STAFF", {"rate_grade": "G2"})]:
         ids[sid] = ok(c.post("/users", headers=admin, json={"staff_id": sid, "full_name": name, "password": pw, "role": role, **kw}))["id"]
     pm, pmo = tok("pm1"), tok("pmo1")
@@ -79,7 +79,7 @@ def seed(app, pw, c):
     ok(c.post(f"/projects/{a_pid}/risks", headers=pm, json={"title": "Key vendor delay", "probability": 3, "impact": 3}))
     ok(c.post(f"/projects/{b_pid}/risks", headers=pm, json={"title": "Source data quality", "probability": 5, "impact": 4}))
     ok(c.post(f"/projects/{b_pid}/issues", headers=pm, json={"title": "Production access not granted", "severity": "critical", "due_date": d(-3)}))
-    g = ok(c.post("/programs", headers=pmo, json={"code": "DX-2026", "name": "Digital Transformation", "manager_id": ids["pmo1"]}))["id"]
+    g = ok(c.post("/programs", headers=pmo, json={"code": "DX-2026", "name": "Digital Transformation", "manager_id": ids["pg1"]}))["id"]
     for pid in (a_pid, b_pid):
         ok(c.put(f"/projects/{pid}/program", headers=pmo, json={"program_id": g}))
     ok(c.post(f"/projects/{a_pid}/benefits", headers=pm, json={"title": "Faster month-end close", "metric": "Days to close", "unit": "days", "baseline": 10, "target": 5, "actual": 8, "due_date": d(120), "status": "on_track"}))
@@ -103,7 +103,7 @@ def seed(app, pw, c):
             db.add(Snapshot(project_id=a_pid, snap_date=_d.today() - _td(days=7 * w), rag="GREEN" if w > 3 else "AMBER", progress_pct=round(45 - 5 * w, 1) if w < 8 else 0.0,
                             cpi=round(1.1 - 0.02 * w, 2), spi=round(0.85 + 0.02 * w, 2), open_risks=1, open_alerts=0 if w > 3 else 1))
         db.commit()
-    print("Demo data ready. Users: admin, pm1, pmo1, dm1, s1, s2, s3 (all with the demo password).")
+    print("Demo data ready. Users: admin, pm1, pmo1, dm1, pg1, s1, s2, s3 (all with the demo password).")
 
 
 if __name__ == "__main__":

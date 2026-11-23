@@ -193,7 +193,9 @@ def resource_load(week_of: date | None = None, db=Depends(get_db), user: User = 
             TimesheetEntry.user_id == u.id, TimesheetEntry.status.in_(("submitted", "approved")),
             TimesheetEntry.entry_date >= ws, TimesheetEntry.entry_date <= ws + timedelta(days=6)).scalar()
         if planned or actual:
-            out.append({"user_id": u.id, "staff_id": u.staff_id, "capacity": effective_capacity(db, u.capacity_hours_week, ws), "planned": planned,
+            per = db.query(PlannedAllocation.project_id, func.sum(PlannedAllocation.hours)).filter_by(user_id=u.id, week_start=ws).group_by(PlannedAllocation.project_id).all()
+            names = {p.id: p.number for p in db.query(Project).filter(Project.id.in_([x[0] for x in per]))} if per else {}
+            out.append({"user_id": u.id, "full_name": u.full_name, "by_project": [{"project": names.get(pid_), "hours": hrs} for pid_, hrs in per], "staff_id": u.staff_id, "capacity": effective_capacity(db, u.capacity_hours_week, ws), "planned": planned,
                         "actual": actual, "over_allocated": planned > effective_capacity(db, u.capacity_hours_week, ws)})
     return {"week_start": ws, "staff": out}
 
