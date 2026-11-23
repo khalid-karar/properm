@@ -136,3 +136,10 @@ Single sign-on (needs real hosting and an identity provider), saved filters, pro
 
 ## Schema changes
 Tables are created with `create_all`; there are no migrations yet. If you created a dev database from the first commit, delete `properm.db` (`activities` gained `baseline_cost`, `planned_start`, `planned_end`; `users.cost_rate_hour` was replaced by `rate_grade`). Add Alembic before any real data exists. The 2026-11-23 slice added tables (`programs`, `closure_items`, `benefits`, `holidays`, `notifications`, `report_schedules`, `ai_drafts`) and columns (`projects.program_id`, `users.email`); `create_all` adds new tables but not new columns, so delete an old dev database. The V3 build added tables for scope, agile, strategy, compliance, procurement, skills, reserves, quality, document versions, engagement and `two_factor` (new tables only). The role-gap build-out added tables `documents`, `stakeholders`, `milestones`, `project_kpis`, `activity_dependencies`, `snapshots`, `config_items` and columns `projects.client`, `projects.sponsor`, `projects.scope_statement`.
+
+
+## Added in the overnight build
+- Scheduler and e-mail retry (`PROPERM_SCHEDULER=1`), see docs/DEPLOY_ORACLE.md
+- Plan domains from the book with per-domain review, Excel/CSV/MS Project import with preview, Excel export
+- CI (GitHub Actions), load test and indexes (docs/SCALE.md), dark mode, first-time tour, accessibility and phone tests
+- Single sign-on via OpenID Connect (docs/SSO.md)

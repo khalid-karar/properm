@@ -28,7 +28,12 @@ const GROUPS = [["g_work", ["home", "todo", "timesheet", "leave", "approvals", "
 export const homeFor = () => "home";
 
 async function route() {
-  const [name = "", arg] = location.hash.replace(/^#\//, "").split("/");
+  const [name0 = "", arg] = location.hash.replace(/^#\//, "").split("/");
+  const name = name0.split("?")[0];
+  if (name === "sso" && arg) {                              // back from the company sign-in page with a one-minute code
+    try { const r = await api("POST", "/auth/sso/exchange", { code: decodeURIComponent(arg) }); session.set(r.access_token, r.role); me = null; location.hash = "#/"; } catch { location.hash = "#/login?sso_error=expired"; }
+    return;
+  }
   const s = session.get();
   if (!s) {
     unmountAssistant();

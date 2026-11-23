@@ -49,6 +49,9 @@ def user_out(u: User, include_cost: bool = False) -> dict:
 def login(body: LoginIn, db=Depends(get_db)):
     from .. import acct
     u = db.query(User).filter_by(staff_id=body.staff_id).first()
+    from .sso import sso_only
+    if sso_only() and not (u and u.role == "ADMIN"):
+        raise HTTPException(403, "Password sign-in is turned off. Use single sign-on.")
     if u and u.active:
         until = acct.is_locked(db, u)
         if until:

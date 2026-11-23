@@ -26,6 +26,15 @@ export default function (root) {
     h("h2", { class: "t" }, t("login")),
     field(t("staff_id"), id), field(t("password"), pw), otpRow, msg, btn);
   const quick = h("div", { class: "card", hidden: true });
+  const sso = h("div", { class: "card", hidden: true, id: "sso-box" });
+  const ssoErr = (location.hash.split("sso_error=")[1] || "").split("&")[0];
+  api("GET", "/auth/sso/config").then(c => {
+    if (!c.enabled) return;
+    mount(sso, ssoErr ? h("p", { class: "warn", role: "alert" }, t("sso_err_" + (["no_account", "expired", "provider_refused", "bad_token", "unverified_email"].includes(ssoErr) ? ssoErr : "failed"))) : null,
+      h("a", { class: "btn", id: "sso-btn", href: `${(window.PROPERM_API || "")}/auth/sso/login`, style: "display:block;text-align:center" }, c.label || t("sso_btn")),
+      c.sso_only ? h("p", { class: "muted small" }, t("sso_only_note")) : null);
+    sso.hidden = false;
+  }).catch(() => {});
   const starting = window.PROPERM_EMBEDDED ? h("div", { class: "card" }, h("p", { class: "muted" }, t("demo_starting"))) : null;
   const board = h("div", { class: "card timeline" });
   const hero = h("section", { class: "hero" },
@@ -33,7 +42,7 @@ export default function (root) {
     h("div", {}, h("h1", {}, t("hero_title")), h("p", { class: "lead" }, t("hero_lead"))),
     h("ul", { class: "points" }, [["timesheet", "hero_p1"], ["chart", "hero_p2"], ["shield", "hero_p3"], ["spark", "hero_p4"]].map(([ic, k]) => h("li", {}, icon(ic), h("span", {}, t(k))))),
     h("div", { class: "foot" }, "Smart PMO · Riyadh"));
-  const side = h("section", { class: "login-side" }, form, starting, quick,
+  const side = h("section", { class: "login-side" }, sso, form, starting, quick,
     h("button", { class: "btn secondary", type: "button", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); location.reload(); } }, getLang() === "en" ? "العربية" : "English"));
   mount(root, h("div", { class: "login-page" }, hero, side, h("div", { class: "timeline-wrap" }, board)));
   timeline(board);

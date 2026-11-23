@@ -22,6 +22,7 @@ export function importCard(kind, url, { accept = ".xlsx,.csv", after } = {}) {
         r.committed ? h("p", { class: "ok", id: `imp-done-${kind}` }, `${t("imp_saved")}: ${r.saved}`) : null,
         pw.length ? h("div", { class: "card" }, h("p", { class: "small" }, t("imp_pw")), table([t("staff_id"), t("password")], pw)) : null,
         h("div", { style: "max-height:320px;overflow:auto" }, table([t("line"), t("name"), t("status"), t("detail")], r.rows.map(x => [x.line, x.key, badge(x.status, x.status === "ok" ? "ok" : x.status === "error" ? "RED" : "GREY"), x.message]))));
+      if (commit && r.committed) toast(`${t("imp_saved")}: ${r.saved}`);
       if (commit && r.committed && after) await after();
     } catch (e) { mount(out, errorBox(e)); }
   });

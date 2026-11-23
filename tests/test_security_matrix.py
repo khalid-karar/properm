@@ -4,7 +4,7 @@ import re
 from tests.test_flow import TODAY, app, c, world  # noqa: F401
 from tests.test_gates import mk
 
-PUBLIC = {"/auth/login", "/health", "/ai/status", "/auth/demo-login", "/auth/demo-users", "/config"}
+PUBLIC = {"/auth/login", "/health", "/ai/status", "/auth/demo-login", "/auth/demo-users", "/config", "/auth/sso/config", "/auth/sso/login", "/auth/sso/callback", "/auth/sso/exchange"}
 
 
 def fill(path, ids):

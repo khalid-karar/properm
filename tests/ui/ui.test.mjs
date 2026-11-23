@@ -483,7 +483,7 @@ await step("project book: paste, analyse, review, apply as a plan", async () => 
   await tab(p, "Plan"); await p.waitForSelector("#imp-plan");
   await p.setInputFiles("#imp-file-plan", { name: "plan.csv", mimeType: "text/csv", buffer: Buffer.from("code,name,planned_hours\nX-1,Imported task,24\nX-2,Another,16\n") });
   await p.click("#imp-preview-plan"); await p.waitForSelector("#imp-out-plan td");
-  await p.click("#imp-commit-plan"); await p.waitForSelector("#imp-done-plan", { timeout: 8000 }).catch(async () => { throw new Error("import not saved: " + (await p.textContent("#imp-out-plan")).slice(0, 300)); });
+  await p.click("#imp-commit-plan"); await p.waitForSelector(".toast:has-text('Saved rows')");
 });
 
 p = await newPage("home"); await login(p, "pmo1");
