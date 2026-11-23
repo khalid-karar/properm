@@ -1,6 +1,7 @@
 import { api, downloadCsv, openReport } from "../api.js";
 import { getLang, st, t } from "../i18n.js";
-import { askText, badge, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
+import { details } from "./details.js";
+import { askText, badge, modal, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
 
 const MANAGE = ["PM", "PMO", "ADMIN"];
 const NEXT = { tendering: ["planning", "archived"], execution: ["closing", "on_hold"], closing: ["archived"], planning: ["on_hold"], on_hold: [] };
@@ -14,6 +15,7 @@ export default async function (root, { me, arg }) {
     const state = h("select", {}, h("option", { value: "planning" }, t("planning")), h("option", { value: "tendering" }, t("tendering")));
     const start = h("input", { type: "date" }), end = h("input", { type: "date" });
     const budget = h("input", { type: "number", min: "0", style: "width:130px" });
+    const client = h("input"), sponsor = h("input");
     const ccy = h("input", { value: "SAR", maxlength: "3", style: "width:70px" });
     const err = h("div");
     const btn = h("button", { class: "btn", type: "button" }, t("create"));
@@ -21,13 +23,13 @@ export default async function (root, { me, arg }) {
       mount(err);
       try {
         await api("POST", "/projects", { number: num_.value.trim(), name: name.value.trim(), state: state.value, planned_start: start.value || null,
-          planned_end: end.value || null, budget_ceiling: budget.value ? Number(budget.value) : null, currency: ccy.value.toUpperCase() });
+          planned_end: end.value || null, budget_ceiling: budget.value ? Number(budget.value) : null, currency: ccy.value.toUpperCase(), client: client.value.trim() || null, sponsor: sponsor.value.trim() || null });
         toast(t("saved")); await render();
       } catch (e) { mount(err, errorBox(e)); }
     }));
     mount(root, h("h1", {}, t("projects")),
       canManage ? h("div", { class: "card" }, h("h2", {}, t("new_project")),
-        h("div", { class: "row" }, field(t("number"), num_), field(t("name"), name), field(t("state"), state), field(t("planned_start"), start), field(t("planned_end"), end), field(t("budget"), budget), field(t("currency"), ccy), btn), err) : null,
+        h("div", { class: "row" }, field(t("number"), num_), field(t("name"), name), field(t("state"), state), field(t("planned_start"), start), field(t("planned_end"), end), field(t("budget"), budget), field(t("currency"), ccy), field(t("client"), client), field(t("sponsor"), sponsor), btn), err) : null,
       h("div", { class: "card" }, table([t("number"), t("name"), t("state"), t("planned_start"), t("planned_end"), ""],
         list.map(p => [p.number, p.name, badge(t(p.state), "gold"), p.planned_start || "—", p.planned_end || "—",
           h("span", {}, h("a", { href: `#/projects/${p.id}` }, t("open")), " ", ["execution", "closing"].includes(p.state) && me.role !== "STAFF" ? h("a", { href: `#/dashboard/${p.id}` }, t("nav_dashboard")) : null)]), t("none"))));
@@ -43,7 +45,7 @@ async function detail(root, me, pid) {
 
   async function render() {
     const p = await api("GET", `/projects/${pid}`);
-    const tabs = ["overview", "progress", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
+    const tabs = ["overview", "details", "progress", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
     const show = (x) => (x === "costs" || x === "allocations") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : true;
     const body = h("div");
     mount(root,
@@ -55,6 +57,7 @@ async function detail(root, me, pid) {
       body);
     try {
       if (tab === "overview") await overview(body, p);
+      else if (tab === "details") await details(body, p, { pid, me, dir, canManage, render });
       else if (tab === "progress") await progress(body, p);
       else if (tab === "risks") await risks(body, p);
       else if (tab === "costs") await costs(body, p);
@@ -100,11 +103,21 @@ async function detail(root, me, pid) {
       canManage ? h("div", { class: "card" }, h("div", { class: "row" }, moves,
         p.state === "planning" ? h("button", { class: "btn gold small", onClick: guarded(null, async () => { if (!confirm(t("confirm_lock"))) return; await api("POST", `/projects/${pid}/baseline/lock`); toast(t("baseline_locked")); await render(); }) }, t("lock_baseline")) : null)) : null,
       h("div", { class: "card" }, h("h2", {}, t("activities")),
-        table([t("code"), t("name"), t("planned_hours"), p.activities.some(a => "baseline_cost" in a) ? t("baseline_cost") : null, t("planned_start"), t("planned_end"), t("locked")].filter(x => x !== null),
-          acts.filter(a => a.phase === "execution").map(a => [a.code, a.name, num(a.planned_hours), ..."baseline_cost" in a ? [num(a.baseline_cost, 0)] : [], a.planned_start || "—", a.planned_end || "—", a.locked ? "✓" : ""]), t("none"))),
+        table([t("code"), t("name"), t("planned_hours"), p.activities.some(a => "baseline_cost" in a) ? t("baseline_cost") : null, t("planned_start"), t("planned_end"), t("locked"), canManage && p.state === "planning" ? "" : null].filter(x => x !== null),
+          acts.filter(a => a.phase === "execution").map(a => [a.code, a.name, num(a.planned_hours), ..."baseline_cost" in a ? [num(a.baseline_cost, 0)] : [], a.planned_start || "—", a.planned_end || "—", a.locked ? "✓" : "",
+            ...(canManage && p.state === "planning" ? [a.locked ? "" : h("span", { class: "row", style: "gap:6px" }, h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, () => editActivity(a)) }, t("edit")),
+              h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { if (!confirm(t("confirm_delete"))) return; await api("DELETE", `/projects/${pid}/activities/${a.id}`); await render(); }) }, t("remove")))] : [])]), t("none"))),
       canManage && p.state === "planning" ? h("div", { class: "card" }, h("h2", {}, t("add_activity")),
         h("div", { class: "row" }, field(t("code"), code), field(t("name"), name), field(t("planned_hours"), hrs), field(t("baseline_cost"), bc), field(t("planned_start"), ps), field(t("planned_end"), pe), add), err) : null,
       canManage ? h("div", { class: "card" }, h("h2", {}, t("assigned_staff")), h("div", { class: "row" }, field(t("staff"), who), assignBtn)) : null);
+  }
+
+  async function editActivity(a) {
+    const n = h("input", { value: a.name }), hr = h("input", { type: "number", min: "1", value: a.planned_hours }), bcst = h("input", { type: "number", min: "0", value: a.baseline_cost ?? "" });
+    const ps = h("input", { type: "date", value: a.planned_start || "" }), pe = h("input", { type: "date", value: a.planned_end || "" }), e = h("div");
+    modal({ title: `${t("edit")} ${a.code}`, body: h("div", {}, h("div", { class: "row" }, field(t("name"), n), field(t("planned_hours"), hr), field(t("baseline_cost"), bcst)), h("div", { class: "row", style: "margin-top:10px" }, field(t("planned_start"), ps), field(t("planned_end"), pe)), e),
+      actions: [{ label: t("cancel"), class: "secondary", onClick: (c) => c() },
+        { label: t("save"), onClick: async (c) => { try { await api("PATCH", `/projects/${pid}/activities/${a.id}`, { name: n.value.trim(), planned_hours: Number(hr.value), baseline_cost: bcst.value === "" ? null : Number(bcst.value), planned_start: ps.value || null, planned_end: pe.value || null }); c(); toast(t("saved")); await render(); } catch (x) { mount(e, errorBox(x)); } } }] });
   }
 
   async function aiTab(body, p) {

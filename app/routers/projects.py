@@ -23,6 +23,9 @@ class ProjectIn(BaseModel):
     budget_ceiling: float | None = Field(None, ge=0)
     currency: str = Field("SAR", min_length=3, max_length=3)
     project_type: str = "predictive"
+    client: str | None = Field(None, max_length=200)
+    sponsor: str | None = Field(None, max_length=200)
+    scope_statement: str | None = Field(None, max_length=10000)
 
 
 class ActivityIn(BaseModel):
@@ -77,7 +80,7 @@ def p_out(p: Project) -> dict:
     return {"id": p.id, "number": p.number, "name": p.name, "state": p.state, "pm_id": p.pm_id,
             "planned_start": p.planned_start, "planned_end": p.planned_end, "budget_ceiling": p.budget_ceiling,
             "currency": p.currency, "project_type": p.project_type, "baseline_version": p.baseline_version,
-            "program_id": p.program_id}
+            "program_id": p.program_id, "client": p.client, "sponsor": p.sponsor, "scope_statement": p.scope_statement}
 
 
 def a_out(a: Activity, cost: bool = False) -> dict:

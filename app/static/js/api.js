@@ -79,3 +79,22 @@ export async function openReport(path) {
   window.open(url, "_blank");
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
+
+/** Save a project document (fetched as base64 JSON so it works in the browser demo as well). */
+export async function saveDocument(path, fallbackName) {
+  const d = await api("GET", path);
+  const bin = atob(d.content_b64), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = d.filename || fallbackName; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+/** Read a File as base64 (no data: prefix). */
+export const fileToB64 = (file) => new Promise((res, rej) => {
+  const r = new FileReader();
+  r.onload = () => res(String(r.result).split(",")[1] || "");
+  r.onerror = () => rej(new Error("Could not read the file"));
+  r.readAsDataURL(file);
+});

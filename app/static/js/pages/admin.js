@@ -9,14 +9,15 @@ export default async function (root) {
     const f = { name: h("input", { value: u.full_name }), role: h("select", {}, ROLES.map(r => h("option", { value: r, selected: r === u.role }, r))),
       grade: h("input", { value: u.rate_grade || "" }), email: h("input", { type: "email", value: u.email || "" }), cap: h("input", { type: "number", value: u.capacity_hours_week, style: "width:80px" }), ccb: h("input", { type: "checkbox", checked: u.is_ccb }),
       active: h("input", { type: "checkbox", checked: u.active, disabled: u.id === me.id }), pw: h("input", { type: "password", autocomplete: "new-password" }),
-      lm: h("select", {}, h("option", { value: "" }, "—"), users.filter(x => x.id !== u.id).map(x => h("option", { value: x.id, selected: x.id === u.line_manager_id }, x.full_name))) };
+      lm: h("select", {}, h("option", { value: "" }, "—"), users.filter(x => x.id !== u.id).map(x => h("option", { value: x.id, selected: x.id === u.line_manager_id }, x.full_name))),
+      dg: h("select", {}, h("option", { value: "" }, "—"), users.filter(x => x.id !== u.id).map(x => h("option", { value: x.id, selected: x.id === u.delegate_id }, x.full_name))) };
     const err = h("div");
     modal({ title: `${t("edit")}: ${u.staff_id}`,
-      body: h("div", {}, h("div", { class: "row" }, field(t("full_name"), f.name), field(t("role"), f.role), field(t("grade"), f.grade), field(t("capacity"), f.cap), field(t("line_manager"), f.lm), field(t("email"), f.email)),
+      body: h("div", {}, h("div", { class: "row" }, field(t("full_name"), f.name), field(t("role"), f.role), field(t("grade"), f.grade), field(t("capacity"), f.cap), field(t("line_manager"), f.lm), field(t("delegate"), f.dg), field(t("email"), f.email)),
         h("div", { class: "row", style: "margin-top:10px" }, field(t("is_ccb"), f.ccb), field(t("active"), f.active), field(t("new_password"), f.pw)), err),
       actions: [{ label: t("cancel"), onClick: (close) => close() }, { label: t("save"), class: "primary", onClick: async (close) => {
         mount(err);
-        const body = { full_name: f.name.value.trim(), role: f.role.value, rate_grade: f.grade.value.trim() || null, capacity_hours_week: Number(f.cap.value), is_ccb: f.ccb.checked, line_manager_id: f.lm.value ? Number(f.lm.value) : null, email: f.email.value.trim() || null, active: f.active.checked };
+        const body = { full_name: f.name.value.trim(), role: f.role.value, rate_grade: f.grade.value.trim() || null, capacity_hours_week: Number(f.cap.value), is_ccb: f.ccb.checked, line_manager_id: f.lm.value ? Number(f.lm.value) : null, delegate_id: f.dg.value ? Number(f.dg.value) : null, email: f.email.value.trim() || null, active: f.active.checked };
         if (f.pw.value) body.new_password = f.pw.value;
         try { await api("PATCH", `/users/${u.id}`, body); toast(t("saved")); close(); await render(); } catch (e) { mount(err, errorBox(e)); }
       } }] });

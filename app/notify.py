@@ -45,6 +45,8 @@ def targets(db, event: str, d: dict):
         return [(u.id, "Change request needs a decision", _label(db, pid), L) for u in db.query(User).filter_by(is_ccb=True, active=True)]
     elif event in ("change.approved", "change.rejected"):
         return [(u, f"Change request {event.split('.')[1]}", _label(db, pid), L) for u in _pm(db, pid)]
+    elif event == "project.manager_changed":
+        return [(d["user_id"], "You are now the project manager", _label(db, pid), L)]
     elif event == "project.state_changed":
         return [(u, "Project state changed", f"{_label(db, pid)}: {d['from']} → {d['to']}", L) for u in _pm(db, pid)]
     elif event == "cost.posted" and d.get("approval") == "pending":

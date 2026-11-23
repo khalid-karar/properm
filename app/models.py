@@ -1,5 +1,5 @@
 from datetime import date, datetime, timezone
-from sqlalchemy import (Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String,
+from sqlalchemy import (Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, LargeBinary, String,
                         Text, UniqueConstraint, event)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -56,6 +56,9 @@ class Project(Base):
     project_type: Mapped[str] = mapped_column(String(20), default="predictive")
     baseline_version: Mapped[int] = mapped_column(Integer, default=0)
     program_id: Mapped[int | None] = mapped_column(ForeignKey("programs.id"), nullable=True)
+    client: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    sponsor: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    scope_statement: Mapped[str | None] = mapped_column(Text, nullable=True)
     pm = relationship("User", foreign_keys=[pm_id])
 
 
@@ -401,6 +404,31 @@ class AiDraft(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     reviewed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Document(Base):
+    """Uploaded project file (contract, charter, other). Stored in the database so no extra file service is needed."""
+    __tablename__ = "documents"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(20))            # contract | charter | scope | other
+    filename: Mapped[str] = mapped_column(String(200))
+    size: Mapped[int] = mapped_column(Integer)
+    content: Mapped[bytes] = mapped_column(LargeBinary)
+    uploaded_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Stakeholder(Base):
+    __tablename__ = "stakeholders"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    organisation: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    role: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    power: Mapped[int] = mapped_column(Integer, default=3)       # 1-5
+    interest: Mapped[int] = mapped_column(Integer, default=3)    # 1-5
+    engagement: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 @event.listens_for(AuditLog, "before_update")
