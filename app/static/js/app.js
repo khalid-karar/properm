@@ -31,7 +31,7 @@ async function route() {
   const page = name || homeFor(me.role);
   if (page === "login") { location.hash = `#/${homeFor(me.role)}`; return; }
   if (me.must_change_password && page !== "profile") { location.hash = "#/profile"; return; }
-  if (!allowed.includes(page) && page !== "notifications" && page !== "profile" && !(page === "decisions" && me.is_ccb)) { location.hash = `#/${homeFor(me.role)}`; return; }
+  if (!allowed.includes(page) && page !== "notifications" && page !== "profile" && page !== "search" && !(page === "decisions" && me.is_ccb)) { location.hash = `#/${homeFor(me.role)}`; return; }
 
   const main = h("main", {}, h("p", { class: "muted" }, t("loading")));
   document.body.classList.remove("nav-open");
@@ -55,6 +55,8 @@ function shell(active, main) {
     h("div", { class: "side-foot" }, "Smart PMO"));
   const top = h("header", { class: "top" },
     h("button", { type: "button", class: "iconbtn menu-btn", "aria-label": "Menu", onClick: () => document.body.classList.toggle("nav-open") }, icon("menu")),
+    h("input", { type: "search", class: "topsearch", id: "topsearch", placeholder: t("search_all_ph"), "aria-label": t("search"),
+      onKeydown: (e) => { const v = e.target.value.trim(); if (e.key === "Enter" && v.length >= 2) location.hash = `#/search/${encodeURIComponent(v)}`; } }),
     h("span", { class: "spacer" }),
     h("a", { href: "#/notifications", class: "bell", id: "bell", "aria-label": t("notifications"), title: t("notifications") }, icon("bell"), h("span", { class: "bellcount" })),
     h("button", { type: "button", class: "btn-ghost", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); route(); } }, getLang() === "en" ? "العربية" : "English"),

@@ -4,8 +4,12 @@ import { t } from "../i18n.js";
 import { badge, bar, h, mount, num, table } from "../ui.js";
 
 export default async function (root) {
-  const rows = await api("GET", "/me/projects");
-  mount(root, h("h1", {}, t("nav_mine")),
+  const [rows, up] = await Promise.all([api("GET", "/me/projects"), api("GET", "/me/upcoming")]);
+  const wl = (w) => w.slice(5);
+  const upCard = h("div", { class: "card", id: "upcoming" }, h("h2", {}, t("upcoming_work")), h("p", { class: "muted small" }, t("upcoming_note")),
+    up.projects.length ? h("div", { style: "overflow-x:auto" }, table([t("project"), ...up.weeks.map(wl)], [...up.projects.map(p => [p.project, ...p.hours.map(x => x ? num(x) : "")]),
+      [h("strong", {}, t("total")), ...up.totals.map((x, i) => h("span", { class: x > up.capacity[i] + 0.01 ? "neg" : "" }, num(x)))], [h("span", { class: "muted" }, t("capacity")), ...up.capacity.map(x => h("span", { class: "muted" }, num(x)))]])) : h("p", { class: "muted" }, t("none")));
+  mount(root, h("h1", {}, t("nav_mine")), upCard,
     rows.length ? null : h("div", { class: "card" }, h("p", { class: "muted" }, t("no_projects"))),
     rows.map(p => h("div", { class: "card" },
       h("h2", {}, h("a", { href: `#/projects/${p.id}` }, `${p.number} · ${p.name}`), " ", badge(t(p.state), "GREY")),

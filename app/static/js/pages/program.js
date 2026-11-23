@@ -1,5 +1,5 @@
 // Program detail: roadmap of projects and milestones, cross-project dependencies, program-level risks.
-import { api } from "../api.js";
+import { api, openReport } from "../api.js";
 import { gantt } from "../charts.js";
 import { t } from "../i18n.js";
 import { badge, errorBox, field, guarded, h, modal, mount, num, table, toast } from "../ui.js";
@@ -42,6 +42,7 @@ export default async function (root, { me, gid }) {
     mount(root, h("p", {}, h("a", { href: "#/programs" }, `← ${t("programs")}`)),
       h("h1", {}, `${rm.program.code} · ${rm.program.name} `, rm.conflicts ? badge(`${rm.conflicts} ${t("dep_conflicts")}`, "RED") : null),
       rm.program.description ? h("p", { class: "muted" }, rm.program.description) : null,
+      h("p", {}, h("button", { class: "btn small secondary", type: "button", onClick: () => openReport(`/reports/board-pack.html?program_id=${gid}`) }, t("board_pack"))),
       h("div", { class: "card", id: "roadmap" }, h("h2", {}, t("roadmap")), h("p", { class: "muted small" }, t("roadmap_note")), chart,
         table([t("project"), t("state"), "RAG", t("planned_start"), t("planned_end"), "%"], rm.projects.map(p => [h("a", { href: `#/projects/${p.project_id}` }, `${p.number} · ${p.name}`), t(p.state), badge(t(`rag_${p.rag}`), p.rag), p.start || "—", p.end || "—", p.progress_pct == null ? "—" : `${num(p.progress_pct, 0)}%`]), t("none"))),
       h("div", { class: "card", id: "xdeps" }, h("h2", {}, t("cross_deps")), h("p", { class: "muted small" }, t("cross_deps_note")),

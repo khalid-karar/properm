@@ -319,6 +319,18 @@ await step("PMO: templates page, assign resource request", async () => {
   await Promise.all([p.waitForResponse(r => r.url().includes("/resource-requests/")), p.click("#rr-queue button:has-text('Assign')")]);
 });
 
+p = await newPage("b-pmo"); await login(p, "pmo1");
+await step("search, board pack, what-if, coming up", async () => {
+  await p.fill("#topsearch", "ERP"); await p.press("#topsearch", "Enter"); await p.waitForSelector(".search-group a:has-text('ERP Rollout')");
+  const [pop] = await Promise.all([p.waitForEvent("popup"), p.goto(BASE + "#/executive").then(() => p.click("#board-pack"))]);
+  await pop.waitForSelector("h1:has-text('Steering committee pack')"); await pop.close();
+  await p.goto(BASE + "#/portfolio"); await p.selectOption("#what-if select >> nth=1", "stop"); await p.click("#what-if button:has-text('Show effect')"); await p.waitForSelector("#what-if table.whatif");
+  await p.goto(BASE + "#/todo"); await p.waitForSelector("#coming-up");
+});
+
+p = await newPage("b-staff"); await login(p, "s1");
+await step("staff: planned hours ahead", async () => { await p.goto(BASE + "#/mine"); await p.waitForSelector("#upcoming td"); });
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

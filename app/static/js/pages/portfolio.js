@@ -31,6 +31,27 @@ export default async function (root, { me }) {
       h("thead", {}, h("tr", {}, h("th", {}, t(`grp_${group}`)), cap.weeks.map(w => h("th", {}, wkLabel(w))))),
       h("tbody", {}, cap.groups.map(g => h("tr", {}, h("td", {}, `${g.group}`, h("span", { class: "muted small" }, ` (${g.people})`)), g.weeks.map(cell))),
         h("tr", { class: "tot" }, h("td", {}, h("strong", {}, t("total"))), cap.totals.map(x => cell({ ...x, load_pct: x.supply ? Math.round(100 * x.demand / x.supply) : null }))))));
+    const projs = pri.filter(r => r.kind === "project");
+    const wi = { proj: h("select", {}, projs.map(r => h("option", { value: r.id }, `${r.number} · ${r.name}`))), act: h("select", {}, ["delay", "stop"].map(a => h("option", { value: a }, t(`wi_${a}`)))),
+      weeks: h("input", { type: "number", min: "1", max: "52", value: "4", style: "width:80px" }) };
+    const wiOut = h("div"), wiErr = h("div");
+    const runWi = guarded(null, async () => {
+      mount(wiErr);
+      try {
+        const r = await api("POST", "/portfolio/what-if", { changes: [{ project_id: Number(wi.proj.value), action: wi.act.value, weeks: Number(wi.weeks.value) }] });
+        const cls = (a, b) => (b < a ? "better" : b > a ? "worse" : "");
+        mount(wiOut, h("table", { class: "heat whatif" }, h("thead", {}, h("tr", {}, h("th", {}, ""), r.before.weeks.map(w => h("th", {}, w.week_start.slice(5))))),
+            h("tbody", {}, h("tr", {}, h("td", {}, t("wi_before")), r.before.weeks.map(w => h("td", {}, w.supply ? `${Math.round(100 * w.demand / w.supply)}%` : "—"))),
+              h("tr", {}, h("td", {}, t("wi_after")), r.after.weeks.map((w, i) => h("td", { class: cls(r.before.weeks[i].demand, w.demand) }, w.supply ? `${Math.round(100 * w.demand / w.supply)}%` : "—"))))),
+          h("p", {}, `${t("wi_over_weeks")}: ${r.before.over_allocated_weeks} → `, h("strong", {}, String(r.after.over_allocated_weeks))),
+          r.effects.map(e => h("div", {}, h("p", {}, h("strong", {}, e.project), " · ",
+            e.action === "delay" ? `${t("planned_end")}: ${e.old_end || "—"} → ${e.new_end || "—"}` : `${t("wi_hours_freed")}: ${num(e.hours_freed)} h` + (e.budget_not_spent != null ? ` · ${t("wi_budget_left")}: ${num(e.budget_not_spent, 0)} ${e.currency}` : "")),
+            (e.hits || []).length ? h("ul", { class: "checks" }, e.hits.map(x => h("li", { class: "bad" }, `✗ ${x.project} ${t("needed_by").toLowerCase()} ${x.needed_by}` + (x.would_arrive ? ` → ${x.would_arrive}` : ` (${t("wi_never")})`)))) : null)),
+          h("p", { class: "muted small" }, t("wi_note")));
+      } catch (e) { mount(wiErr, errorBox(e)); }
+    });
+    const wiCard = h("div", { class: "card", id: "what-if" }, h("h2", {}, t("what_if")), h("p", { class: "muted small" }, t("what_if_note")),
+      h("div", { class: "row" }, field(t("project"), wi.proj), field(t("wi_action"), wi.act), field(t("wi_weeks"), wi.weeks), h("button", { class: "btn", type: "button", onClick: runWi }, t("wi_run"))), wiErr, wiOut);
     mount(root, h("h1", {}, t("nav_portfolio")),
       h("div", { class: "card", id: "priorities" }, h("h2", {}, t("priorities")), h("p", { class: "muted small" }, t("priorities_note")),
         table(["#", t("number"), t("name"), t("type"), t("state"), "RAG", t("score"), t("budget"), "CPI", canScore ? "" : null].filter(x => x !== null),
@@ -42,6 +63,7 @@ export default async function (root, { me }) {
       h("div", { class: "card", id: "capacity" }, h("h2", {}, t("capacity_plan")), h("p", { class: "muted small" }, t("capacity_note")),
         h("div", { class: "row" }, field(t("group_by"), gsel)), capTable,
         cap.over_allocated.length ? [h("h3", {}, t("over_allocated")), table([t("staff"), t("week_of"), t("demand"), t("supply")], cap.over_allocated.slice(0, 20).map(o => [o.user, o.week_start, num(o.demand), num(o.supply)]))] : null),
+      wiCard,
       comp ? h("div", { class: "card", id: "compliance" }, h("h2", {}, `${t("compliance")} · ${t("week_of")} ${comp.week_start}`), h("p", { class: "muted small" }, t("compliance_note")),
         table([t("manager"), t("projects"), t("missing_reports"), t("stale_progress"), t("risks_unreviewed"), t("overdue_actions"), t("approvals_3d"), t("team_weeks_missing"), ""],
           comp.managers.map(r => [r.pm, r.projects, r.missing_reports.length ? h("span", { class: "neg" }, r.missing_reports.join(", ")) : "0", r.stale_progress, r.risks_unreviewed, r.overdue_actions, r.approvals_waiting_3d, r.team_weeks_missing,

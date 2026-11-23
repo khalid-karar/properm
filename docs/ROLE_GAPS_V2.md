@@ -17,7 +17,7 @@ Best practice: a full, accurate timesheet with little effort; knows what is comi
 | Submit the **whole week** in one go and get a weekly status | ✅ | Week strip + Submit week (entries are still approved one by one) | P1 |
 | **Reminders** for missing days and the weekly deadline | ✅ | To-do item; PMO sends reminders (or a cron calls `POST /reminders/timesheets`) | P1 |
 | **Plan leave ahead** so managers see reduced capacity | ✅ | Leave page, line-manager approval, lowers capacity in resource load | P1 |
-| See **upcoming work** (my planned hours for the next weeks) | ⬜ | "My projects" shows caps, not the forward plan | P2 |
+| See **upcoming work** (my planned hours for the next weeks) | ✅ | "My projects" shows caps, not the forward plan | P2 |
 | Update % complete on activities I own | 🟡 | Only the PM updates progress | P3 |
 
 ## 2. Project Manager
@@ -45,7 +45,7 @@ Best practice: run the governance cycle (stage gates, reporting calendar, compli
 | **Compliance view**: late weekly reports, missing timesheets, stale risks, overdue actions, per PM | ✅ | Portfolio page | P1 |
 | **Capacity plan** for the next 8–12 weeks (demand vs supply by department/grade) | ✅ | Portfolio page, by department, grade or person | P1 |
 | **Project templates / methodology library** maintained by PMO | ✅ | Templates page | P2 |
-| Reporting calendar (who must submit what, when) | 🟡 | Scheduled reports exist; no due-date calendar | P2 |
+| Reporting calendar (who must submit what, when) | ✅ | "Coming up" on My to-do | P2 |
 
 ## 4. Program Manager
 Best practice: manage the program as one unit: roadmap, inter-project dependencies, program-level risks and a benefits realisation plan.
@@ -68,8 +68,8 @@ Best practice: decides on investment (what to start, stop, continue), not on dai
 | **Project intake approval** (business case → approve/reject before a PM can start) | ✅ | Proposals page; switch in Configuration | P1 |
 | **Prioritisation / scoring** (strategic fit, value, risk, cost) to rank the portfolio | ✅ | Projects and proposals on one ranked list (Portfolio page) | P1 |
 | Decision options beyond approve/reject: **defer, request more information, approve with conditions**, with rationale kept | ✅ | Proposals, stage gates and change requests | P1 |
-| **Steering-committee pack**: one-page per project, exportable | 🟡 | Period reports exist; no board pack format | P2 |
-| What-if (stop or delay a project, effect on budget and capacity) | ⬜ | | P3 |
+| **Steering-committee pack**: one-page per project, exportable | ✅ | Executive page and each program page | P2 |
+| What-if (stop or delay a project, effect on budget and capacity) | ✅ | Portfolio page | P3 |
 
 ## 6. Administrator
 Best practice: secure access, clean organisation data, safe off-boarding, recoverable data.
@@ -88,7 +88,7 @@ Best practice: secure access, clean organisation data, safe off-boarding, recove
 ## 7. Everyone
 | Need | Status | Pri |
 |---|---|---|
-| **Global search** (projects, people, risks, documents) | ⬜ | P2 |
+| **Global search** (projects, people, risks, documents) | ✅ | P2 |
 | Saved filters / personal home page | ⬜ | P3 |
 | Arabic/English, role guide, profile | ✅ | |
 

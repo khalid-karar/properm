@@ -5,7 +5,7 @@ import { badge, guarded, h, mount, num, table, toast } from "../ui.js";
 
 export default async function (root, { me }) {
   async function render() {
-    const d = await api("GET", "/me/todo");
+    const [d, cal] = await Promise.all([api("GET", "/me/todo"), api("GET", "/me/calendar")]);
     const link = (pid, text) => h("a", { href: `#/projects/${pid}` }, text);
     mount(root, h("h1", {}, `${t("nav_todo")} `, d.total ? badge(d.total, "critical") : null),
       d.total ? null : h("div", { class: "card" }, h("p", { class: "muted" }, t("nothing_pending"))),
@@ -21,6 +21,8 @@ export default async function (root, { me }) {
         h("span", { class: "row", style: "gap:6px" }, link(a.project_id, t("open")), h("button", { class: "btn small", type: "button", onClick: guarded(null, async () => { await api("PATCH", `/projects/${a.project_id}/actions/${a.id}`, { status: "done" }); toast(t("saved")); await render(); }) }, t("mark_done")))]))) : null,
       d.risks.length ? h("div", { class: "card" }, h("h2", {}, t("my_risks")), table([t("project"), t("title"), t("score"), ""], d.risks.map(r => [r.project, r.title, badge(r.score, r.score >= 20 ? "critical" : "warning"), link(r.project_id, t("open"))]))) : null,
       d.issues.length ? h("div", { class: "card" }, h("h2", {}, t("my_issues")), table([t("project"), t("title"), t("severity"), ""], d.issues.map(i => [i.project, i.title, i.severity, link(i.project_id, t("open"))]))) : null);
+    root.append(h("div", { class: "card", id: "coming-up" }, h("h2", {}, t("coming_up")), cal.length ? table([t("date"), t("type"), t("title"), ""],
+      cal.map(x => [h("span", { class: x.overdue ? "neg" : "" }, x.date), t(`ck_${x.kind}`), x.title, x.link ? h("a", { href: x.link }, t("open")) : ""])) : h("p", { class: "muted" }, t("none"))));
   }
   await render();
 }

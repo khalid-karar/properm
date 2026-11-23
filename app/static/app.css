@@ -205,3 +205,5 @@ table.heat tr.tot td{border-top:2px solid var(--line-strong,#cbd2dc)}
 table.raci td,table.raci th{text-align:center}table.raci select{width:auto;padding:2px 6px}
 table.raci td.rl-A{background:rgba(30,60,120,.15);font-weight:700}table.raci td.rl-R{background:rgba(40,150,80,.14)}
 button.x{border:none;background:none;color:var(--muted);cursor:pointer;margin-inline-start:4px;font-size:14px}
+input.topsearch{max-width:280px;margin-inline-start:8px}@media (max-width:860px){input.topsearch{max-width:140px}}
+.whatif td.better{color:var(--green);font-weight:600}.whatif td.worse{color:var(--red);font-weight:600}
