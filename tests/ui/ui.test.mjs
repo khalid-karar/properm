@@ -155,6 +155,13 @@ await step("todo page, approvals filters and bulk select", async () => {
   await p.check("label:has-text('Flagged only') input"); await p.waitForSelector("h2:has-text('My recent decisions')"); await p.uncheck("label:has-text('Flagged only') input");
 });
 
+await step("reports page: preview and excel download", async () => {
+  await p.goto(BASE + "#/reports"); await p.waitForSelector("h1:has-text('Reports')"); await p.waitForSelector("h2:has-text('Portfolio')");
+  await p.selectOption("label:has-text('Period') select", "quarter"); await p.click("button:has-text('Preview')"); await p.waitForSelector("td:has-text('ALPHA-01')");
+  const [dl] = await Promise.all([p.waitForEvent("download"), p.click("button:has-text('Export Excel')")]);
+  if (!dl.suggestedFilename().endsWith(".xlsx")) throw new Error("no xlsx: " + dl.suggestedFilename());
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

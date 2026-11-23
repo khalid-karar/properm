@@ -8,11 +8,11 @@ let me = null;
 
 const NAV = {
   STAFF: ["todo", "timesheet", "approvals", "projects", "alerts"],
-  PM: ["todo", "timesheet", "approvals", "projects", "load", "dashboard", "decisions", "alerts"],
-  PMO: ["todo", "timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "alerts", "audit"],
-  ADMIN: ["todo", "timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "alerts", "audit", "admin"],
-  DECISION_MAKER: ["todo", "executive", "projects", "load", "dashboard", "decisions", "programs", "alerts"],
-  PROGRAM_MANAGER: ["todo", "executive", "projects", "load", "dashboard", "decisions", "programs", "alerts"],
+  PM: ["todo", "timesheet", "approvals", "projects", "load", "dashboard", "decisions", "reports", "alerts"],
+  PMO: ["todo", "timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "reports", "alerts", "audit"],
+  ADMIN: ["todo", "timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "reports", "alerts", "audit", "admin"],
+  DECISION_MAKER: ["todo", "executive", "projects", "load", "dashboard", "decisions", "programs", "reports", "alerts"],
+  PROGRAM_MANAGER: ["todo", "executive", "projects", "load", "dashboard", "decisions", "programs", "reports", "alerts"],
 };
 const HOME = { STAFF: "timesheet", PM: "projects", DECISION_MAKER: "executive" };
 export const homeFor = (role) => HOME[role] || "dashboard";
