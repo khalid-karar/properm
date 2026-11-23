@@ -8,13 +8,13 @@ let me = null;
 
 const NAV = {
   STAFF: ["timesheet", "approvals", "projects", "alerts"],
-  PM: ["timesheet", "approvals", "projects", "load", "dashboard", "alerts"],
-  PMO: ["timesheet", "approvals", "projects", "load", "dashboard", "programs", "alerts", "audit"],
-  ADMIN: ["timesheet", "approvals", "projects", "load", "dashboard", "programs", "alerts", "audit", "admin"],
-  DECISION_MAKER: ["projects", "load", "dashboard", "programs", "alerts"],
-  PROGRAM_MANAGER: ["projects", "load", "dashboard", "programs", "alerts"],
+  PM: ["timesheet", "approvals", "projects", "load", "dashboard", "decisions", "alerts"],
+  PMO: ["timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "alerts", "audit"],
+  ADMIN: ["timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "alerts", "audit", "admin"],
+  DECISION_MAKER: ["executive", "projects", "load", "dashboard", "decisions", "programs", "alerts"],
+  PROGRAM_MANAGER: ["executive", "projects", "load", "dashboard", "decisions", "programs", "alerts"],
 };
-const HOME = { STAFF: "timesheet", PM: "projects" };
+const HOME = { STAFF: "timesheet", PM: "projects", DECISION_MAKER: "executive" };
 export const homeFor = (role) => HOME[role] || "dashboard";
 
 async function route() {
@@ -30,7 +30,7 @@ async function route() {
   const allowed = NAV[me.role] || [];
   const page = name || homeFor(me.role);
   if (page === "login") { location.hash = `#/${homeFor(me.role)}`; return; }
-  if (!allowed.includes(page) && page !== "notifications") { location.hash = `#/${homeFor(me.role)}`; return; }
+  if (!allowed.includes(page) && page !== "notifications" && !(page === "decisions" && me.is_ccb)) { location.hash = `#/${homeFor(me.role)}`; return; }
 
   const main = h("main", {}, h("p", { class: "muted" }, t("loading")));
   document.body.classList.remove("nav-open");

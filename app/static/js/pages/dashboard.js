@@ -1,5 +1,6 @@
 import { api, downloadCsv } from "../api.js";
 import { st, t } from "../i18n.js";
+import { heatmap, lineChart, pairedBars, COLORS } from "../charts.js";
 import { badge, bar, errorBox, field, guarded, h, mount, num, stat, table } from "../ui.js";
 
 const EXEC = ["PMO", "ADMIN", "DECISION_MAKER", "PROGRAM_MANAGER"];
@@ -47,4 +48,27 @@ async function project(root, pid) {
       (e.warnings || []).length ? h("div", { class: "warn" }, h("ul", {}, e.warnings.map(w => h("li", {}, w)))) : null) : null,
     d.overdue_activities.length ? h("div", { class: "card" }, h("h2", {}, t("overdue")), table([t("activity"), t("planned_end"), t("days_late")], d.overdue_activities.map(a => [a.code, a.planned_end, a.days_late]))) : null,
     h("div", { class: "card" }, h("h2", {}, t("alerts")), table([t("severity"), t("cause"), t("status")], d.alerts.map(a => [badge(st(a.severity), a.severity), a.cause, st(a.status)]), t("none")), h("p", {}, h("a", { href: "#/alerts" }, t("nav_alerts")))));
+  const box = h("div"); root.append(box);
+  charts(box, pid, !!d.evm);
+}
+
+async function charts(box, pid, cost) {
+  const [trend, hv, rm, sc] = await Promise.all([api("GET", `/dashboards/project/${pid}/trend`), api("GET", `/dashboards/project/${pid}/hours-vs-plan`), api("GET", `/dashboards/project/${pid}/risk-matrix`),
+    cost ? api("GET", `/dashboards/project/${pid}/scurve`).catch(() => null) : null]);
+  const cards = [];
+  if (sc && sc.available) {
+    const labels = sc.points.map(x => x.date), ti = sc.points.findIndex(x => x.date >= sc.today);
+    cards.push(h("div", { class: "card" }, h("h2", {}, t("scurve")),
+      lineChart({ labels, series: [{ name: "PV", color: COLORS.grey, dash: "5 4", values: sc.points.map(x => x.PV) }, { name: "EV", color: COLORS.navy, values: sc.points.map(x => x.EV) }, { name: "AC", color: COLORS.red, values: sc.points.map(x => x.AC) }],
+        refLine: ti >= 0 ? { index: ti, label: t("today") } : null, refY: { value: sc.BAC, label: `BAC ${sc.BAC.toLocaleString()} ${sc.currency}` } })));
+  }
+  if (cost && trend.length > 1) {
+    cards.push(h("div", { class: "card" }, h("h2", {}, t("cpi_spi_trend")),
+      lineChart({ labels: trend.map(x => x.date), yMin: 0, fmt: (v) => v.toFixed(1), refY: { value: 1, label: "1.0" }, series: [{ name: "CPI", color: COLORS.navy, values: trend.map(x => x.cpi) }, { name: "SPI", color: COLORS.gold, values: trend.map(x => x.spi) }] })));
+  } else if (trend.length <= 1) {
+    cards.push(h("div", { class: "card" }, h("h2", {}, t("trend")), h("p", { class: "muted" }, t("trend_building"))));
+  }
+  cards.push(h("div", { class: "card" }, h("h2", {}, t("hours_vs_plan")), pairedBars({ rows: hv.map(x => ({ label: x.code, a: x.planned, b: x.approved })), aName: t("planned"), bName: t("approved") })));
+  cards.push(h("div", { class: "card" }, h("h2", {}, t("risk_heatmap")), heatmap(rm.cells, { pLabel: t("probability"), iLabel: t("impact") })));
+  mount(box, h("div", { class: "grid2" }, cards));
 }

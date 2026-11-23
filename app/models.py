@@ -470,3 +470,18 @@ class ActivityDependency(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     activity_id: Mapped[int] = mapped_column(ForeignKey("activities.id"))
     predecessor_id: Mapped[int] = mapped_column(ForeignKey("activities.id"))
+
+
+class Snapshot(Base):
+    """One row per project per day, so RAG / CPI / SPI can be shown as a trend (written lazily and on demand)."""
+    __tablename__ = "snapshots"
+    __table_args__ = (UniqueConstraint("project_id", "snap_date"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    snap_date: Mapped[date] = mapped_column(Date)
+    rag: Mapped[str] = mapped_column(String(10))
+    progress_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cpi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    spi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    open_risks: Mapped[int] = mapped_column(Integer, default=0)
+    open_alerts: Mapped[int] = mapped_column(Integer, default=0)

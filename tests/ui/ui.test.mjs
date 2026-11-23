@@ -117,7 +117,7 @@ await step("AI suggestion on an alert", async () => {
 await step("details tab: edit client, add stakeholder", async () => {
   await p.goto(BASE + "#/alerts"); const cl = p.locator(".modal button:has-text('Close')"); if (await cl.count()) await cl.click();
   await p.goto(BASE + "#/projects/1"); await tab(p, "Details"); await p.waitForSelector("h2:has-text('Project details')");
-  await p.fill("label:has-text('Client') input", "Ministry X"); await p.click("button:has-text('Save') >> nth=0"); await p.waitForSelector(".toast");
+  await p.fill("label:has-text('Client') input", "Ministry X"); await Promise.all([p.waitForResponse(r => r.request().method() === "PATCH" && r.url().endsWith("/projects/1")), p.locator(".card:has(h2:has-text('Project details')) button:has-text('Save')").click()]);
   await p.goto(BASE + "#/projects/1"); await tab(p, "Details"); await p.waitForSelector("label:has-text('Client') input");
   if ((await p.inputValue("label:has-text('Client') input")) !== "Ministry X") throw new Error("client not saved");
   const sc = p.locator(".card:has(h2:has-text('Stakeholders'))"); await sc.locator("label:has-text('Name') input").first().fill("Dr Salem"); await sc.locator("button:has-text('Add')").click(); await p.waitForSelector("td:has-text('Dr Salem')");
@@ -133,6 +133,12 @@ await step("audit viewer lists and filters; period lock status", async () => {
   await p.goto(BASE + "#/audit"); await p.waitForSelector("h2:has-text('Audit log')"); await p.waitForSelector("td .badge");
   await p.waitForSelector("h2:has-text('Period lock')");
   await p.selectOption("label:has-text('Action') select", { index: 1 }); await p.click("button:has-text('Filter')"); await p.waitForSelector("td .badge");
+});
+
+await step("executive summary, decision queue, project charts", async () => {
+  await p.goto(BASE + "#/executive"); await p.waitForSelector("h1:has-text('Executive')"); await p.waitForSelector("h2:has-text('Needs attention')");
+  await p.goto(BASE + "#/decisions"); await p.waitForSelector("h1:has-text('Decisions')");
+  await p.goto(BASE + "#/dashboard/1"); await p.waitForSelector("h2:has-text('S-curve')"); await p.waitForSelector("svg.chart"); await p.waitForSelector("h2:has-text('Risk heat map')"); await shot(p, "16-charts");
 });
 
 p = await newPage("ar"); await login(p, "pmo1");
