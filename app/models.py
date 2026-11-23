@@ -682,3 +682,58 @@ class LoginEvent(Base):
     ok: Mapped[bool] = mapped_column(Boolean)
     reason: Mapped[str | None] = mapped_column(String(60), nullable=True)
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ProjectTemplate(Base):
+    """PMO method library: standard activities, milestones, KPIs and risks to start a project from."""
+    __tablename__ = "project_templates"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(40), unique=True)
+    name: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+
+class ResourceRequest(Base):
+    """A project manager asks the PMO for people instead of assigning them directly."""
+    __tablename__ = "resource_requests"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    requested_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    skill: Mapped[str] = mapped_column(String(200))
+    department: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    hours_per_week: Mapped[float] = mapped_column(Float)
+    start: Mapped[date] = mapped_column(Date)
+    end: Mapped[date] = mapped_column(Date)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="requested")    # requested | fulfilled | rejected | cancelled
+    assigned_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    decided_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    decision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class RaciEntry(Base):
+    """Responsibility matrix: for each deliverable, who is Responsible, Accountable, Consulted, Informed."""
+    __tablename__ = "raci_entries"
+    __table_args__ = (UniqueConstraint("project_id", "item", "person"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    item: Mapped[str] = mapped_column(String(200))
+    person: Mapped[str] = mapped_column(String(200))
+    letter: Mapped[str] = mapped_column(String(1))
+
+
+class CommItem(Base):
+    """Communication plan line: who gets what information, how and how often."""
+    __tablename__ = "comm_items"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    audience: Mapped[str] = mapped_column(String(200))
+    information: Mapped[str] = mapped_column(String(300))
+    method: Mapped[str] = mapped_column(String(100))
+    frequency: Mapped[str] = mapped_column(String(20))      # weekly | biweekly | monthly | quarterly | milestone | ad_hoc
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    last_sent: Mapped[date | None] = mapped_column(Date, nullable=True)

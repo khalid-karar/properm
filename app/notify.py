@@ -72,6 +72,13 @@ def targets(db, event: str, d: dict):
         return [(x, "Leave request needs a decision", f"{d.get('name')}: {d['start']} – {d['end']}", "#/leave") for x in who]
     elif event == "leave.decided":
         return [(d["user_id"], f"Your leave was {d['status']}", f"{d['start']} – {d['end']}", "#/leave")]
+    elif event == "resource.requested":
+        return [(u, "Resource request needs a decision", f"{_label(db, pid)}: {d.get('skill')}", "#/load") for u in _role(db, "PMO")]
+    elif event == "resource.decided":
+        out = [(d["user_id"], f"Resource request {d['status']}", f"{_label(db, pid)}: {d.get('skill')}", L)]
+        if d.get("assigned_id"):
+            out.append((d["assigned_id"], "You have been assigned to a project", _label(db, pid), L))
+        return out
     elif event == "anomaly.flag":
         return [(u, "Timesheet anomaly flagged", f"User {d.get('user_id')} had {d.get('blocks_7d')} flagged blocks in 7 days", "#/approvals") for u in _role(db, "PMO")]
     return []

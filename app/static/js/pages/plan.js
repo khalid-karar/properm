@@ -63,7 +63,13 @@ export async function plan(body, p, { pid, dir, canManage, render }) {
       () => api("PUT", `/projects/${pid}/activities/${l.a.value}/limits`, { user_id: Number(l.u.value), max_hours: Number(l.hrs.value) }), t("save")) : null) : null;
 
   const g = acts.filter(a => a.planned_start && a.planned_end);
+  const cp = await api("GET", `/projects/${pid}/critical-path`);
+  const crit = new Set(cp.critical), rowIdx = Object.fromEntries(g.map((a, i) => [a.id, i]));
+  const glinks = deps.filter(x => x.activity_id in rowIdx && x.predecessor_id in rowIdx).map(x => { const a = g[rowIdx[x.activity_id]], pr = g[rowIdx[x.predecessor_id]];
+    return { fromRow: rowIdx[x.predecessor_id], fromDate: pr.planned_end, toRow: rowIdx[x.activity_id], toDate: a.planned_start, bad: crit.has(a.code) && crit.has(pr.code) }; });
   const gcard = h("div", { class: "card", id: "gantt-card" }, h("h2", {}, t("timeline")),
-    g.length ? gantt({ rows: g.map(a => ({ label: `${a.code} ${a.name}`, start: a.planned_start, end: a.planned_end })), marks: ms.map(x => ({ label: x.name, date: x.due_date, done: !!x.achieved_on })), todayLabel: t("today") }) : h("p", { class: "muted" }, t("timeline_empty")));
+    g.length ? gantt({ rows: g.map(a => ({ label: `${a.code} ${a.name}`, start: a.planned_start, end: a.planned_end, color: crit.has(a.code) ? "var(--red)" : null })), links: glinks, marks: ms.map(x => ({ label: x.name, date: x.due_date, done: !!x.achieved_on })), todayLabel: t("today") }) : h("p", { class: "muted" }, t("timeline_empty")));
+  if (cp.activities.length) gcard.append(h("p", { class: "small", id: "critical-path" }, h("strong", {}, `${t("critical_path")}: `), cp.critical.join(" → ") || "—", ` · ${t("network_finish")}: ${cp.finish}`,
+    cp.activities.some(x => x.pushed_days > 0) ? h("span", { class: "neg" }, ` · ${t("pushed_note")}: ${cp.activities.filter(x => x.pushed_days > 0).map(x => `${x.code} +${x.pushed_days}d`).join(", ")}`) : null));
   mount(body, gcard, mcard, kcard, dcard, lcard);
 }

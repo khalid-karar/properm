@@ -3,6 +3,7 @@ import { getLang, st, t } from "../i18n.js";
 import { details } from "./details.js";
 import { plan } from "./plan.js";
 import { control } from "./control.js";
+import { requestCard, team } from "./team.js";
 import { decide, decisionList, outcomeBadge } from "../decide.js";
 import { askText, badge, modal, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
 
@@ -57,7 +58,7 @@ async function detail(root, me, pid) {
 
   async function render() {
     const p = await api("GET", `/projects/${pid}`);
-    const tabs = ["overview", "details", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
+    const tabs = ["overview", "details", "team", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
     const show = (x) => (x === "costs" || x === "allocations") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : true;
     const body = h("div");
     mount(root,
@@ -70,6 +71,7 @@ async function detail(root, me, pid) {
     try {
       if (tab === "overview") await overview(body, p);
       else if (tab === "details") await details(body, p, { pid, me, dir, canManage, render });
+      else if (tab === "team") await team(body, p, { pid, me, dir, canManage, render });
       else if (tab === "plan") await plan(body, p, { pid, dir, canManage, render });
       else if (tab === "progress") await progress(body, p);
       else if (tab === "control") await control(body, p, { pid, me, dir, canManage, render });
@@ -112,6 +114,10 @@ async function detail(root, me, pid) {
         h("button", { class: "btn secondary small", onClick: guarded(null, async () => { await api("PUT", `/projects/${pid}/program`, { program_id: sel.value ? Number(sel.value) : null }); toast(t("saved")); }) }, t("save"))));
     }
     const gates = await api("GET", `/projects/${pid}/gates`);
+    const tpls = canManage && ["tendering", "planning"].includes(p.state) ? await api("GET", "/templates").catch(() => []) : [];
+    const tsel = h("select", {}, tpls.filter(x => x.active).map(x => h("option", { value: x.id }, `${x.code} · ${x.name}`))), terr = h("div");
+    const tplCard = tpls.some(x => x.active) ? h("div", { class: "card", id: "apply-template" }, h("h2", {}, t("apply_template")), h("p", { class: "muted small" }, t("apply_template_note")),
+      h("div", { class: "row" }, field(t("template"), tsel), h("button", { class: "btn", type: "button", onClick: guarded(null, async () => { mount(terr); try { const r = await api("POST", `/projects/${pid}/apply-template/${tsel.value}`); toast(`${t("saved")}: ${r.activities} ${t("activities")}, ${r.milestones} ${t("milestones")}, ${r.risks} ${t("risks")}`); await render(); } catch (e) { mount(terr, errorBox(e)); } }) }, t("apply"))), terr) : null;
     const log_ = await api("GET", `/decision-log?project_id=${pid}`);
     const gerr = h("div"), gnote = h("textarea", { rows: 2 });
     const pendingG = gates.reviews.find(r => r.gate === gates.next_gate && ["pending", "deferred"].includes(r.status));
@@ -124,7 +130,7 @@ async function detail(root, me, pid) {
       table([t("date"), t("title"), t("outcome"), t("rationale"), t("conditions"), t("decided_by")], log_.map(r => [(r.decided_at || "").slice(0, 10), r.title, t(`oc_${r.outcome}`), r.rationale || "", r.conditions || "", r.decided_by || ""]))) : null;
     mount(body,
       h("div", { class: "grid", style: "margin-bottom:16px" }, stat(t("state"), t(p.state)), stat(t("baseline_version"), p.baseline_version), stat(t("planned_start"), p.planned_start || "—"), stat(t("planned_end"), p.planned_end || "—")),
-      progCard, gateCard,
+      progCard, tplCard, gateCard,
       canManage ? h("div", { class: "card" }, h("div", { class: "row" }, moves,
         p.state === "planning" ? h("button", { class: "btn gold small", onClick: guarded(null, async () => { if (!confirm(t("confirm_lock"))) return; await api("POST", `/projects/${pid}/baseline/lock`); toast(t("baseline_locked")); await render(); }) }, t("lock_baseline")) : null)) : null,
       h("div", { class: "card" }, h("h2", {}, t("activities")),
@@ -333,7 +339,8 @@ async function detail(root, me, pid) {
     const cell = (u, w) => { const r = rows.find(x => x.user_id === u && x.week_start === w); return r ? num(r.hours) : ""; };
     mount(body, h("div", { class: "card" }, h("h2", {}, t("allocations")),
       users.length ? h("div", { style: "overflow-x:auto" }, table([t("staff"), ...weeks], users.map(u => [(dirById[u] || {}).full_name || u, ...weeks.map(w => cell(u, w))]))) : h("p", { class: "muted" }, t("none")),
-      canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("staff"), who), field(t("week_of"), wk), field(t("hours"), hrs), btn) : null, err));
+      canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("staff"), who), field(t("week_of"), wk), field(t("hours"), hrs), btn) : null, err),
+      await requestCard(pid, canManage, render));
   }
 
   async function reports(body, p) {

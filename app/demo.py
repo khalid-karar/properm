@@ -95,6 +95,28 @@ def seed(app, pw, c):
     ok(c.patch(f"/projects/{a_pid}/milestones/{ms[0]['id']}", headers=pm, json={"achieved_on": d(-18)}))
     k = ok(c.post(f"/projects/{a_pid}/kpis", headers=pm, json={"name": "On-time delivery", "unit": "%", "target": 95}))
     ok(c.put(f"/projects/{a_pid}/kpis/{k['id']}/actual", headers=pm, json={"actual": 88}))
+    # project tools: template library, RACI, communication plan, dependencies (critical path), a waiting resource request
+    ok(c.post(f"/templates/from-project/{a_pid}", headers=pmo, json={"code": "ERP-STD", "name": "Standard ERP implementation"}))
+    ok(c.post("/templates", headers=pmo, json={"code": "DIGI-SVC", "name": "Digital service (agile delivery)", "description": "Discovery, alpha, beta and live, as used for citizen-facing services",
+        "data": {"activities": [{"code": "DISC", "name": "Discovery", "planned_hours": 120, "start_offset_days": 0, "duration_days": 28},
+                                {"code": "ALPHA", "name": "Alpha prototype", "planned_hours": 240, "start_offset_days": 28, "duration_days": 42, "after": "DISC"},
+                                {"code": "BETA", "name": "Private and public beta", "planned_hours": 480, "start_offset_days": 70, "duration_days": 84, "after": "ALPHA"},
+                                {"code": "LIVE", "name": "Go live and handover", "planned_hours": 80, "start_offset_days": 154, "duration_days": 21, "after": "BETA"}],
+                 "milestones": [{"name": "Discovery report approved", "offset_days": 28}, {"name": "Public beta launched", "offset_days": 112}],
+                 "kpis": [{"name": "User satisfaction", "unit": "%", "target": 85, "higher_is_better": True}, {"name": "Digital take-up", "unit": "%", "target": 60, "higher_is_better": True}],
+                 "risks": [{"title": "Low user research participation", "category": "stakeholders", "probability": 3, "impact": 3},
+                           {"title": "Legacy integration harder than expected", "category": "technical", "probability": 3, "impact": 4}]}}))
+    for i in (1, 2):
+        c.post(f"/projects/{a_pid}/dependencies", headers=pm, json={"activity_id": a_acts[i], "predecessor_id": a_acts[i - 1]})
+    for item, cells in (("Solution design", {"Sara Al-Harbi": "A", "Faisal Nasser": "R", "Dr. Salem Al-Otaibi": "C", "Omar Al-Qahtani": "I"}),
+                        ("Data migration", {"Sara Al-Harbi": "A", "Khaled Mansour": "R", "Huda Saleh": "C"}),
+                        ("Go-live decision", {"Dr. Salem Al-Otaibi": "A", "Sara Al-Harbi": "R", "Omar Al-Qahtani": "C", "Faisal Nasser": "I"})):
+        for person, letter in cells.items():
+            ok(c.put(f"/projects/{a_pid}/raci", headers=pm, json={"item": item, "person": person, "letter": letter}))
+    cm = ok(c.post(f"/projects/{a_pid}/comms", headers=pm, json={"audience": "Steering committee", "information": "Status, risks and decisions needed", "method": "Meeting", "frequency": "monthly", "owner_id": ids["pm1"]}))
+    ok(c.post(f"/projects/{a_pid}/comms", headers=pm, json={"audience": "Finance users", "information": "What changes next month", "method": "E-mail newsletter", "frequency": "biweekly", "owner_id": ids["s1"]}))
+    ok(c.post(f"/projects/{a_pid}/comms/{cm['id']}/sent", headers=pm))
+    ok(c.post(f"/projects/{b_pid}/resource-requests", headers=pm, json={"skill": "Senior data engineer", "department": "Data", "hours_per_week": 24, "start": d(7), "end": d(49), "note": "Pipelines are behind; need a second engineer"}))
     # a couple of failed sign-ins so the security history has something to show
     for _ in range(2):
         c.post("/auth/login", json={"staff_id": "s3", "password": "wrong-password-1"})

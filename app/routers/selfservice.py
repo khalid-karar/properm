@@ -16,7 +16,7 @@ router = APIRouter(tags=["self-service"])
 
 KINDS = ["timesheet.submitted", "timesheet.approved", "timesheet.rejected", "alert.raised", "action.assigned",
          "change.requested", "change.approved", "change.rejected", "project.manager_changed", "project.state_changed",
-         "cost.posted", "anomaly.flag", "proposal.submitted", "proposal.decided", "gate.requested", "gate.decided", "change.returned", "leave.requested", "leave.decided", "timesheet.reminder"]
+         "cost.posted", "anomaly.flag", "proposal.submitted", "proposal.decided", "gate.requested", "gate.decided", "change.returned", "leave.requested", "leave.decided", "timesheet.reminder", "resource.requested", "resource.decided"]
 
 
 def _prefs(db, uid):

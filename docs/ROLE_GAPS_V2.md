@@ -30,10 +30,10 @@ Best practice: plan against a baseline, forecast honestly, control change, keep 
 | **Estimate to complete** per activity (PM's own forecast, not just formula) | ✅ | Progress tab hours + forecast end date | P1 |
 | **Decision and action log** per project (who decided what, actions with owners and due dates) | ✅ | Decision log (Overview), action log (Control, feeds My to-do) | P1 |
 | **Lessons learned register** (during and at closure, searchable by other PMs) | ✅ | Control tab + Lessons library | P1 |
-| **Resource request** to PMO/line manager instead of assigning people directly | ⬜ | | P2 |
-| **RACI** and **communication plan** (who is informed, how often) | ⬜ | | P2 |
-| Critical path and dependency arrows on the timeline | ⬜ | Timeline has bars and milestones only | P2 |
-| Start a project from a **template** (standard activities, KPIs, risks) | ⬜ | | P2 |
+| **Resource request** to PMO/line manager instead of assigning people directly | ✅ | Allocations tab; PMO assigns on Resource load | P2 |
+| **RACI** and **communication plan** (who is informed, how often) | ✅ | RACI & communication tab | P2 |
+| Critical path and dependency arrows on the timeline | ✅ | Plan tab | P2 |
+| Start a project from a **template** (standard activities, KPIs, risks) | ✅ | Overview tab while planning | P2 |
 
 ## 3. PMO
 Best practice: run the governance cycle (stage gates, reporting calendar, compliance), standardise methods, plan capacity across the portfolio.
@@ -44,7 +44,7 @@ Best practice: run the governance cycle (stage gates, reporting calendar, compli
 | **Stage gates**: entry criteria and a recorded approval to move tendering → planning → execution → closing | ✅ | Automatic checks, recorded decision; switch in Configuration | P1 |
 | **Compliance view**: late weekly reports, missing timesheets, stale risks, overdue actions, per PM | ✅ | Portfolio page | P1 |
 | **Capacity plan** for the next 8–12 weeks (demand vs supply by department/grade) | ✅ | Portfolio page, by department, grade or person | P1 |
-| **Project templates / methodology library** maintained by PMO | ⬜ | | P2 |
+| **Project templates / methodology library** maintained by PMO | ✅ | Templates page | P2 |
 | Reporting calendar (who must submit what, when) | 🟡 | Scheduled reports exist; no due-date calendar | P2 |
 
 ## 4. Program Manager

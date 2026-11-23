@@ -302,6 +302,23 @@ await step("admin: sign-in history and hand over a user's work", async () => {
   await p.goto(BASE + "#/profile"); await p.waitForSelector("h2:has-text('Recent sign-ins')");
 });
 
+p = await newPage("tools-pm"); await login(p, "pm1");
+await step("PM tools: RACI, comms, resource request, critical path, apply template", async () => {
+  await p.goto(BASE + "#/projects/1"); await tab(p, "RACI & communication"); await p.waitForSelector("#raci-card table.raci");
+  await p.waitForSelector("#comms-card td:has-text('Steering committee')");
+  await tab(p, "Plan"); await p.waitForSelector("#critical-path");
+  await p.goto(BASE + "#/projects/4"); await p.waitForSelector("#apply-template");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/apply-template/")), p.click("#apply-template button:has-text('Apply')")]);
+});
+
+p = await newPage("tools-pmo"); await login(p, "pmo1");
+await step("PMO: templates page, assign resource request", async () => {
+  await p.goto(BASE + "#/templates"); await p.waitForSelector("td:has-text('DIGI-SVC')");
+  await p.locator("tr:has(td:has-text('DIGI-SVC')) button:has-text('Open')").click(); await p.waitForSelector(".modal td:has-text('Discovery')"); await p.click(".modal button:has-text('Close')");
+  await p.goto(BASE + "#/load"); await p.waitForSelector("#rr-queue td:has-text('Senior data engineer')");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/resource-requests/")), p.click("#rr-queue button:has-text('Assign')")]);
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

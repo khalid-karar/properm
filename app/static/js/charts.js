@@ -117,7 +117,7 @@ export function gantt({ rows, marks = [], todayLabel = "", links = [] }) {
   rows.forEach((r, i) => {
     const y = T + i * RH, x1 = x(D(r.start)), w = Math.max(4, x(D(r.end)) - x1);
     svg.append(txt(r.label.length > 24 ? r.label.slice(0, 23) + "…" : r.label, { x: 4, y: y + 16, class: "ct", fill: "var(--text)" }),
-      el("rect", { x: x1, y: y + 4, width: w, height: 14, rx: 3, fill: "var(--grey)", opacity: 0.45 }),
+      el("rect", { x: x1, y: y + 4, width: w, height: 14, rx: 3, fill: r.color || "var(--grey)", opacity: r.color ? 0.75 : 0.45 }),
       r.pct ? el("rect", { x: x1, y: y + 4, width: w * Math.min(1, r.pct / 100), height: 14, rx: 3, fill: "var(--navy2)" }) : null,
       ...(r.marks || []).map(m => { const cx = x(D(m.date)); return el("path", { d: `M${cx} ${y + 4} l7 7 l-7 7 l-7 -7 z`, fill: m.done ? "var(--green)" : "var(--gold)", stroke: "#fff" }, el("title", {}, `${m.label} ${m.date}`)); }));
   });
