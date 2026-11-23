@@ -18,7 +18,7 @@ async function login(page, id) {
 }
 const SHOTS = process.env.SHOTS_DIR;
 const shot = (page, n) => (SHOTS ? page.screenshot({ path: `${SHOTS}/${n}.png`, fullPage: true }) : null);
-const step = async (label, fn) => { try { await fn(); console.log("ok  ", label); } catch (e) { problems.push(`${label}: ${e.message.split("\n")[0]}`); console.log("FAIL", label, e.message.split("\n")[0]); } };
+const step = async (label, fn) => { try { await fn(); console.log("ok  ", label); } catch (e) { problems.push(`${label}: ${e.message.split("\n")[0]}`); try { await p.screenshot({ path: "/tmp/fail-" + label.replace(/\W+/g, "_") + ".png" }); } catch {} console.log("FAIL", label, e.message.split("\n")[0]); } };
 const tab = (p, name) => p.click(`button[role=tab]:has-text("${name}")`);
 
 let p = await newPage("pm");
@@ -112,6 +112,20 @@ await step("AI tab shows stub banner and drafts a narrative", async () => {
 });
 await step("AI suggestion on an alert", async () => {
   await p.goto(BASE + "#/alerts"); await p.click("button:has-text('AI suggestion') >> nth=0"); await p.waitForSelector(".modal:has-text('Offline stub output')");
+});
+
+await step("details tab: edit client, add stakeholder", async () => {
+  await p.goto(BASE + "#/alerts"); const cl = p.locator(".modal button:has-text('Close')"); if (await cl.count()) await cl.click();
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Details"); await p.waitForSelector("h2:has-text('Project details')");
+  await p.fill("label:has-text('Client') input", "Ministry X"); await p.click("button:has-text('Save') >> nth=0"); await p.waitForSelector(".toast");
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Details"); await p.waitForSelector("label:has-text('Client') input");
+  if ((await p.inputValue("label:has-text('Client') input")) !== "Ministry X") throw new Error("client not saved");
+  await p.fill("label:has-text('Name') >> nth=-1 >> input", "Dr Salem"); await p.click("button:has-text('Add') >> nth=-1"); await p.waitForSelector("td:has-text('Dr Salem')");
+});
+await step("plan tab: milestone and KPI", async () => {
+  await p.goto(BASE + "#/projects/1"); await tab(p, "Plan"); await p.waitForSelector("h2:has-text('Milestones')");
+  await p.fill("label:has-text('Name') >> nth=0 >> input", "Go-live"); await p.fill("label:has-text('Due date') input", "2027-03-01"); await p.click("button:has-text('Add') >> nth=0"); await p.waitForSelector("td:has-text('Go-live')");
+  await p.fill("label:has-text('Name') >> nth=1 >> input", "Uptime"); await p.fill("label:has-text('Target') input", "99"); await p.click("button:has-text('Add') >> nth=1"); await p.waitForSelector("td:has-text('Uptime')");
 });
 
 p = await newPage("ar"); await login(p, "pmo1");

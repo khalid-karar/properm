@@ -439,3 +439,34 @@ def _no_update(mapper, connection, target):
 @event.listens_for(AuditLog, "before_delete")
 def _no_delete(mapper, connection, target):
     raise RuntimeError("audit_log is append-only")
+
+
+class Milestone(Base):
+    __tablename__ = "milestones"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    name: Mapped[str] = mapped_column(String(300))
+    due_date: Mapped[date] = mapped_column(Date)
+    achieved_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    activity_id: Mapped[int | None] = mapped_column(ForeignKey("activities.id"), nullable=True)
+
+
+class ProjectKpi(Base):
+    __tablename__ = "project_kpis"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    name: Mapped[str] = mapped_column(String(200))
+    unit: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    target: Mapped[float] = mapped_column(Float)
+    actual: Mapped[float | None] = mapped_column(Float, nullable=True)
+    higher_is_better: Mapped[bool] = mapped_column(Boolean, default=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class ActivityDependency(Base):
+    """Finish-to-start link: `activity_id` cannot start before `predecessor_id` finishes."""
+    __tablename__ = "activity_dependencies"
+    __table_args__ = (UniqueConstraint("activity_id", "predecessor_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    activity_id: Mapped[int] = mapped_column(ForeignKey("activities.id"))
+    predecessor_id: Mapped[int] = mapped_column(ForeignKey("activities.id"))

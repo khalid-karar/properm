@@ -1,6 +1,7 @@
 import { api, downloadCsv, openReport } from "../api.js";
 import { getLang, st, t } from "../i18n.js";
 import { details } from "./details.js";
+import { plan } from "./plan.js";
 import { askText, badge, modal, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
 
 const MANAGE = ["PM", "PMO", "ADMIN"];
@@ -45,7 +46,7 @@ async function detail(root, me, pid) {
 
   async function render() {
     const p = await api("GET", `/projects/${pid}`);
-    const tabs = ["overview", "details", "progress", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
+    const tabs = ["overview", "details", "plan", "progress", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
     const show = (x) => (x === "costs" || x === "allocations") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : true;
     const body = h("div");
     mount(root,
@@ -58,6 +59,7 @@ async function detail(root, me, pid) {
     try {
       if (tab === "overview") await overview(body, p);
       else if (tab === "details") await details(body, p, { pid, me, dir, canManage, render });
+      else if (tab === "plan") await plan(body, p, { pid, dir, canManage, render });
       else if (tab === "progress") await progress(body, p);
       else if (tab === "risks") await risks(body, p);
       else if (tab === "costs") await costs(body, p);

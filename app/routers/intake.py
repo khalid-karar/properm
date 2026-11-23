@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from ..audit import emit, log
 from ..deps import current_user, get_db, require_roles
-from ..models import (Activity, ActivityStaffLimit, Assignment, Document, Project, Stakeholder, TimesheetEntry, User)
+from ..models import (Activity, ActivityDependency, ActivityStaffLimit, Milestone, Assignment, Document, Project, Stakeholder, TimesheetEntry, User)
 from .projects import MANAGE, a_out, can_view, get_project, need_manage, p_out
 
 router = APIRouter(prefix="/projects", tags=["project intake"])
@@ -240,6 +240,8 @@ def delete_activity(pid: int, aid: int, db=Depends(get_db), user: User = Depends
     if db.query(TimesheetEntry).filter_by(activity_id=aid).first():
         raise HTTPException(409, "This activity already has timesheet entries")
     db.query(ActivityStaffLimit).filter_by(activity_id=aid).delete()
+    db.query(ActivityDependency).filter((ActivityDependency.activity_id == aid) | (ActivityDependency.predecessor_id == aid)).delete(synchronize_session=False)
+    db.query(Milestone).filter_by(activity_id=aid).update({"activity_id": None})
     db.delete(a)
     log(db, user.id, "activity.deleted", "activity", aid, {"project_id": pid, "code": a.code})
     db.commit()
