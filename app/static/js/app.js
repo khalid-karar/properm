@@ -7,12 +7,12 @@ const app = document.getElementById("app");
 let me = null;
 
 const NAV = {
-  STAFF: ["todo", "timesheet", "approvals", "projects", "alerts"],
-  PM: ["todo", "timesheet", "approvals", "projects", "load", "dashboard", "decisions", "reports", "alerts"],
-  PMO: ["todo", "timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "reports", "alerts", "audit"],
-  ADMIN: ["todo", "timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "reports", "alerts", "audit", "config", "admin"],
-  DECISION_MAKER: ["todo", "executive", "projects", "load", "dashboard", "decisions", "programs", "reports", "alerts"],
-  PROGRAM_MANAGER: ["todo", "executive", "projects", "load", "dashboard", "decisions", "programs", "reports", "alerts"],
+  STAFF: ["todo", "timesheet", "mine", "approvals", "projects", "alerts", "guide"],
+  PM: ["todo", "timesheet", "approvals", "projects", "load", "dashboard", "decisions", "reports", "alerts", "guide"],
+  PMO: ["todo", "timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "reports", "alerts", "audit", "guide"],
+  ADMIN: ["todo", "timesheet", "approvals", "projects", "load", "executive", "dashboard", "decisions", "programs", "reports", "alerts", "audit", "config", "admin", "guide"],
+  DECISION_MAKER: ["todo", "executive", "projects", "load", "dashboard", "decisions", "programs", "reports", "alerts", "guide"],
+  PROGRAM_MANAGER: ["todo", "executive", "projects", "load", "dashboard", "decisions", "programs", "reports", "alerts", "guide"],
 };
 const HOME = { STAFF: "timesheet", PM: "projects", DECISION_MAKER: "executive" };
 export const homeFor = (role) => HOME[role] || "dashboard";
@@ -30,7 +30,7 @@ async function route() {
   const allowed = NAV[me.role] || [];
   const page = name || homeFor(me.role);
   if (page === "login") { location.hash = `#/${homeFor(me.role)}`; return; }
-  if (!allowed.includes(page) && page !== "notifications" && !(page === "decisions" && me.is_ccb)) { location.hash = `#/${homeFor(me.role)}`; return; }
+  if (!allowed.includes(page) && page !== "notifications" && page !== "profile" && !(page === "decisions" && me.is_ccb)) { location.hash = `#/${homeFor(me.role)}`; return; }
 
   const main = h("main", {}, h("p", { class: "muted" }, t("loading")));
   document.body.classList.remove("nav-open");
@@ -57,7 +57,7 @@ function shell(active, main) {
     h("span", { class: "spacer" }),
     h("a", { href: "#/notifications", class: "bell", id: "bell", "aria-label": t("notifications"), title: t("notifications") }, icon("bell"), h("span", { class: "bellcount" })),
     h("button", { type: "button", class: "btn-ghost", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); route(); } }, getLang() === "en" ? "العربية" : "English"),
-    h("span", { class: "who" }, h("span", { class: "avatar" }, initials(me.full_name)),
+    h("a", { class: "who", href: "#/profile", title: t("nav_profile") }, h("span", { class: "avatar" }, initials(me.full_name)),
       h("span", { class: "tx" }, h("div", { class: "nm" }, me.full_name), h("div", { class: "rl" }, me.role))),
     h("button", { type: "button", class: "btn-ghost", onClick: () => { session.clear(); me = null; location.hash = "#/login"; } }, t("logout")));
   return h("div", { class: "shell" }, side, h("div", { class: "content" }, top, main));

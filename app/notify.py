@@ -7,7 +7,7 @@ import smtplib
 import sys
 from email.message import EmailMessage
 
-from .models import Outbox, Project, TimesheetEntry, User, Notification, Alert
+from .models import Outbox, Project, TimesheetEntry, User, Notification, Alert, UserPref
 
 
 def _pm(db, pid):
@@ -79,9 +79,12 @@ def notify(db, user_id: int, kind: str, title: str, body: str | None = None, lin
     u = db.get(User, user_id)
     if not u or not u.active:
         return None
+    pref = db.get(UserPref, user_id)
+    if pref and kind in (pref.muted_kinds or []):
+        return None
     n = Notification(user_id=user_id, kind=kind, title=title[:300], body=body, link=link)
     db.add(n)
-    n.emailed = send_email(u, title, body)
+    n.emailed = send_email(u, title, body) if not pref or pref.email_enabled else False
     return n
 
 

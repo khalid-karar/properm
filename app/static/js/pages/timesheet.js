@@ -29,7 +29,13 @@ export default async function (root, { me }) {
         h("button", { class: "btn secondary small", onClick: () => { S.week = addDays(S.week, -7); render(); } }, t("prev")),
         h("strong", {}, `${t("week_of")} ${wk}`),
         h("button", { class: "btn secondary small", onClick: () => { S.week = addDays(S.week, 7); render(); } }, t("next")),
-        h("button", { class: "btn secondary small", onClick: () => { S.week = weekStart(new Date()); render(); } }, t("this_week"))),
+        h("button", { class: "btn secondary small", onClick: () => { S.week = weekStart(new Date()); render(); } }, t("this_week")),
+        h("button", { class: "btn secondary small", type: "button", id: "copy-week", onClick: guarded(null, async () => {
+          if (!confirm(t("copy_confirm"))) return;
+          const r = await api("POST", "/timesheets/copy-week", { from_week_of: fmtDate(addDays(S.week, -7)), to_week_of: wk });
+          toast(`${t("copy_done")}: ${r.created}` + (r.skipped.length ? ` · ${t("copy_skipped")}: ${r.skipped.length}` : ""));
+          await render();
+        }) }, t("copy_last_week"))),
       h("div", { class: "grid", style: "margin-bottom:16px" },
         stat(t("capacity"), `${num(util.capacity)} h`), stat(t("submitted"), `${num(util.submitted)} h`), stat(t("approved"), `${num(util.approved)} h`),
         stat(t("utilization"), `${num(util.utilization_pct)}%`), stat(t("remaining"), `${num(util.remaining_capacity)} h`),

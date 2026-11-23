@@ -134,7 +134,7 @@ await step("details tab: edit client, add stakeholder", async () => {
   await p.fill("label:has-text('Client') input", "Ministry X"); await Promise.all([p.waitForResponse(r => r.request().method() === "PATCH" && r.url().endsWith("/projects/1")), p.locator(".card:has(h2:has-text('Project details')) button:has-text('Save')").click()]);
   await p.goto(BASE + "#/projects/1"); await tab(p, "Details"); await p.waitForSelector("label:has-text('Client') input");
   if ((await p.inputValue("label:has-text('Client') input")) !== "Ministry X") throw new Error("client not saved");
-  const sc = p.locator(".card:has(h2:has-text('Stakeholders'))"); await sc.getByLabel("Name", { exact: true }).fill("Dr Khalid Test"); await sc.locator("button:has-text('Add')").click(); await sc.locator("td:has-text('Dr Khalid Test')").waitFor();
+  const sc = p.locator(".card:has(h2:has-text('Stakeholders'))"); await sc.locator("td:has-text('Salem')").waitFor(); await p.waitForTimeout(400); await sc.getByLabel("Name", { exact: true }).fill("Dr Khalid Test"); await sc.locator("button:has-text('Add')").click(); await sc.locator("td:has-text('Dr Khalid Test')").waitFor();
 });
 await step("plan tab: milestone and KPI", async () => {
   await p.goto(BASE + "#/projects/1"); await tab(p, "Plan"); await p.waitForSelector("h2:has-text('Milestones')");
@@ -168,6 +168,21 @@ await step("reports page: preview and excel download", async () => {
   await p.selectOption("label:has-text('Period') select", "quarter"); await p.click("button:has-text('Preview')"); await p.waitForSelector("td:has-text('ALPHA-01')");
   const [dl] = await Promise.all([p.waitForEvent("download"), p.click("button:has-text('Export Excel')")]);
   if (!dl.suggestedFilename().endsWith(".xlsx")) throw new Error("no xlsx: " + dl.suggestedFilename());
+});
+
+p = await newPage("self"); await login(p, "s1");
+await step("profile, my projects, role guide, copy week", async () => {
+  await p.click("a.who"); await p.waitForSelector("h1:has-text('My profile')");
+  await p.getByLabel("E-mail (for notifications)", { exact: true }).fill("s1@example.com");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/me/profile") && r.request().method() === "PATCH"), p.locator(".card:has(h2:has-text('Account')) button:has-text('Save')").click()]);
+  await p.locator(".card:has(h2:has-text('Notification choices')) label.check input").first().uncheck();
+  await Promise.all([p.waitForResponse(r => r.url().includes("/me/prefs")), p.locator(".card:has(h2:has-text('Notification choices')) button:has-text('Save')").click()]);
+  await p.getByLabel("Current password", { exact: true }).fill("wrong"); await p.getByLabel("New password (8+ characters)", { exact: true }).fill("another-pass-1");
+  await p.locator(".card:has(h2:has-text('Change password')) button:has-text('Change password')").click(); await p.waitForSelector(".err, .error, [role=alert]");
+  await p.goto(BASE + "#/mine"); await p.waitForSelector("h1:has-text('My projects')"); await p.waitForSelector("td");
+  await p.goto(BASE + "#/guide"); await p.waitForSelector("h1:has-text('What you can do')");
+  await p.goto(BASE + "#/timesheet"); p.once("dialog", d => d.accept());
+  await Promise.all([p.waitForResponse(r => r.url().includes("/timesheets/copy-week")), p.click("#copy-week")]);
 });
 
 p = await newPage("ar"); await login(p, "pmo1");

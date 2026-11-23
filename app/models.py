@@ -497,3 +497,11 @@ class ConfigItem(Base):
     label: Mapped[str] = mapped_column(String(200))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     data: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class UserPref(Base):
+    """Personal notification choices (profile page)."""
+    __tablename__ = "user_prefs"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    muted_kinds: Mapped[list] = mapped_column(JSON, default=list)
+    email_enabled: Mapped[bool] = mapped_column(Boolean, default=True)

@@ -36,7 +36,7 @@ header.top .spacer{flex:1}
 .bell{color:var(--text2);position:relative;display:inline-grid;place-items:center;padding:7px;border-radius:9px;text-decoration:none}
 .bell:hover{background:var(--grey-s);text-decoration:none}
 .bellcount:not(:empty){position:absolute;top:0;inset-inline-end:0;background:var(--red);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:0 5px;line-height:16px;min-width:16px;text-align:center}
-.who{display:flex;align-items:center;gap:10px;line-height:1.2}
+.who{text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;line-height:1.2}
 .avatar{width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
 .who .nm{font-weight:600;font-size:13px}.who .rl{font-size:11px;color:var(--muted)}
 header.top .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--text2);border-radius:9px;padding:6px 12px;cursor:pointer;font:inherit;font-size:13px}
@@ -182,3 +182,7 @@ svg.chart{width:100%;height:auto;display:block}svg.chart .ct{font-size:15px;fill
 .pbars{display:grid;gap:10px}.pb{display:grid;grid-template-columns:130px 1fr 110px;gap:10px;align-items:center;font-size:13px}.pbb{display:grid;gap:3px}.pbr{height:9px;border-radius:5px;min-width:2px}.pbv{text-align:end;color:var(--muted);font-variant-numeric:tabular-nums}.pbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hm{display:grid;grid-template-columns:22px repeat(5,minmax(40px,64px));gap:4px;width:max-content}.hm-cell{height:46px;border:2px solid transparent;border-radius:8px;display:grid;place-items:center;font-weight:700;font-size:15px}.hm-axis{display:grid;place-items:center;font-size:11px;color:var(--muted)}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px}.grid2>.card{margin-bottom:0}
+
+ul.guide{margin:0;padding-inline-start:20px;line-height:2}
+label.check{display:flex;align-items:center;gap:8px;margin:6px 0;font-weight:400}
+label.check input{width:auto}
