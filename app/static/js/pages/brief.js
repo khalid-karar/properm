@@ -1,5 +1,6 @@
 // Project "Brief" tab: upload the project book (Arabic or English; text, DOCX, PDF or scan), review what the AI read, then apply it as a plan.
 import { api, fileToB64 } from "../api.js";
+import { aiLabel } from "../aistatus.js";
 import { getLang, t } from "../i18n.js";
 import { badge, errorBox, field, guarded, h, mount, num, stat, table, toast } from "../ui.js";
 
@@ -173,11 +174,11 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
         }) }, t("tr_translate")), trBox);
     };
     const PRI = () => [["must", t("brief_must")], ["should", t("brief_should")]];
-    const sec = (id, titleKey, ...kids) => h("details", { class: "card sec", id, open: id === "sec-tasks" }, h("summary", {}, h("h3", { style: "display:inline" }, t(titleKey))), ...kids);
+    const sec = (id, titleKey, ...kids) => h("details", { class: "card sec", id, open: id === "sec-tasks" && (dr.activities || []).length <= 15 }, h("summary", {}, h("h3", { style: "display:inline" }, t(titleKey))), ...kids);
     out.addEventListener("toggle", (ev) => { if (ev.target.open) ev.target.querySelectorAll("textarea.ta").forEach(autosize); }, true);
     mount(out,
-      h("div", { class: "card", id: "brief-review" }, h("h2", {}, dr.meta.name || t("brief_review")),
-        h("p", { class: "muted small" }, `${dr.meta.language === "ar" ? "العربية" : "English"} · ${dr.meta.pages} p · ${dr.meta.source?.method || ""} · ${r.status}`),
+      h("div", { class: "card", id: "brief-review" }, h("h2", {}, dr.meta.name || t("brief_review")), h("p", {}, aiLabel(), " ", h("span", { class: "muted small" }, t("ai_rules_note"))),
+        h("p", { class: "muted small" }, `${t(dr.meta.language === "ar" ? "lang_name_ar" : "lang_name_en")} · ${dr.meta.pages} ${t("bk_pages")} · ${dr.meta.source?.method || ""} · ${r.status}`),
         ...(dr.warnings || []).map(w => h("p", { class: "warn" }, w)), ...(dr.notes || []).map(w => h("p", { class: "muted small" }, w)),
         trBanner(), stats, h("p", { class: "muted small" }, t("brief_edit_hint")), h("p", { class: "muted small" }, (dr.assumptions || []).join(" "))),
       sec("sec-phases", "brief_phases", editList(dr, "phases", [["name", "name", "l", "text"], ["start_month", "brief_from_month", "s", "num"], ["end_month", "brief_to_month", "s", "num"]],

@@ -1,5 +1,6 @@
 // Start a project from its book: drop the file, check the pre-filled number, name, dates and phases, confirm, and land on the draft plan.
 import { api, fileToB64 } from "../api.js";
+import { aiLabel } from "../aistatus.js";
 import { t } from "../i18n.js";
 import { badge, errorBox, field, guarded, h, mount, table, toast } from "../ui.js";
 
@@ -17,7 +18,7 @@ export function bookStartCard() {
     try { review(await api("POST", "/project-intake/book/preview", payload)); } catch (e) { mount(err, errorBox(e)); }
   }));
   const review = (pv) => {
-    const num = h("input", { id: "bk-number", value: pv.number }), name = h("input", { id: "bk-name", value: pv.name, dir: "auto", style: "min-width:260px" });
+    const num = h("input", { id: "bk-number", value: pv.number }), name = h("textarea", { id: "bk-name", class: "ta", rows: "2", dir: "auto", style: "min-width:260px;flex:2" }, pv.name);
     const start = h("input", { type: "date", id: "bk-start", value: String(pv.planned_start).slice(0, 10) }), end = h("input", { type: "date", id: "bk-end", value: String(pv.planned_end).slice(0, 10) });
     const e2 = h("div");
     const go = h("button", { class: "btn gold", type: "button", id: "bk-create" }, t("bk_create"));
@@ -32,13 +33,13 @@ export function bookStartCard() {
       } catch (e) { mount(e2, errorBox(e)); }
     }));
     mount(out, h("div", { class: "card", style: "margin-top:12px" }, h("h3", {}, t("bk_check")),
-      h("p", { class: "muted small" }, `${pv.language === "ar" ? "العربية" : "English"} · ${pv.pages} p · ${pv.counts.activities} ${t("brief_tasks")} · ${pv.counts.requirements} ${t("requirements")} · ${pv.counts.deliverables} ${t("brief_deliverables")}`,
+      h("p", { class: "muted small" }, `${t(pv.language === "ar" ? "lang_name_ar" : "lang_name_en")} · ${pv.pages} ${t("bk_pages")} · ${pv.counts.activities} ${t("brief_tasks")} · ${pv.counts.requirements} ${t("requirements")} · ${pv.counts.deliverables} ${t("brief_deliverables")}`,
         pv.number_from_book ? ` · ${t("bk_number_from_book")}` : ""),
       ...(pv.warnings || []).map(w => h("p", { class: "warn" }, w)),
       h("div", { class: "row" }, field(t("number"), num), field(t("name"), name), field(t("planned_start"), start), field(t("planned_end"), end)),
       pv.phases.length ? table([t("brief_phase"), t("name"), t("brief_from_month"), t("brief_to_month")], pv.phases.map(ph => [ph.n, ph.name, ph.start_month, ph.end_month])) : null,
       h("p", { class: "muted small" }, t("bk_note")), go, e2));
   };
-  return h("div", { class: "card", id: "book-start" }, h("h2", {}, t("bk_title")), h("p", { class: "muted small" }, t("bk_intro")),
+  return h("div", { class: "card", id: "book-start" }, h("h2", {}, t("bk_title"), " ", aiLabel()), h("p", { class: "muted small" }, t("bk_intro")), h("p", { class: "muted small" }, t("ai_rules_note")),
     h("div", { class: "row" }, field(t("file"), file), read), h("details", { style: "margin-top:8px" }, h("summary", { class: "small" }, t("bk_or_paste")), text), err, out);
 }

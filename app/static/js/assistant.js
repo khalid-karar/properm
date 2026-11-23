@@ -1,4 +1,5 @@
 // Floating AI assistant and Ctrl/Cmd+K quick jump. Text only goes through h(); nothing is inserted as HTML.
+import { aiLabel } from "./aistatus.js";
 import { api } from "./api.js";
 import { getLang, t } from "./i18n.js";
 import { h, icon, mount } from "./ui.js";
@@ -44,7 +45,7 @@ export function mountAssistant() {
   log = h("div", { id: "asst-log", class: "asst-log", role: "log", "aria-live": "polite" });
   input = h("input", { type: "text", id: "asst-input", placeholder: t("asst_ph"), "aria-label": t("asst_ph"), maxlength: 500, onKeydown: (e) => { if (e.key === "Enter") send(); } });
   panel = h("section", { id: "asst-panel", class: "asst-panel", "aria-label": t("asst_title") },
-    h("header", {}, h("span", { class: "asst-ic" }, icon("spark")), h("div", {}, h("strong", {}, t("asst_title")), h("small", {}, t("asst_sub"))),
+    h("header", {}, h("span", { class: "asst-ic" }, icon("spark")), h("div", {}, h("strong", {}, t("asst_title")), h("small", {}, t("asst_sub")), h("div", {}, aiLabel())),
       h("button", { class: "iconbtn", type: "button", "aria-label": t("close"), onClick: () => { panel.classList.remove("open"); btn.setAttribute("aria-expanded", "false"); } }, "✕")),
     log, h("footer", {}, input, h("button", { class: "btn", type: "button", onClick: () => send() }, t("asst_send"))));
   document.body.append(panel, btn);
