@@ -28,7 +28,7 @@ aside.side nav a.active::before{content:"";position:absolute;inset-inline-start:
 .side-foot{margin-top:auto;font-size:11px;color:#8fa0c4;padding:10px}
 .ico{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .content{min-width:0;display:flex;flex-direction:column}
-header.top{display:flex;align-items:center;gap:10px;padding:10px 28px;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;min-height:60px}
+header.top{display:flex;align-items:center;gap:10px;padding:10px 28px;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;min-height:60px}
 header.top .spacer{flex:1}
 .iconbtn{background:none;border:1px solid transparent;border-radius:9px;padding:7px;color:var(--text2);cursor:pointer;position:relative;display:inline-grid;place-items:center}
 .iconbtn:hover{background:var(--grey-s)}
@@ -196,7 +196,7 @@ ul.declog{margin:6px 0;padding-inline-start:18px;line-height:1.6}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:8px 0}
 .day{border:1px solid var(--line);border-radius:8px;padding:6px;text-align:center;font-size:13px}
 .day .dn{color:var(--muted);font-size:11px}.day .dh{font-weight:600}
-.day.ok{border-color:var(--green)}.day.miss{border-color:var(--red);background:rgba(200,40,40,.06)}.day.off{opacity:.55}
+.day.ok{border-color:var(--green)}.day.miss{border-color:var(--red);background:rgba(200,40,40,.06)}.day.off{background:var(--grey-s)}
 table.heat{border-collapse:collapse;width:100%;font-size:13px}
 table.heat th,table.heat td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
 table.heat td:first-child,table.heat th:first-child{text-align:start}
@@ -292,3 +292,63 @@ label.check,.check{flex-direction:row}
 details.dom{border:1px solid var(--line,#e2e8f0);border-radius:10px;padding:8px 12px;margin:8px 0}
 details.dom summary{cursor:pointer;font-weight:600}
 pre.diff{white-space:pre-wrap;font-size:12px;max-height:160px;overflow:auto;background:rgba(127,127,127,.08);padding:6px;border-radius:6px}
+
+/* ---------- dark theme: follows the device unless the person picks one (top bar button) ---------- */
+:root[data-theme=dark]{color-scheme:dark;
+  --bg:#0e131f;--card:#161d2d;--line:#2a3449;--line2:#222b3e;--text:#e8edf7;--text2:#c5cee2;--muted:#9aa6c0;
+  --red:#f97066;--red-s:#3b1f1f;--amber:#fdb022;--amber-s:#3a2d12;--green:#47cd89;--green-s:#13301f;--grey:#9aa6c0;--grey-s:#232b3d;--blue-s:#1a2640;--gold-soft:#3a3118;
+  --navy2:#8db0ff;--ring:0 0 0 3px rgba(141,176,255,.3);--shadow:0 1px 2px rgba(0,0,0,.4);--shadow-l:0 12px 32px rgba(0,0,0,.55)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;
+  --bg:#0e131f;--card:#161d2d;--line:#2a3449;--line2:#222b3e;--text:#e8edf7;--text2:#c5cee2;--muted:#9aa6c0;
+  --red:#f97066;--red-s:#3b1f1f;--amber:#fdb022;--amber-s:#3a2d12;--green:#47cd89;--green-s:#13301f;--grey:#9aa6c0;--grey-s:#232b3d;--blue-s:#1a2640;--gold-soft:#3a3118;
+  --navy2:#8db0ff;--ring:0 0 0 3px rgba(141,176,255,.3);--shadow:0 1px 2px rgba(0,0,0,.4);--shadow-l:0 12px 32px rgba(0,0,0,.55)}}
+
+:root[data-theme=dark] input,:root[data-theme=dark] select,:root[data-theme=dark] textarea{background:#0f1626;border-color:#33405a;color:var(--text)}
+:root[data-theme=dark] button.btn{background:#3b63b8;border-color:#3b63b8;color:#fff}
+:root[data-theme=dark] button.btn.secondary,:root[data-theme=dark] header.top .btn-ghost{background:#1c2538;border-color:#33405a;color:var(--text2)}
+:root[data-theme=dark] .table-wrap,:root[data-theme=dark] table,:root[data-theme=dark] .modal,:root[data-theme=dark] .kcard,:root[data-theme=dark] .asst-panel{background:var(--card)}
+:root[data-theme=dark] th{background:#1b2336}
+:root[data-theme=dark] tbody tr:hover td{background:#1c2538}
+:root[data-theme=dark] .empty{background:#131a2a}
+:root[data-theme=dark] .err{border-color:#7a2a24;color:#ffb4ab}
+:root[data-theme=dark] .warn{border-color:#6b4d12;color:#fdd187}
+:root[data-theme=dark] .toast{background:#e8edf7;color:#101828}
+:root[data-theme=dark] .kcol{background:#121a2a}
+:root[data-theme=dark] a{color:var(--navy2)}
+:root[data-theme=dark] header.top{background:var(--card);border-color:var(--line)}
+:root[data-theme=dark] input.topsearch{background:#0f1626}
+:root[data-theme=dark] .card{background:var(--card);border-color:var(--line)}
+@media (prefers-color-scheme:dark){
+:root:not([data-theme=light]) input,:root:not([data-theme=light]) select,:root:not([data-theme=light]) textarea{background:#0f1626;border-color:#33405a;color:var(--text)}
+:root:not([data-theme=light]) button.btn{background:#3b63b8;border-color:#3b63b8;color:#fff}
+:root:not([data-theme=light]) button.btn.secondary,:root:not([data-theme=light]) header.top .btn-ghost{background:#1c2538;border-color:#33405a;color:var(--text2)}
+:root:not([data-theme=light]) .table-wrap,:root:not([data-theme=light]) table,:root:not([data-theme=light]) .modal,:root:not([data-theme=light]) .kcard,:root:not([data-theme=light]) .asst-panel{background:var(--card)}
+:root:not([data-theme=light]) th{background:#1b2336}
+:root:not([data-theme=light]) tbody tr:hover td{background:#1c2538}
+:root:not([data-theme=light]) .empty{background:#131a2a}
+:root:not([data-theme=light]) .err{border-color:#7a2a24;color:#ffb4ab}
+:root:not([data-theme=light]) .warn{border-color:#6b4d12;color:#fdd187}
+:root:not([data-theme=light]) .toast{background:#e8edf7;color:#101828}
+:root:not([data-theme=light]) .kcol{background:#121a2a}
+:root:not([data-theme=light]) a{color:var(--navy2)}
+:root:not([data-theme=light]) header.top{background:var(--card);border-color:var(--line)}
+:root:not([data-theme=light]) input.topsearch{background:#0f1626}
+:root:not([data-theme=light]) .card{background:var(--card);border-color:var(--line)}
+}
+
+/* ---------- first-time tour ---------- */
+.tour-shade{position:fixed;inset:0;background:rgba(10,15,30,.5);z-index:70}
+.tour-card{position:fixed;z-index:72;inset-inline-start:50%;inset-block-end:28px;transform:translateX(-50%);width:min(440px,calc(100vw - 24px));background:var(--card);color:var(--text);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow-l)}
+[dir=rtl] .tour-card{transform:translateX(50%)}
+.tour-card h3{margin:0 0 6px}.tour-card .row{justify-content:space-between;margin-top:12px}
+.tour-on{position:relative;z-index:71;outline:3px solid var(--gold);outline-offset:3px;border-radius:10px}
+
+/* ---------- contrast fixes (WCAG AA) ---------- */
+button.btn.gold,.btn.gold{background:#8a6100;border-color:#8a6100}button.btn.gold:hover{background:#6f4e00}
+.badge.RED,.badge.critical,.badge.rejected,.badge.closed-bad{color:#b42318}
+.bellcount:not(:empty){background:#c0261b}
+.day.off .dn,.off.day .dn{color:#5b6475}
+:root[data-theme=dark] .badge.gold,:root[data-theme=dark] .gold.badge{color:#fdd187}
+:root[data-theme=dark] .badge.RED,:root[data-theme=dark] .badge.critical,:root[data-theme=dark] .badge.rejected{color:#ffb4ab}
+:root[data-theme=dark] .off.day .dn{color:#9aa6c0}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .badge.gold{color:#fdd187}:root:not([data-theme=light]) .badge.RED,:root:not([data-theme=light]) .badge.critical{color:#ffb4ab}:root:not([data-theme=light]) .off.day .dn{color:#9aa6c0}}

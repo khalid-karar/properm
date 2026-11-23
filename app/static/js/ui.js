@@ -115,7 +115,7 @@ export const num = (v, d = 1) => (v == null ? "—" : Number(v).toLocaleString(u
 
 export function table(headers, rows, empty) {
   if (!rows.length && empty) return h("div", { class: "empty" }, empty);
-  return h("div", { class: "table-wrap" }, h("table", {}, h("thead", {}, h("tr", {}, headers.map(x => h("th", {}, x)))),
+  return h("div", { class: "table-wrap", tabindex: "0" }, h("table", {}, h("thead", {}, h("tr", {}, headers.map(x => h("th", {}, x)))),
     h("tbody", {}, rows.map(r => h("tr", {}, r.map(c => h("td", {}, c)))))));
 }
 
@@ -138,4 +138,16 @@ export function guarded(btnOrNull, fn) {
     try { await fn(ev); } catch (e) { toast(e.lines ? e.lines().join(" · ") : t("error"), "error"); }
     finally { if (b) b.disabled = false; }
   };
+}
+
+/** Give every form control that has no accessible name one (from its wrapping label, placeholder, title or name), so screen readers can announce it. */
+export function nameControls(root = document) {
+  root.querySelectorAll("select:not([aria-label]):not([aria-labelledby]), input:not([type=hidden]):not([aria-label]):not([aria-labelledby]), textarea:not([aria-label]):not([aria-labelledby])").forEach(el => {
+    if (el.id && root.querySelector(`label[for="${el.id}"]`)) return;
+    const lab = el.closest("label");
+    const own = lab && lab.textContent.trim();
+    const prev = el.previousElementSibling && ["SPAN", "LABEL", "DIV"].includes(el.previousElementSibling.tagName) ? el.previousElementSibling.textContent.trim() : "";
+    const name = own || prev || el.getAttribute("placeholder") || el.getAttribute("title") || el.getAttribute("name") || (el.tagName === "SELECT" && el.selectedOptions[0]?.textContent.trim()) || "";
+    if (name) el.setAttribute("aria-label", name.slice(0, 80));
+  });
 }

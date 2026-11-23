@@ -44,6 +44,7 @@ export default async function (root, { me }) {
         h("div", { class: "row", style: "margin-bottom:10px; align-items:end" }, field(t("project"), projSel), field(t("staff"), userSel), h("label", { style: "flex-direction:row;align-items:center;gap:8px" }, flagBox, t("flagged_only")),
           h("span", { class: "grow" }), h("button", { class: "btn small", type: "button", disabled: !picked.size, onClick: guarded(null, () => bulk("approve")) }, `${t("approve_selected")} (${picked.size})`),
           h("button", { class: "btn danger small", type: "button", disabled: !picked.size, onClick: guarded(null, () => bulk("reject")) }, t("reject_selected"))),
+        rows.length >= 300 ? h("p", { class: "warn small", id: "queue-capped" }, t("queue_capped")) : null,
         table([all, t("staff"), t("date"), t("project"), t("hours"), t("flags"), ""],
           rows.map(e => [h("input", { type: "checkbox", checked: picked.has(e.id), "aria-label": t("select"), onChange: (ev) => { ev.target.checked ? picked.add(e.id) : picked.delete(e.id); render(); } }),
             (dir[e.user_id] || {}).full_name || e.user_id, e.entry_date,

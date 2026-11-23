@@ -2,6 +2,7 @@
 import { api } from "../api.js";
 import { getLang, t } from "../i18n.js";
 import { badge, h, icon, mount, num } from "../ui.js";
+import { startTour } from "../tour.js";
 
 const ACTIONS = {
   STAFF: [["timesheet", "act_log_hours", "act_log_hours_d"], ["leave", "act_leave", "act_leave_d"], ["mine", "act_my_projects", "act_my_projects_d"], ["skills", "act_skills", "act_skills_d"]],
@@ -47,4 +48,5 @@ export default async function (root, { me }) {
         needs.length ? h("ul", { class: "needs" }, needs.map(([txt, href]) => h("li", {}, h("a", { href }, txt)))) : h("div", { class: "allgood" }, icon("approvals"), h("span", {}, t("hm_all_good")))),
       h("div", { class: "card" }, h("h2", {}, t("hm_next")),
         h("div", { class: "actions" }, (ACTIONS[me.role] || []).map(([page, k, d]) => h("a", { class: "action", href: `#/${page}` }, h("span", { class: "tile-ic" }, icon(page)), h("span", {}, h("strong", {}, t(k)), h("small", {}, t(d)))))))));
+  root.append(h("p", { class: "muted small" }, h("button", { class: "btn secondary small", type: "button", id: "tour-btn", onClick: () => startTour(me) }, t("tour_replay"))));
 }

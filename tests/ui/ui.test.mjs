@@ -6,8 +6,9 @@ const { chromium } = await import(process.env.PLAYWRIGHT_PATH || "playwright");
 const BASE = (process.env.BASE_URL || "http://localhost:8765") + "/ui/";
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || (fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined), args: ["--no-sandbox"] });
 const problems = [];
-async function newPage(name) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+async function newPage(name, opts = {}) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, ...opts.ctx });
+  if (!opts.tour) await ctx.addInitScript(() => { try { localStorage.setItem("properm.tour.off", "1"); } catch { /* ignore */ } });
   const page = await ctx.newPage();
   page.on("pageerror", e => problems.push(`[${name}] pageerror: ${e.message}`));
   page.on("console", m => { if (m.type() === "error" && !/40[0-9]|409|422/.test(m.text())) problems.push(`[${name}] console: ${m.text()}`); });
@@ -20,7 +21,7 @@ async function login(page, id) {
 }
 const SHOTS = process.env.SHOTS_DIR;
 const shot = (page, n) => (SHOTS ? page.screenshot({ path: `${SHOTS}/${n}.png`, fullPage: true }) : null);
-const step = async (label, fn) => { try { await fn(); console.log("ok  ", label); } catch (e) { problems.push(`${label}: ${e.message.split("\n")[0]}`); try { await p.screenshot({ path: "/tmp/fail-" + label.replace(/\W+/g, "_") + ".png" }); } catch {} console.log("FAIL", label, e.message.split("\n")[0]); } };
+const step = async (label, fn) => { try { await fn(); console.log("ok  ", label); } catch (e) { problems.push(`${label}: ${e.message.split("\n").slice(0, 3).join(" ")}`); try { await p.screenshot({ path: "/tmp/fail-" + label.replace(/\W+/g, "_") + ".png" }); } catch {} console.log("FAIL", label, e.message.split("\n")[0]); } };
 const tab = (p, name) => p.click(`button[role=tab]:has-text("${name}")`);
 
 let p = await newPage("pm");
@@ -482,7 +483,7 @@ await step("project book: paste, analyse, review, apply as a plan", async () => 
   await tab(p, "Plan"); await p.waitForSelector("#imp-plan");
   await p.setInputFiles("#imp-file-plan", { name: "plan.csv", mimeType: "text/csv", buffer: Buffer.from("code,name,planned_hours\nX-1,Imported task,24\nX-2,Another,16\n") });
   await p.click("#imp-preview-plan"); await p.waitForSelector("#imp-out-plan td");
-  await p.click("#imp-commit-plan"); await p.waitForSelector("#imp-done-plan");
+  await p.click("#imp-commit-plan"); await p.waitForSelector("#imp-done-plan", { timeout: 8000 }).catch(async () => { throw new Error("import not saved: " + (await p.textContent("#imp-out-plan")).slice(0, 300)); });
 });
 
 p = await newPage("home"); await login(p, "pmo1");
@@ -499,6 +500,52 @@ await step("home page, grouped nav, assistant widget and quick jump", async () =
 });
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
+
+// ---- first-time tour, dark mode, phone layout, accessibility ----
+p = await newPage("tour", { tour: true }); await login(p, "dm1");
+await step("first-time tour shows once and can be skipped", async () => {
+  await p.goto(BASE + "#/home"); await p.waitForSelector("#tour-card"); await p.click("#tour-next"); await p.waitForSelector(".tour-on");
+  await p.click("#tour-skip"); await p.waitForFunction(() => !document.getElementById("tour-card"));
+  await p.reload(); await p.waitForSelector(".welcome h1"); await p.waitForTimeout(1200);
+  if (await p.$("#tour-card")) throw new Error("tour came back after being skipped");
+  await p.click("#tour-btn"); await p.waitForSelector("#tour-card"); await p.click("#tour-skip");
+});
+await step("dark mode toggle changes the page and is remembered", async () => {
+  const bg = () => p.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const before = await bg(); await p.click("#theme-btn"); const after = await bg();
+  if (before === after) throw new Error("theme did not change");
+  await shot(p, "21-dark-home"); await p.reload(); await p.waitForSelector(".welcome h1");
+  if ((await bg()) !== after) throw new Error("theme not remembered");
+});
+
+const axeSrc = fs.readFileSync(process.env.AXE_PATH || "node_modules/axe-core/axe.min.js", "utf8");
+const PAGES = ["home", "timesheet", "projects", "projects/1", "alerts", "reports", "admin", "approvals", "portfolio", "profile"];
+for (const [who, theme] of [["pmo1", "light"], ["pmo1", "dark"]]) {
+  p = await newPage("a11y-" + theme); await login(p, who);
+  await p.evaluate((th) => { localStorage.setItem("properm.theme", th); }, theme);
+  await step(`accessibility scan (${theme})`, async () => {
+    const bad = [];
+    for (const pg of PAGES) {
+      await p.goto(BASE + "#/" + pg); await p.reload(); await p.waitForSelector("header.top"); await p.waitForTimeout(700);
+      await p.evaluate(axeSrc);
+      const r = await p.evaluate(async () => (await axe.run(document, { runOnly: ["wcag2a", "wcag2aa"], resultTypes: ["violations"] })).violations.filter(v => ["serious", "critical"].includes(v.impact)).map(v => `${v.id}(${v.nodes.length})`));
+      if (r.length) bad.push(`${pg}: ${r.join(", ")}`);
+    }
+    if (bad.length) throw new Error("a11y: " + bad.join(" | "));
+  });
+}
+p = await newPage("phone", { ctx: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } }); await login(p, "s1");
+await step("phone: no sideways scroll, menu opens, tap targets reachable", async () => {
+  const bad = [];
+  for (const pg of ["home", "timesheet", "mine", "leave", "todo"]) {
+    await p.goto(BASE + "#/" + pg); await p.reload(); await p.waitForSelector("header.top"); await p.waitForTimeout(600);
+    const w = await p.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
+    if (w[0] > w[1] + 2) bad.push(`${pg}: ${w[0]}px wide on a ${w[1]}px screen`);
+  }
+  await shot(p, "22-phone-timesheet");
+  await p.click(".menu-btn"); await p.waitForSelector("body.nav-open aside.side nav a");
+  if (bad.length) throw new Error(bad.join(" | "));
+});
 
 console.log(problems.length ? "PROBLEMS:\n" + problems.join("\n") : "ALL OK");
 await browser.close();

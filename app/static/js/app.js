@@ -1,9 +1,16 @@
 import { api, session } from "./api.js";
+import { maybeTour } from "./tour.js";
+import { nameControls } from "./ui.js";
 import { applyDir, getLang, setLang, t } from "./i18n.js";
 import { clear, errorBox, h, icon, mount } from "./ui.js";
 import { mountAssistant, unmountAssistant } from "./assistant.js";
 
 applyDir();
+const THEME_KEY = "properm.theme";
+const applyTheme = () => { let v = null; try { v = localStorage.getItem(THEME_KEY); } catch { /* private mode */ } if (v === "dark" || v === "light") document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; };
+applyTheme();
+{ let q = 0; new MutationObserver(() => { clearTimeout(q); q = setTimeout(() => nameControls(), 150); }).observe(document.documentElement, { childList: true, subtree: true }); }
+const isDark = () => document.documentElement.dataset.theme === "dark" || (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
 const app = document.getElementById("app");
 let me = null;
 
@@ -42,6 +49,7 @@ async function route() {
   document.body.classList.remove("nav-open");
   mount(app, shell(page, main));
   mountAssistant();
+  maybeTour(me);
   try {
     const mod = await import(`./pages/${page}.js`);
     await mod.default(main, { me, arg, nav: NAV[me.role] || [] });
@@ -68,6 +76,7 @@ function shell(active, main) {
       onKeydown: (e) => { const v = e.target.value.trim(); if (e.key === "Enter" && v.length >= 2) location.hash = `#/search/${encodeURIComponent(v)}`; } }),
     h("span", { class: "spacer" }),
     h("a", { href: "#/notifications", class: "bell", id: "bell", "aria-label": t("notifications"), title: t("notifications") }, icon("bell"), h("span", { class: "bellcount" })),
+    h("button", { type: "button", class: "btn-ghost", id: "theme-btn", "aria-label": t("theme_toggle"), title: t("theme_toggle"), onClick: () => { try { localStorage.setItem(THEME_KEY, isDark() ? "light" : "dark"); } catch { /* ignore */ } applyTheme(); } }, "◐"),
     h("button", { type: "button", class: "btn-ghost", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); unmountAssistant(); route(); } }, getLang() === "en" ? "العربية" : "English"),
     h("a", { class: "who", href: "#/profile", title: t("nav_profile") }, h("span", { class: "avatar" }, initials(me.full_name)),
       h("span", { class: "tx" }, h("div", { class: "nm" }, me.full_name), h("div", { class: "rl" }, me.role))),

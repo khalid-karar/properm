@@ -36,6 +36,6 @@ jobs:
         run: for f in $(find app/static/js -name '*.js'); do cp "$f" /tmp/x.mjs && node --check /tmp/x.mjs || exit 1; done
       - name: Browser test
         run: |
-          npm i --no-save playwright
+          npm i --no-save playwright axe-core
           npx playwright install --with-deps chromium
           PLAYWRIGHT_PATH="$PWD/node_modules/playwright/index.mjs" bash tests/ui/run.sh

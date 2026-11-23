@@ -1,6 +1,6 @@
 #!/bin/sh
 # Seeds a throwaway demo database, starts the server, runs the browser test, stops the server.
-# Needs: pip deps, `npm i playwright` (or PLAYWRIGHT_PATH), Chrome (or CHROME_PATH).
+# Needs: pip deps, `npm i playwright axe-core` (or PLAYWRIGHT_PATH and AXE_PATH), Chrome (or CHROME_PATH).
 set -e
 cd "$(dirname "$0")/../.."
 DB=$(mktemp -u /tmp/properm-ui-XXXXXX.db)
