@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { t } from "../i18n.js";
-import { restoreCard, retentionCard } from "./ops.js";
+import { jobsCard, restoreCard, retentionCard } from "./ops.js";
 import { badge, errorBox, field, guarded, h, modal, mount, num, table, toast, today } from "../ui.js";
 
 const ROLES = ["STAFF", "PM", "PMO", "PROGRAM_MANAGER", "DECISION_MAKER", "ADMIN"];
@@ -114,7 +114,7 @@ export default async function (root) {
           u.active && u.id !== me.id ? h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, () => handover(u, users)) }, t("handover")) : null)]), t("none")),
         h("h2", { style: "margin-top:14px" }, t("new_user")),
         h("div", { class: "row" }, field(t("staff_id"), f.sid), field(t("full_name"), f.name), field(t("job_title"), f.jt), field(t("department"), f.dep), field(t("password"), f.pw), field(t("role"), f.role), field(t("grade"), f.grade), field(t("capacity"), f.cap), field(t("is_ccb"), f.ccb), field(t("line_manager"), f.lm), addU), uerr),
-      secCard, mailCard, backupCard, restoreCard(), retentionCard(),
+      secCard, mailCard, backupCard, restoreCard(), retentionCard(), jobsCard(),
       h("div", { class: "card", id: "import-card" }, h("h2", {}, t("bulk_import")), h("p", { class: "muted small" }, t("bulk_import_note")), csvBox, h("p", {}, impBtn), cout),
       h("div", { class: "card" }, h("h2", {}, t("rates")), table([t("grade"), t("hourly_rate"), t("currency"), t("effective_from"), ""], rates.map(r => [r.grade, num(r.hourly_rate, 2), r.currency, r.effective_from, r.future ? h("span", { class: "row", style: "gap:6px" }, badge(t("future_rate"), "AMBER"), h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/admin/rates/${r.id}`); await render(); }) }, t("remove"))) : ""]), t("none")),
         h("div", { class: "row", style: "margin-top:12px" }, field(t("grade"), rg), field(t("hourly_rate"), rv), field(t("currency"), rc), field(t("effective_from"), rd), addR), rerr),

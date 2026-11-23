@@ -29,6 +29,20 @@ export function restoreCard() {
       }) }, t("restore_apply"))), out);
 }
 
+export function jobsCard() {
+  const out = h("div", { id: "jobs-out" });
+  const load = async () => {
+    try {
+      const r = await api("GET", "/admin/jobs");
+      mount(out, h("p", { class: r.scheduler_on ? "ok" : "muted" }, r.scheduler_on ? t("jobs_auto_on") : t("jobs_auto_off")),
+        table([t("name"), t("date"), t("status"), t("detail")], r.runs.slice(0, 12).map(x => [x.name, x.date, x.status, JSON.stringify(x.detail).slice(0, 90)]), t("none")));
+    } catch (e) { mount(out, errorBox(e)); }
+  };
+  load();
+  return h("div", { class: "card", id: "jobs-card" }, h("h2", {}, t("jobs_title")), h("p", { class: "muted small" }, t("jobs_note")),
+    h("button", { class: "btn", id: "jobs-run", type: "button", onClick: guarded(null, async () => { await api("POST", "/admin/jobs/run?force=true"); toast(t("jobs_done")); await load(); }) }, t("jobs_run")), out);
+}
+
 export function retentionCard() {
   const out = h("div", { id: "retention-out" });
   const ld = h("input", { type: "number", value: 365, min: 30, style: "width:90px" }), nd = h("input", { type: "number", value: 90, min: 7, style: "width:90px" });

@@ -118,12 +118,18 @@ def deliver(cfg: dict, to: str, title: str, body: str | None) -> str | None:
 
 
 def send_email(user: User, title: str, body: str | None, db=None) -> bool:
+    return try_email(user, title, body, db)[0]
+
+
+def try_email(user: User, title: str, body: str | None, db=None) -> tuple[bool, bool, str | None]:
+    """-> (sent, attempted, error). Not attempted when there is no address or no mail server."""
     if not user.email:
-        return False
+        return False, False, None
     cfg = mail_settings(db)
     if not cfg.get("host"):
-        return False
-    return deliver(cfg, user.email, title, body) is None
+        return False, False, None
+    err = deliver(cfg, user.email, title, body)
+    return err is None, True, err
 
 
 def notify(db, user_id: int, kind: str, title: str, body: str | None = None, link: str | None = None) -> Notification | None:
@@ -135,8 +141,34 @@ def notify(db, user_id: int, kind: str, title: str, body: str | None = None, lin
         return None
     n = Notification(user_id=user_id, kind=kind, title=title[:300], body=body, link=link)
     db.add(n)
-    n.emailed = send_email(u, title, body, db) if not pref or pref.email_enabled else False
+    if not pref or pref.email_enabled:
+        n.emailed, tried, err = try_email(u, title, body, db)
+        n.email_attempts, n.email_error = (1 if tried else 0), err
+    else:
+        n.emailed = False
     return n
+
+
+def retry_emails(db, max_attempts: int = 5, limit: int = 100) -> dict:
+    """Second chance for e-mails that failed (mail server down, wrong password). Gives up after max_attempts or 3 days."""
+    from datetime import datetime, timedelta, timezone
+    since = datetime.now(timezone.utc) - timedelta(days=3)
+    sent = failed = 0
+    rows = db.query(Notification).filter(Notification.emailed.is_(False), Notification.email_attempts > 0, Notification.email_attempts < max_attempts,
+                                         Notification.created_at >= since).order_by(Notification.id).limit(limit).all()
+    for n in rows:
+        u = db.get(User, n.user_id)
+        if not u or not u.active:
+            n.email_attempts = max_attempts
+            continue
+        ok, tried, err = try_email(u, n.title, n.body, db)
+        if tried:
+            n.email_attempts += 1
+            n.email_error = err
+            n.emailed = ok
+            sent, failed = sent + ok, failed + (not ok)
+    db.commit()
+    return {"retried": len(rows), "sent": sent, "failed": failed}
 
 
 def dispatch(db, limit: int = 200) -> int:

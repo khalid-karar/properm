@@ -1,6 +1,9 @@
 from pathlib import Path
 
+import asyncio
 import os
+import sys
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +14,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from .models import Base
-from .routers import auth_users, projects, timesheets, admin, delivery, registers, reports, alerts, dashboards, governance, notifications, exports, ai as ai_router, intake, plan, oversight, insights, workflow, periodic, config_lists, selfservice, adminplus, gates, control, weekly, portfolio, programs2, security, pmtools, insight2, adminops, scope, agile, strategy, procurement, skills, depth, ops, brief as brief_router
+from .routers import auth_users, projects, timesheets, admin, delivery, registers, reports, alerts, dashboards, governance, notifications, exports, ai as ai_router, intake, plan, oversight, insights, workflow, periodic, config_lists, selfservice, adminplus, gates, control, weekly, portfolio, programs2, security, pmtools, insight2, adminops, scope, agile, strategy, procurement, skills, depth, ops, jobs, brief as brief_router
 
 
 class OutboxDispatch:
@@ -41,6 +44,27 @@ class OutboxDispatch:
                 pass
 
 
+@asynccontextmanager
+async def _lifespan(app):
+    task = None
+    if os.environ.get("PROPERM_SCHEDULER") == "1" and sys.platform != "emscripten":
+        async def loop():
+            from . import scheduler
+            while True:
+                try:
+                    def once():
+                        with app.state.Session() as db:
+                            scheduler.run_due(db)
+                    await asyncio.to_thread(once)
+                except Exception:
+                    pass
+                await asyncio.sleep(int(os.environ.get("PROPERM_SCHEDULER_MINUTES", "15")) * 60)
+        task = asyncio.create_task(loop())
+    yield
+    if task:
+        task.cancel()
+
+
 def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = True) -> FastAPI:
     kwargs = {}
     test_db = os.environ.get("PROPERM_TEST_DATABASE_URL", "")
@@ -55,13 +79,13 @@ def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = Tr
     if redirect:
         Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-    app = FastAPI(title="PROPERM Smart PMO", version="0.1.0")
+    app = FastAPI(title="PROPERM Smart PMO", version="0.1.0", lifespan=_lifespan)
     app.state.engine = engine
     app.state.Session = sessionmaker(engine, expire_on_commit=False)
     origins = [o.strip() for o in os.environ.get("PROPERM_CORS_ORIGINS", "").split(",") if o.strip()]
     if origins:   # only for a UI hosted on another origin (e.g. Netlify); tokens go in a header, not cookies
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["Authorization", "Content-Type"])
-    for r in (auth_users.router, projects.router, projects.pending_router, governance.router, notifications.router, exports.router, ai_router.router, intake.router, plan.router, oversight.router, insights.router, workflow.router, periodic.router, config_lists.router, selfservice.router, adminplus.router, gates.router, control.router, weekly.router, portfolio.router, programs2.router, security.router, pmtools.router, insight2.router, adminops.router, scope.router, agile.router, strategy.router, procurement.router, skills.router, depth.router, ops.router, brief_router.router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
+    for r in (auth_users.router, projects.router, projects.pending_router, governance.router, notifications.router, exports.router, ai_router.router, intake.router, plan.router, oversight.router, insights.router, workflow.router, periodic.router, config_lists.router, selfservice.router, adminplus.router, gates.router, control.router, weekly.router, portfolio.router, programs2.router, security.router, pmtools.router, insight2.router, adminops.router, scope.router, agile.router, strategy.router, procurement.router, skills.router, depth.router, ops.router, jobs.router, brief_router.router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
         app.include_router(r)
 
     app.add_middleware(OutboxDispatch, session_factory=app.state.Session)

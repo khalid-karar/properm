@@ -39,3 +39,6 @@ Create an empty schema just for tests, then:
     ORACLE_TEST_URL='oracle+oracledb://TESTUSER:PASSWORD@HOST:1521/?service_name=SVC' sh scripts/test_oracle.sh
 
 It connects, prints the Oracle version, then runs the whole suite against it (the schema is dropped and rebuilt for every test). Send me the first failure and I will fix it. The redirect only works under pytest, so it can never touch a real database.
+
+## Scheduler
+Set `PROPERM_SCHEDULER=1` on the backend and it runs the daily jobs by itself (checks every 15 minutes, each job at most once a day): alert evaluation, scheduled reports, Sunday timesheet reminders, overdue-action nudges, and e-mail retries. Without it, call `POST /admin/jobs/run` from a cron. Admin → Scheduled jobs shows the history.

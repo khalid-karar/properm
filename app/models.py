@@ -374,6 +374,8 @@ class Notification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     emailed: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    email_error: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
 
 class ReportSchedule(Base):
@@ -1099,3 +1101,15 @@ class TwoFactor(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     backup_hashes: Mapped[str | None] = mapped_column(Text, nullable=True)   # JSON list of sha256 hex
     enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class JobRun(Base):
+    """One scheduled job, once per day (see app/scheduler.py)."""
+    __tablename__ = "job_runs"
+    __table_args__ = (UniqueConstraint("name", "run_date"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(40))
+    run_date: Mapped[date] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(10), default="ok")      # ok | failed
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
