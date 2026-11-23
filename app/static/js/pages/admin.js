@@ -6,7 +6,7 @@ const ROLES = ["STAFF", "PM", "PMO", "PROGRAM_MANAGER", "DECISION_MAKER", "ADMIN
 
 export default async function (root) {
   function editUser(u, users, me) {
-    const f = { jt: h("input", { value: u.job_title || "" }), dep: h("input", { value: u.department || "" }), name: h("input", { value: u.full_name }), role: h("select", {}, ROLES.map(r => h("option", { value: r, selected: r === u.role }, r))),
+    const f = { jt: h("input", { value: u.job_title || "" }), dep: depInput(u.department), name: h("input", { value: u.full_name }), role: h("select", {}, ROLES.map(r => h("option", { value: r, selected: r === u.role }, r))),
       grade: h("input", { value: u.rate_grade || "" }), email: h("input", { type: "email", value: u.email || "" }), cap: h("input", { type: "number", value: u.capacity_hours_week, style: "width:80px" }), ccb: h("input", { type: "checkbox", checked: u.is_ccb }),
       active: h("input", { type: "checkbox", checked: u.active, disabled: u.id === me.id }), pw: h("input", { type: "password", autocomplete: "new-password" }),
       lm: h("select", {}, h("option", { value: "" }, "—"), users.filter(x => x.id !== u.id).map(x => h("option", { value: x.id, selected: x.id === u.line_manager_id }, x.full_name))),
@@ -37,8 +37,12 @@ export default async function (root) {
         catch (e) { mount(err, errorBox(e)); } } }] });
   }
 
+  let DEPTS = [];
+  const depInput = (v) => DEPTS.length ? h("select", {}, h("option", { value: "" }, "—"), DEPTS.map(d => h("option", { value: d, selected: d === v }, d))) : h("input", { value: v || "" });
+
   async function render() {
     const me = await api("GET", "/me");
+    DEPTS = ((await api("GET", "/config/lists")).department || []).map(x => x.label);
     const sec = await api("GET", "/admin/logins?limit=60");
     const failedOnly = h("input", { type: "checkbox", checked: !!render.failed, onChange: (e) => { render.failed = e.target.checked; render(); } });
     const events = render.failed ? sec.events.filter(e => !e.ok) : sec.events;
@@ -49,7 +53,7 @@ export default async function (root) {
       h("h3", {}, t("signin_history")), h("label", { class: "check" }, failedOnly, " ", t("failed_only")),
       table([t("time"), t("staff_id"), t("full_name"), t("result")], events.map(e => [e.at ? e.at.slice(0, 16).replace("T", " ") : "", e.staff_id, e.user || "—", e.ok ? badge(t("signin_ok"), "GREEN") : badge(t(`sr_${e.reason || "bad_password"}`), "RED")]), t("none")));
     const [users, rates, cfg] = await Promise.all([api("GET", "/users"), api("GET", "/admin/rates"), api("GET", "/admin/rules")]);
-    const f = { jt: h("input"), dep: h("input"), sid: h("input"), name: h("input"), pw: h("input", { type: "password", autocomplete: "new-password" }), role: h("select", {}, ROLES.map(r => h("option", { value: r }, r))), grade: h("input", { style: "width:90px" }),
+    const f = { jt: h("input"), dep: depInput(null), sid: h("input"), name: h("input"), pw: h("input", { type: "password", autocomplete: "new-password" }), role: h("select", {}, ROLES.map(r => h("option", { value: r }, r))), grade: h("input", { style: "width:90px" }),
       cap: h("input", { type: "number", value: "40", style: "width:80px" }), ccb: h("input", { type: "checkbox" }), lm: h("select", {}, h("option", { value: "" }, "—"), users.map(u => h("option", { value: u.id }, u.full_name))) };
     const uerr = h("div");
     const hols = await api("GET", "/calendar/holidays");
@@ -86,12 +90,30 @@ export default async function (root) {
         if (r.created.length) toast(t("saved"));
       } catch (e) { mount(cout, errorBox(e)); }
     }));
+    const mail = await api("GET", "/admin/mail");
+    const mf = { host: h("input", { value: mail.host || "" }), port: h("input", { type: "number", value: mail.port, style: "width:90px" }), user: h("input", { value: mail.username || "", autocomplete: "off" }),
+      pw: h("input", { type: "password", autocomplete: "new-password", placeholder: mail.password_set ? t("pw_kept") : "" }), from: h("input", { value: mail.from_addr || "" }),
+      tls: h("input", { type: "checkbox", checked: mail.starttls }), on: h("input", { type: "checkbox", checked: mail.enabled }), to: h("input", { type: "email", placeholder: "name@example.sa" }) };
+    const mout = h("div");
+    const mailCard = h("div", { class: "card", id: "mail-card" }, h("h2", {}, t("mail_server")), h("p", { class: "muted small" }, `${t("mail_note")} ${t("mail_source")}: ${t(`ms_${mail.source}`)}`),
+      h("div", { class: "row" }, field(t("mail_host"), mf.host), field(t("mail_port"), mf.port), field(t("mail_user"), mf.user), field(t("password"), mf.pw), field(t("mail_from"), mf.from)),
+      h("div", { class: "row" }, h("label", { class: "check" }, mf.tls, " STARTTLS"), h("label", { class: "check" }, mf.on, " ", t("mail_enabled")),
+        h("button", { class: "btn", type: "button", onClick: guarded(null, async () => { mount(mout); try { await api("PUT", "/admin/mail", { host: mf.host.value.trim() || null, port: Number(mf.port.value), username: mf.user.value.trim() || null, password: mf.pw.value || null, from_addr: mf.from.value.trim() || null, starttls: mf.tls.checked, enabled: mf.on.checked }); toast(t("saved")); await render(); } catch (e) { mount(mout, errorBox(e)); } }) }, t("save"))),
+      h("div", { class: "row", style: "margin-top:8px" }, field(t("mail_test_to"), mf.to), h("button", { class: "btn secondary", type: "button", onClick: guarded(null, async () => { mount(mout); try { const r = await api("POST", "/admin/mail/test", { to: mf.to.value.trim() }); mount(mout, r.ok ? h("p", { class: "ok" }, t("mail_test_ok")) : errorBox(new Error(r.error))); } catch (e) { mount(mout, errorBox(e)); } }) }, t("mail_test"))), mout);
+    const incDocs = h("input", { type: "checkbox" });
+    const backupCard = h("div", { class: "card", id: "backup-card" }, h("h2", {}, t("backup")), h("p", { class: "muted small" }, t("backup_note")),
+      h("div", { class: "row" }, h("label", { class: "check" }, incDocs, " ", t("backup_docs")),
+        h("button", { class: "btn", type: "button", onClick: guarded(null, async () => {
+          const d = await api("GET", `/admin/export?include_documents=${incDocs.checked}`);
+          const url = URL.createObjectURL(new Blob([JSON.stringify(d, null, 1)], { type: "application/json" }));
+          const a = h("a", { href: url, download: `properm-backup-${d.exported_at.slice(0, 10)}.json` }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+        }) }, t("backup_download"))));
     mount(root, h("h1", {}, t("nav_admin")),
       h("div", { class: "card" }, h("h2", {}, t("users")), table([t("staff_id"), t("full_name"), t("role"), t("grade"), t("capacity"), t("is_ccb"), t("status"), ""], users.map(u => [u.staff_id, u.full_name, u.role, u.rate_grade || "—", num(u.capacity_hours_week), u.is_ccb ? "✓" : "", badge(u.active ? t("active") : t("inactive"), u.active ? "approved" : "critical"), h("span", { class: "row", style: "gap:6px;flex-wrap:nowrap" }, h("button", { class: "btn small", type: "button", onClick: () => editUser(u, users, me) }, t("edit")),
           u.active && u.id !== me.id ? h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, () => handover(u, users)) }, t("handover")) : null)]), t("none")),
         h("h2", { style: "margin-top:14px" }, t("new_user")),
         h("div", { class: "row" }, field(t("staff_id"), f.sid), field(t("full_name"), f.name), field(t("job_title"), f.jt), field(t("department"), f.dep), field(t("password"), f.pw), field(t("role"), f.role), field(t("grade"), f.grade), field(t("capacity"), f.cap), field(t("is_ccb"), f.ccb), field(t("line_manager"), f.lm), addU), uerr),
-      secCard,
+      secCard, mailCard, backupCard,
       h("div", { class: "card", id: "import-card" }, h("h2", {}, t("bulk_import")), h("p", { class: "muted small" }, t("bulk_import_note")), csvBox, h("p", {}, impBtn), cout),
       h("div", { class: "card" }, h("h2", {}, t("rates")), table([t("grade"), t("hourly_rate"), t("currency"), t("effective_from"), ""], rates.map(r => [r.grade, num(r.hourly_rate, 2), r.currency, r.effective_from, r.future ? h("span", { class: "row", style: "gap:6px" }, badge(t("future_rate"), "AMBER"), h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/admin/rates/${r.id}`); await render(); }) }, t("remove"))) : ""]), t("none")),
         h("div", { class: "row", style: "margin-top:12px" }, field(t("grade"), rg), field(t("hourly_rate"), rv), field(t("currency"), rc), field(t("effective_from"), rd), addR), rerr),

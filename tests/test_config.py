@@ -6,7 +6,7 @@ def test_lists_and_ai_admin(c, world):
     pmo, pm, s1 = h["pmo1"], h["pm1"], h["s1"]
     # reading the lists is open to all; changing them is ADMIN only
     lists = c.get("/config/lists", headers=s1).json()
-    assert {"nonproject_code", "risk_category", "kpi_template", "closure_item"} == set(lists) and any(x["code"] == "LEAVE" for x in lists["nonproject_code"])
+    assert {"nonproject_code", "risk_category", "kpi_template", "closure_item", "department"} == set(lists) and any(x["code"] == "LEAVE" for x in lists["nonproject_code"])
     assert c.put("/admin/lists/risk_category/Legal", json={"label": "Legal"}, headers=pmo).status_code == 403
     a = h["admin"]
     assert c.put("/admin/lists/risk_category/Legal", json={"label": "Legal"}, headers=a).status_code == 200

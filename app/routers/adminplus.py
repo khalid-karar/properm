@@ -69,6 +69,12 @@ def import_users(body: ImportIn, db=Depends(get_db), admin: User = Depends(requi
                 raise ValueError
         except ValueError:
             errors.append({"line": n, "staff_id": sid, "error": "capacity_hours_week must be 1-80"}); continue
+        dep = (r.get("department") or "").strip() or None
+        try:
+            from ..lists import check_department
+            check_department(db, dep)
+        except HTTPException as e:
+            errors.append({"line": n, "staff_id": sid, "error": e.detail}); continue
         email = (r.get("email") or "").strip() or None
         if email and ("@" not in email or " " in email):
             errors.append({"line": n, "staff_id": sid, "error": "invalid e-mail"}); continue

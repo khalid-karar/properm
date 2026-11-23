@@ -125,6 +125,8 @@ def seed(app, pw, c):
     bm = ok(c.post(f"/projects/{b_pid}/milestones", headers=pm, json={"name": "Data platform live", "due_date": d(25)}))
     ok(c.post(f"/programs/{g}/dependencies", headers=pmo, json={"project_id": a_pid, "predecessor_id": b_pid, "milestone_id": bm["id"], "needed_by": d(15), "description": "ERP reports read from the data platform"}))
     ok(c.post(f"/programs/{g}/risks", headers=pmo, json={"title": "Same integration vendor on both projects", "probability": 4, "impact": 4, "owner_id": ids["pg1"], "response": "Agree a shared delivery plan with the vendor"}))
+    ok(c.post(f"/programs/{g}/issues", headers=pmo, json={"title": "Shared test environment unavailable two days a week", "severity": "high", "owner_id": ids["pg1"], "due_date": d(7)}))
+    ok(c.put(f"/programs/{g}/budget", headers=pmo, json={"envelope": 450000, "currency": "SAR"}))
     # portfolio: departments, planned hours for the coming weeks, strategic scores
     for sid, dep in (("s1", "Delivery"), ("s2", "Data"), ("s3", "Delivery"), ("pm1", "PMO Office")):
         ok(c.patch(f"/users/{ids[sid]}", headers=admin, json={"department": dep}))
@@ -134,6 +136,8 @@ def seed(app, pw, c):
             ok(c.put(f"/projects/{pid_}/allocations", headers=pm, json={"user_id": ids[sid], "week_of": str(ws0 + timedelta(days=7 * wk)), "hours": hrs}))
     ok(c.put(f"/portfolio/scores/{a_pid}", headers=pmo, json={"strategic_fit": 5, "value": 4, "urgency": 4, "risk_level": 2}))
     ok(c.put(f"/portfolio/scores/{b_pid}", headers=pmo, json={"strategic_fit": 3, "value": 4, "urgency": 3, "risk_level": 4}))
+    for code, label in (("DEL", "Delivery"), ("DATA", "Data"), ("PMO", "PMO Office")):
+        ok(c.put(f"/admin/lists/department/{code}", headers=admin, json={"label": label}))
     # weekly cycle: one submitted week, leave requests (one approved, one waiting)
     lw = T - timedelta(days=((T.weekday() + 1) % 7) + 7)
     ok(c.post("/me/week/submit", headers=tok("s1"), json={"week_of": str(lw), "note": "Two days at the vendor workshop"}))

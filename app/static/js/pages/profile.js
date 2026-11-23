@@ -3,7 +3,7 @@ import { api } from "../api.js";
 import { t } from "../i18n.js";
 import { errorBox, field, guarded, h, mount, toast } from "../ui.js";
 
-export default async function (root, { me }) {
+export default async function (root, { me, nav }) {
   const [p, dir, logins] = await Promise.all([api("GET", "/me/profile"), api("GET", "/directory"), api("GET", "/me/logins").catch(() => [])]);
   const email = h("input", { type: "email", value: p.email || "" });
   const dg = h("select", {}, h("option", { value: "" }, "—"), dir.filter(u => u.id !== p.id).map(u => h("option", { value: u.id, selected: u.id === p.delegate_id }, u.full_name)));
@@ -36,5 +36,8 @@ export default async function (root, { me }) {
         try { await api("POST", "/me/password", { current_password: cur.value, new_password: nw.value }); cur.value = nw.value = ""; toast(t("password_changed")); if (me.must_change_password) { location.hash = "#/"; location.reload(); } }
         catch (e) { perr.append(errorBox(e)); }
       } }, t("change_password"))));
+  const hsel = h("select", { id: "home-page", onChange: guarded(null, async (e) => { await api("PUT", "/me/home", { page: e.target.value || null }); me.home_page = e.target.value || null; toast(t("profile_saved")); }) },
+    h("option", { value: "" }, t("default_page")), (nav || []).map(n => h("option", { value: n, selected: n === me.home_page }, t(`nav_${n}`))));
+  root.append(h("div", { class: "card" }, h("h2", {}, t("start_page")), h("p", { class: "muted small" }, t("start_page_note")), hsel));
   if (logins.length) root.append(h("div", { class: "card" }, h("h2", {}, t("recent_signins")), h("ul", { class: "declog" }, logins.map(e => h("li", {}, `${e.at ? e.at.slice(0, 16).replace("T", " ") : ""} · `, e.ok ? t("signin_ok") : h("span", { class: "neg" }, t(`sr_${e.reason || "bad_password"}`)))))));
 }

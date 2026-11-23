@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from ..alerts import rag_status
 from ..audit import log
 from ..deps import current_user, get_db
-from ..models import Milestone, Program, ProgramRisk, Project, ProjectDependency, User
+from ..models import Benefit, Milestone, Program, ProgramBudget, ProgramIssue, ProgramRisk, Project, ProjectDependency, User
 from .dashboards import EXEC, overall_pct
 
 router = APIRouter(prefix="/programs", tags=["program management"])
@@ -160,3 +160,123 @@ def patch_prisk(gid: int, rid: int, body: PRiskPatch, db=Depends(get_db), user: 
     log(db, user.id, "program.risk_updated", "program_risk", rid, ch)
     db.commit()
     return _pr_out(r, {u.id: u.full_name for u in db.query(User)})
+
+
+# ---------------- program issues ----------------
+class PIssueIn(BaseModel):
+    title: str = Field(min_length=1, max_length=300)
+    severity: str = "medium"
+    owner_id: int | None = None
+    due_date: date | None = None
+
+
+class PIssuePatch(BaseModel):
+    severity: str | None = None
+    owner_id: int | None = None
+    due_date: date | None = None
+    status: str | None = None
+
+
+def _pi_out(x: ProgramIssue, names) -> dict:
+    return {"id": x.id, "title": x.title, "severity": x.severity, "owner_id": x.owner_id, "owner": names.get(x.owner_id), "due_date": x.due_date,
+            "status": x.status, "overdue": x.status in ("open", "in_progress") and x.due_date is not None and x.due_date < date.today()}
+
+
+@router.get("/{gid}/issues")
+def list_pissues(gid: int, db=Depends(get_db), user: User = Depends(current_user)):
+    _prog(db, gid, user)
+    names = {u.id: u.full_name for u in db.query(User)}
+    order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    rows = sorted(db.query(ProgramIssue).filter_by(program_id=gid), key=lambda x: (x.status in ("resolved", "closed"), order.get(x.severity, 9)))
+    return [_pi_out(x, names) for x in rows]
+
+
+@router.post("/{gid}/issues", status_code=201)
+def add_pissue(gid: int, body: PIssueIn, db=Depends(get_db), user: User = Depends(current_user)):
+    _prog(db, gid, user, manage=True)
+    if body.severity not in ("low", "medium", "high", "critical"):
+        raise HTTPException(422, "severity must be low, medium, high or critical")
+    x = ProgramIssue(program_id=gid, **body.model_dump())
+    db.add(x)
+    db.flush()
+    log(db, user.id, "program.issue_added", "program_issue", x.id, {"program_id": gid})
+    db.commit()
+    return _pi_out(x, {u.id: u.full_name for u in db.query(User)})
+
+
+@router.patch("/{gid}/issues/{iid}")
+def patch_pissue(gid: int, iid: int, body: PIssuePatch, db=Depends(get_db), user: User = Depends(current_user)):
+    _prog(db, gid, user, manage=True)
+    x = db.get(ProgramIssue, iid)
+    if not x or x.program_id != gid:
+        raise HTTPException(404, "Issue not found")
+    ch = body.model_dump(exclude_unset=True)
+    if "status" in ch and ch["status"] not in ("open", "in_progress", "resolved", "closed"):
+        raise HTTPException(422, "status must be open, in_progress, resolved or closed")
+    if "severity" in ch and ch["severity"] not in ("low", "medium", "high", "critical"):
+        raise HTTPException(422, "severity must be low, medium, high or critical")
+    for k, v in ch.items():
+        setattr(x, k, v)
+    log(db, user.id, "program.issue_updated", "program_issue", iid, {k: str(v) for k, v in ch.items()})
+    db.commit()
+    return _pi_out(x, {u.id: u.full_name for u in db.query(User)})
+
+
+# ---------------- budget envelope and benefits plan ----------------
+class EnvelopeIn(BaseModel):
+    envelope: float = Field(ge=0)
+    currency: str = Field("SAR", min_length=3, max_length=3)
+
+
+@router.put("/{gid}/budget")
+def set_envelope(gid: int, body: EnvelopeIn, db=Depends(get_db), user: User = Depends(current_user)):
+    if user.role not in ("PMO", "ADMIN", "DECISION_MAKER"):
+        raise HTTPException(403, "The funding envelope is set by PMO, ADMIN or a decision maker")
+    _prog(db, gid, user)
+    b = db.get(ProgramBudget, gid) or ProgramBudget(program_id=gid, envelope=0)
+    b.envelope, b.currency = body.envelope, body.currency.upper()
+    db.add(b)
+    log(db, user.id, "program.envelope_set", "program", gid, body.model_dump())
+    db.commit()
+    return budget(gid, db, user)
+
+
+@router.get("/{gid}/budget")
+def budget(gid: int, db=Depends(get_db), user: User = Depends(current_user)):
+    _prog(db, gid, user)
+    from ..evm import compute_evm
+    b = db.get(ProgramBudget, gid)
+    ccy = b.currency if b else "SAR"
+    rows, other = [], []
+    for p in db.query(Project).filter_by(program_id=gid).order_by(Project.number):
+        e = compute_evm(db, p, date.today()) if p.state in ("execution", "closing") else {}
+        if p.currency != ccy:
+            other.append(p.number)
+            continue
+        rows.append({"project_id": p.id, "number": p.number, "budget": p.budget_ceiling or 0, "spent": (e.get("AC") or 0) if e.get("available") else 0,
+                     "forecast": (e.get("EAC") or p.budget_ceiling or 0) if e.get("available") else (p.budget_ceiling or 0)})
+    tot = {k: round(sum(r[k] for r in rows), 0) for k in ("budget", "spent", "forecast")}
+    env = b.envelope if b else None
+    return {"envelope": env, "currency": ccy, "projects": rows, "totals": tot, "excluded_other_currency": other,
+            "allocated_pct": round(100 * tot["budget"] / env, 1) if env else None,
+            "headroom": round(env - tot["forecast"], 0) if env is not None else None}
+
+
+@router.get("/{gid}/benefits-plan")
+def benefits_plan(gid: int, db=Depends(get_db), user: User = Depends(current_user)):
+    """All benefits of the program's projects in date order, with owners, grouped by quarter."""
+    _prog(db, gid, user)
+    from .governance import b_out
+    names = {u.id: u.full_name for u in db.query(User)}
+    projs = {p.id: p for p in db.query(Project).filter_by(program_id=gid)}
+    rows = []
+    for b in db.query(Benefit).filter(Benefit.project_id.in_(list(projs) or [0])):
+        d = b_out(b)
+        d["project"] = projs[b.project_id].number
+        d["owner"] = names.get(b.owner_id)
+        d["quarter"] = f"{b.due_date.year}-Q{(b.due_date.month - 1) // 3 + 1}" if b.due_date else "No date"
+        d["overdue"] = b.due_date is not None and b.due_date < date.today() and b.status not in ("realized", "missed")
+        rows.append(d)
+    rows.sort(key=lambda r: (r["due_date"] is None, r["due_date"] or date.max))
+    return {"benefits": rows, "by_status": {s: sum(1 for r in rows if r["status"] == s) for s in ("planned", "on_track", "at_risk", "realized", "missed")},
+            "no_owner": sum(1 for r in rows if not r["owner_id"])}

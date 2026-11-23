@@ -331,6 +331,22 @@ await step("search, board pack, what-if, coming up", async () => {
 p = await newPage("b-staff"); await login(p, "s1");
 await step("staff: planned hours ahead", async () => { await p.goto(BASE + "#/mine"); await p.waitForSelector("#upcoming td"); });
 
+p = await newPage("c-admin"); await login(p, "admin");
+await step("admin: mail settings test, backup download, department list, start page", async () => {
+  await p.goto(BASE + "#/admin"); await p.waitForSelector("#mail-card");
+  await p.locator("#mail-card").getByLabel("Send a test to", { exact: true }).fill("x@example.sa");
+  await Promise.all([p.waitForResponse(r => r.url().includes("/admin/mail/test")), p.click("#mail-card button:has-text('Send test')")]); await p.waitForSelector("#mail-card .err");
+  const [dl] = await Promise.all([p.waitForEvent("download"), p.click("#backup-card button:has-text('Download backup')")]);
+  if (!dl.suggestedFilename().endsWith(".json")) throw new Error("no json backup");
+  await p.goto(BASE + "#/config"); await p.waitForSelector("h2:has-text('Departments')");
+  await p.goto(BASE + "#/profile"); await Promise.all([p.waitForResponse(r => r.url().includes("/me/home")), p.selectOption("#home-page", "audit")]);
+});
+
+p = await newPage("c-pg"); await login(p, "pg1");
+await step("program page: envelope, program issues, benefits plan", async () => {
+  await p.goto(BASE + "#/programs/1"); await p.waitForSelector("#envelope .stat"); await p.waitForSelector("#pissues td:has-text('Shared test environment')"); await p.waitForSelector("#benefits-plan td");
+});
+
 p = await newPage("ar"); await login(p, "pmo1");
 await step("arabic tabs & load", async () => { await p.click('button:has-text("العربية")'); await p.goto(BASE + "#/projects/1"); await p.waitForSelector('button[role=tab]:has-text("التحكم في التغيير")'); await tab(p, "التحكم في التغيير"); await p.waitForSelector("td .badge:has-text('معتمد')"); await shot(p, "15-ar-change"); });
 

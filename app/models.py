@@ -737,3 +737,42 @@ class CommItem(Base):
     frequency: Mapped[str] = mapped_column(String(20))      # weekly | biweekly | monthly | quarterly | milestone | ad_hoc
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     last_sent: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+
+class MailConfig(Base):
+    """Mail server settings kept by the administrator (environment variables are used when this is empty)."""
+    __tablename__ = "mail_config"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    host: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    port: Mapped[int] = mapped_column(Integer, default=587)
+    username: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    password: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    from_addr: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    starttls: Mapped[bool] = mapped_column(Boolean, default=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ProgramIssue(Base):
+    __tablename__ = "program_issues"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    severity: Mapped[str] = mapped_column(String(20))
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="open")
+
+
+class ProgramBudget(Base):
+    """Funding envelope for a program, compared with the budgets of its projects."""
+    __tablename__ = "program_budgets"
+    program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"), primary_key=True)
+    envelope: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String(3), default="SAR")
+
+
+class UserHome(Base):
+    """A person's chosen start page."""
+    __tablename__ = "user_home"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    page: Mapped[str] = mapped_column(String(40))

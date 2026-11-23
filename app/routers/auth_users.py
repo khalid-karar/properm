@@ -92,9 +92,9 @@ def demo_login(body: DemoLoginIn, db=Depends(get_db)):
 
 @router.get("/me")
 def me(user: User = Depends(current_user), db=Depends(get_db)):
-    from ..models import AccountSecurity
-    s = db.get(AccountSecurity, user.id)
-    return {**user_out(user), "must_change_password": bool(s and s.must_change_password)}
+    from ..models import AccountSecurity, UserHome
+    s, hp = db.get(AccountSecurity, user.id), db.get(UserHome, user.id)
+    return {**user_out(user), "must_change_password": bool(s and s.must_change_password), "home_page": hp.page if hp else None}
 
 
 @router.get("/directory")
@@ -117,6 +117,8 @@ def create_user(body: UserIn, db=Depends(get_db), admin: User = Depends(require_
     if db.query(User).filter_by(staff_id=body.staff_id).first():
         raise HTTPException(409, "staff_id already exists")
     from .. import acct
+    from ..lists import check_department
+    check_department(db, body.department)
     acct.enforce_policy(db, body.password)
     u = User(**body.model_dump(exclude={"password"}), password_hash=hash_pw(body.password))
     db.add(u)
@@ -148,6 +150,8 @@ def update_user(uid: int, body: UserPatch, db=Depends(get_db), admin: User = Dep
     if not u:
         raise HTTPException(404, "User not found")
     changes = body.model_dump(exclude_unset=True, exclude={"new_password"})
+    from ..lists import check_department
+    check_department(db, changes.get("department"))
     if "role" in changes and changes["role"] not in ROLES:
         raise HTTPException(422, f"role must be one of {ROLES}")
     if (changes.get("active") is False or ("role" in changes and changes["role"] != "ADMIN")) and u.role == "ADMIN" and u.active:

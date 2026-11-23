@@ -8,6 +8,7 @@ DEFAULTS = {
     "kpi_template": [("ON_TIME", "On-time delivery", {"unit": "%", "higher_is_better": True}), ("DEFECTS", "Defect rate", {"unit": "%", "higher_is_better": False}),
                      ("CSAT", "Customer satisfaction", {"unit": "/5", "higher_is_better": True})],
     "closure_item": [],
+    "department": [],
 }
 PROTECTED = {("nonproject_code", "LEAVE")}          # leave logic (R10 / capacity) depends on this code
 LIST_KEYS = tuple(DEFAULTS)
@@ -33,3 +34,13 @@ def active(db, key: str) -> list[dict]:
 
 def active_codes(db) -> dict:
     return {x["code"]: x["label"] for x in active(db, "nonproject_code")}
+
+
+def check_department(db, value) -> None:
+    """When the administrator keeps a department list, a user's department must come from it."""
+    if not value:
+        return
+    labels = {x["label"] for x in active(db, "department")}
+    if labels and value not in labels:
+        from fastapi import HTTPException
+        raise HTTPException(422, f"Department must be one of: {', '.join(sorted(labels))}")

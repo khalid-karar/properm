@@ -1,7 +1,7 @@
 import { api, session } from "../api.js";
 import { getLang, setLang, t } from "../i18n.js";
 import { bar, errorBox, field, guarded, h, icon, mount } from "../ui.js";
-import { homeFor, resetMe } from "../app.js";
+import { resetMe } from "../app.js";
 
 export default function (root) {
   const msg = h("div");
@@ -15,7 +15,7 @@ export default function (root) {
         const r = await api("POST", "/auth/login", { staff_id: id.value.trim(), password: pw.value });
         session.set(r.access_token, r.role);
         resetMe();
-        location.hash = `#/${homeFor(r.role)}`;
+        location.hash = "#/";
       } catch (e) { mount(msg, errorBox(e)); }
   }) },
     h("h2", { class: "t" }, t("login")),
@@ -40,7 +40,7 @@ export default function (root) {
     mount(quick, h("h2", {}, t("quick_login")), h("p", { class: "muted small" }, t("quick_login_note")),
       h("div", { class: "chips" }, users.map(u => h("button", { class: "btn secondary", type: "button", onClick: guarded(null, async () => {
         const r = await api("POST", "/auth/demo-login", { staff_id: u.staff_id });
-        session.set(r.access_token, r.role); resetMe(); location.hash = `#/${homeFor(r.role)}`;
+        session.set(r.access_token, r.role); resetMe(); location.hash = "#/";
       }) }, u.full_name, h("small", {}, u.role)))));
     quick.hidden = false;
   }).catch(() => {});

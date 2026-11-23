@@ -18,7 +18,7 @@ Best practice: a full, accurate timesheet with little effort; knows what is comi
 | **Reminders** for missing days and the weekly deadline | ✅ | To-do item; PMO sends reminders (or a cron calls `POST /reminders/timesheets`) | P1 |
 | **Plan leave ahead** so managers see reduced capacity | ✅ | Leave page, line-manager approval, lowers capacity in resource load | P1 |
 | See **upcoming work** (my planned hours for the next weeks) | ✅ | "My projects" shows caps, not the forward plan | P2 |
-| Update % complete on activities I own | 🟡 | Only the PM updates progress | P3 |
+| Update % complete on activities I own | 🟡 | Only the PM updates progress (activities have no owner field yet) | P3 |
 
 ## 2. Project Manager
 Best practice: plan against a baseline, forecast honestly, control change, keep a decision and action log, report on time, close with lessons learned.
@@ -55,9 +55,9 @@ Best practice: manage the program as one unit: roadmap, inter-project dependenci
 | Own programs, add/remove projects, roll-up of risks and benefits | ✅ | — | |
 | **Program roadmap** (all projects and key milestones on one timeline) | ✅ | Programs → Roadmap | P1 |
 | **Inter-project dependencies** (project B waits for A's milestone) | ✅ | Conflicts flagged and drawn on the roadmap | P1 |
-| **Program-level risks and issues** (owned by the program, not a project) | 🟡 | Program risks done; program issues not yet | P2 |
-| **Benefits realisation plan** (owner, measure, schedule, handover to operations) | 🟡 | Benefits exist per project; no program plan view | P2 |
-| Program budget envelope vs sum of project budgets | 🟡 | EVM totals only | P3 |
+| **Program-level risks and issues** (owned by the program, not a project) | ✅ | Program page | P2 |
+| **Benefits realisation plan** (owner, measure, schedule, handover to operations) | ✅ | Program page, by quarter, flags missing owners | P2 |
+| Program budget envelope vs sum of project budgets | ✅ | Program page | P3 |
 
 ## 5. Decision Maker (sponsor / steering committee)
 Best practice: decides on investment (what to start, stop, continue), not on daily detail; needs short, comparable evidence and a record of decisions.
@@ -80,16 +80,16 @@ Best practice: secure access, clean organisation data, safe off-boarding, recove
 | **Account security**: password policy, lockout after failed sign-ins, force change at first sign-in, session timeout | ✅ | Settings + Admin → Security | P1 |
 | **Sign-in history** (who, when, failures) | ✅ | Admin → Security; own history on My profile | P1 |
 | **Off-boarding**: deactivate a user and reassign their projects, risks, actions, approvals | ✅ | Admin → Hand over | P1 |
-| **Organisation structure**: departments as a maintained list/hierarchy | 🟡 | Free text | P2 |
-| Mail server settings and test from the UI | ⬜ | Environment variables only | P2 |
-| Backup / full data export | ⬜ | | P2 |
+| **Organisation structure**: departments as a maintained list | ✅ | Configuration → Departments (flat list, no hierarchy) | P2 |
+| Mail server settings and test from the UI | ✅ | Admin page | P2 |
+| Backup / full data export | ✅ | Admin page (JSON download; restore is a manual step) | P2 |
 | Single sign-on (Active Directory / Nafath) and MFA | ⬜ | Needs real hosting first | P3 |
 
 ## 7. Everyone
 | Need | Status | Pri |
 |---|---|---|
 | **Global search** (projects, people, risks, documents) | ✅ | P2 |
-| Saved filters / personal home page | ⬜ | P3 |
+| Saved filters / personal home page | 🟡 | Start page done (My profile); saved filters not built | P3 |
 | Arabic/English, role guide, profile | ✅ | |
 
 ---
@@ -101,4 +101,4 @@ Best practice: secure access, clean organisation data, safe off-boarding, recove
 4. ✅ **Portfolio planning** (done 2026-11-23) — 12-week capacity plan, compliance view, prioritisation scoring.
 5. ✅ **Program** (done 2026-11-23) — roadmap, inter-project dependencies, program-level risks.
 6. ✅ **Admin security** (done 2026-11-23) — password policy, lockout, sign-in history, off-boarding with reassignment.
-7. P2/P3 items: templates, RACI/communications, resource requests, critical path, search, board pack, mail settings, backup.
+7. ✅ P2/P3 items (done 2026-11-23, except saved filters, staff progress updates and single sign-on): templates, RACI/communications, resource requests, critical path, search, board pack, mail settings, backup.

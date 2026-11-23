@@ -84,23 +84,46 @@ def targets(db, event: str, d: dict):
     return []
 
 
-def send_email(user: User, title: str, body: str | None) -> bool:
-    host = os.environ.get("PROPERM_SMTP_HOST")
-    if not host or not user.email or sys.platform == "emscripten":
-        return False
+def mail_settings(db) -> dict:
+    """Administrator settings first (Configuration page), then environment variables."""
+    from .models import MailConfig
+    m = db.query(MailConfig).first() if db is not None else None
+    if m and m.host:
+        return {"host": m.host, "port": m.port or 587, "user": m.username, "password": m.password, "from": m.from_addr or "properm@localhost",
+                "starttls": m.starttls, "enabled": m.enabled}
+    return {"host": os.environ.get("PROPERM_SMTP_HOST"), "port": int(os.environ.get("PROPERM_SMTP_PORT", "587")),
+            "user": os.environ.get("PROPERM_SMTP_USER"), "password": os.environ.get("PROPERM_SMTP_PASSWORD", ""),
+            "from": os.environ.get("PROPERM_SMTP_FROM", "properm@localhost"), "starttls": True, "enabled": True}
+
+
+def deliver(cfg: dict, to: str, title: str, body: str | None) -> str | None:
+    """Send one message. Returns None on success or a short error text."""
+    if sys.platform == "emscripten":
+        return "E-mail cannot be sent from the browser demo"
+    if not cfg.get("host") or not cfg.get("enabled"):
+        return "No mail server is set up"
     try:
         m = EmailMessage()
-        m["From"] = os.environ.get("PROPERM_SMTP_FROM", "properm@localhost")
-        m["To"], m["Subject"] = user.email, title
+        m["From"], m["To"], m["Subject"] = cfg["from"], to, title
         m.set_content(body or title)
-        with smtplib.SMTP(host, int(os.environ.get("PROPERM_SMTP_PORT", "587")), timeout=10) as s:
-            s.starttls()
-            if os.environ.get("PROPERM_SMTP_USER"):
-                s.login(os.environ["PROPERM_SMTP_USER"], os.environ.get("PROPERM_SMTP_PASSWORD", ""))
+        with smtplib.SMTP(cfg["host"], int(cfg["port"]), timeout=10) as s:
+            if cfg.get("starttls", True):
+                s.starttls()
+            if cfg.get("user"):
+                s.login(cfg["user"], cfg.get("password") or "")
             s.send_message(m)
-        return True
-    except Exception:
-        return False   # delivery is best effort; the in-app notification still exists
+        return None
+    except Exception as e:      # delivery is best effort; the in-app notification still exists
+        return f"{type(e).__name__}: {e}"[:300]
+
+
+def send_email(user: User, title: str, body: str | None, db=None) -> bool:
+    if not user.email:
+        return False
+    cfg = mail_settings(db)
+    if not cfg.get("host"):
+        return False
+    return deliver(cfg, user.email, title, body) is None
 
 
 def notify(db, user_id: int, kind: str, title: str, body: str | None = None, link: str | None = None) -> Notification | None:
@@ -112,7 +135,7 @@ def notify(db, user_id: int, kind: str, title: str, body: str | None = None, lin
         return None
     n = Notification(user_id=user_id, kind=kind, title=title[:300], body=body, link=link)
     db.add(n)
-    n.emailed = send_email(u, title, body) if not pref or pref.email_enabled else False
+    n.emailed = send_email(u, title, body, db) if not pref or pref.email_enabled else False
     return n
 
 

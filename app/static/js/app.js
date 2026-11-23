@@ -28,17 +28,18 @@ async function route() {
   }
   if (!me) { try { me = await api("GET", "/me"); } catch { return; } }
   const allowed = NAV[me.role] || [];
-  const page = name || homeFor(me.role);
-  if (page === "login") { location.hash = `#/${homeFor(me.role)}`; return; }
+  const home = me.home_page && (NAV[me.role] || []).includes(me.home_page) ? me.home_page : homeFor(me.role);
+  const page = name || home;
+  if (page === "login") { location.hash = `#/${home}`; return; }
   if (me.must_change_password && page !== "profile") { location.hash = "#/profile"; return; }
-  if (!allowed.includes(page) && page !== "notifications" && page !== "profile" && page !== "search" && !(page === "decisions" && me.is_ccb)) { location.hash = `#/${homeFor(me.role)}`; return; }
+  if (!allowed.includes(page) && page !== "notifications" && page !== "profile" && page !== "search" && !(page === "decisions" && me.is_ccb)) { location.hash = `#/${home}`; return; }
 
   const main = h("main", {}, h("p", { class: "muted" }, t("loading")));
   document.body.classList.remove("nav-open");
   mount(app, shell(page, main));
   try {
     const mod = await import(`./pages/${page}.js`);
-    await mod.default(main, { me, arg });
+    await mod.default(main, { me, arg, nav: NAV[me.role] || [] });
     setTimeout(refreshBell, 200);
   } catch (e) {
     mount(main, errorBox(e));
