@@ -43,11 +43,17 @@ class OutboxDispatch:
 
 def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = True) -> FastAPI:
     kwargs = {}
+    test_db = os.environ.get("PROPERM_TEST_DATABASE_URL", "")
+    redirect = bool(test_db) and ":memory:" in database_url and "PYTEST_CURRENT_TEST" in os.environ
+    if redirect:   # run the test-suite against another database (scripts/test_oracle.sh); the schema is rebuilt for every test
+        database_url = test_db
     if database_url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
         if ":memory:" in database_url:
             kwargs["poolclass"] = StaticPool
     engine = create_engine(database_url, **kwargs)
+    if redirect:
+        Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     app = FastAPI(title="PROPERM Smart PMO", version="0.1.0")
     app.state.engine = engine

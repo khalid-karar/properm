@@ -32,3 +32,10 @@ A staging or demo server (never the production one) may use OpenRouter while the
     PROPERM_AI_DEMO_OFFSITE=1                         # required, or the app refuses an off-Kingdom host
 
 While this is on, every page shows a red banner, every AI call is marked `offsite_demo` in the audit log, and Admin → AI shows "Inside the Kingdom: No". It is ignored when `PROPERM_ENV=production`. Use demo data only; do not upload real client books to that server.
+
+## First Oracle test run (one command)
+Create an empty schema just for tests, then:
+
+    ORACLE_TEST_URL='oracle+oracledb://TESTUSER:PASSWORD@HOST:1521/?service_name=SVC' sh scripts/test_oracle.sh
+
+It connects, prints the Oracle version, then runs the whole suite against it (the schema is dropped and rebuilt for every test). Send me the first failure and I will fix it. The redirect only works under pytest, so it can never touch a real database.
