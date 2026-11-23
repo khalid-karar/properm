@@ -12,6 +12,8 @@ import { engagementCard, reservesCard, riskResponseCards } from "./projdepth.js"
 import { procurement } from "./projprocurement.js";
 import { compliance } from "./projcompliance.js";
 import { briefTab } from "./brief.js";
+import { documentsTab } from "./docs.js";
+import { bookStartCard } from "./bookstart.js";
 import { askText, badge, bar, modal, errorBox, field, guarded, h, mount, num, stat, table, toast, today } from "../ui.js";
 
 const MANAGE = ["PM", "PMO", "ADMIN"];
@@ -45,7 +47,8 @@ export default async function (root, { me, arg }) {
     }));
     mount(root, h("h1", {}, t("projects")),
       viaIntake ? h("div", { class: "card" }, h("h2", {}, t("new_project")), h("p", {}, t("intake_note"), " ", h("a", { class: "btn small", href: "#/proposals" }, t("submit_proposal")))) : null,
-      canManage && !viaIntake ? h("div", { class: "card" }, h("h2", {}, t("new_project")),
+      canManage && !viaIntake ? bookStartCard() : null,
+      canManage && !viaIntake ? h("div", { class: "card" }, h("h2", {}, t("new_project_manual")),
         h("div", { class: "row" }, field(t("number"), num_), field(t("name"), name), field(t("state"), state), field(t("planned_start"), start), field(t("planned_end"), end), field(t("budget"), budget), field(t("currency"), ccy), field(t("client"), client), field(t("sponsor"), sponsor), btn), err) : null,
       me.role === "STAFF" ? null : h("div", { class: "card" }, h("div", { class: "row" }, field(t("filter_state"), sel("state", [...new Set(all.map(p => p.state))].map(x => [x, t(x)]))),
         field(t("filter_pm"), sel("pm", [...new Set(all.map(p => p.pm_id))].map(x => [x, pmName(x)]))), progs.length ? field(t("filter_program"), sel("program", progs.map(g => [g.id, g.code]))) : null,
@@ -59,6 +62,7 @@ export default async function (root, { me, arg }) {
 
 async function detail(root, me, pid) {
   let tab = "overview";
+  try { const ot = sessionStorage.getItem("properm.opentab"); if (ot) { tab = ot; sessionStorage.removeItem("properm.opentab"); } } catch { /* ignore */ }
   const setTab = (x) => { tab = x; render(); };
   const canManage = MANAGE.includes(me.role);
   const dir = await api("GET", "/directory");
@@ -66,7 +70,7 @@ async function detail(root, me, pid) {
 
   async function render() {
     const p = await api("GET", `/projects/${pid}`);
-    const tabs = ["overview", "setup", "details", "scope", "agile", "compliance", "procurement", "team", "brief", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
+    const tabs = ["overview", "setup", "details", "documents", "scope", "agile", "compliance", "procurement", "team", "brief", "plan", "progress", "control", "risks", "costs", "changes", "allocations", "benefits", "closure", "ai", "reports"];
     const show = (x) => x === "setup" ? canManage : (x === "costs" || x === "allocations" || x === "procurement") ? (me.role !== "STAFF") : x === "closure" ? ["closing", "archived"].includes(p.state) : x === "ai" ? canManage : x === "brief" ? canManage && ["tendering", "planning"].includes(p.state) : x === "agile" ? p.project_type !== "predictive" : true;
     const body = h("div");
     mount(root,
@@ -84,6 +88,7 @@ async function detail(root, me, pid) {
       else if (tab === "procurement") await procurement(body, p, { pid, dir, canManage, render });
       else if (tab === "agile") await agile(body, p, { pid, me, dir, canManage, render });
       else if (tab === "setup") await overview(body, p, "setup");
+      else if (tab === "documents") await documentsTab(body, p, { pid, canManage, render });
       else if (tab === "team") await team(body, p, { pid, me, dir, canManage, render });
       else if (tab === "brief") await briefTab(body, p, { pid, dir, canManage, render });
       else if (tab === "plan") await plan(body, p, { pid, dir, canManage, render });

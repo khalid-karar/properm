@@ -287,3 +287,26 @@ def test_apply_validates_edited_draft(c, world):
     ok["requirements"].append({"code": "R-NEW", "title": "Added requirement", "text": "x", "priority": "must", "phase": None, "page": None, "section": "added"})
     g = c.post(url, headers=pm, json={"draft": ok})
     assert g.status_code in (200, 201), g.text
+
+
+def test_start_project_from_the_book(c, world):
+    import base64
+    h = world["h"]
+    pm = h["pm1"]
+    body = {"filename": "book.txt", "content_b64": base64.b64encode(AR_BOOK.encode()).decode()}
+    pv = c.post("/project-intake/book/preview", headers=pm, json=body)
+    assert pv.status_code == 200, pv.text
+    pr = pv.json()
+    assert pr["number"] and len(pr["phases"]) == 2 and pr["planned_end"] > pr["planned_start"] and pr["counts"]["activities"] == 6
+    assert c.post("/project-intake/book/preview", headers=h["s1"], json=body).status_code == 403
+    assert c.post("/project-intake/book/preview", headers=pm, json={}).status_code == 422
+    # nothing was created by the preview
+    assert not [p for p in c.get("/projects", headers=pm).json() if p["number"] == pr["number"]]
+    ok = c.post("/project-intake/book/confirm", headers=pm, json={**body, "number": "BOOK-1", "name": pr["name"] or "From the book", "planned_start": pr["planned_start"], "planned_end": pr["planned_end"]})
+    assert ok.status_code == 201, ok.text
+    pid = ok.json()["project_id"]
+    assert ok.json()["draft_id"] and ok.json()["counts"]["activities"] == 6
+    assert c.post("/project-intake/book/confirm", headers=pm, json={**body, "number": "BOOK-1", "name": "dup", "planned_start": pr["planned_start"], "planned_end": pr["planned_end"]}).status_code == 409
+    docs = c.get(f"/projects/{pid}/documents", headers=pm).json()
+    assert [d["kind"] for d in docs] == ["tender_book"]
+    assert c.get(f"/projects/{pid}/brief", headers=pm).json()[0]["id"] == ok.json()["draft_id"]

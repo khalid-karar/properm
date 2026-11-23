@@ -17,7 +17,7 @@ router = APIRouter(prefix="/projects", tags=["project intake"])
 LOCKED_AFTER_BASELINE = ("planned_start", "planned_end", "budget_ceiling", "currency", "project_type")
 MAX_DOC_BYTES = 3 * 1024 * 1024
 DOC_EXT = {".pdf", ".docx", ".doc", ".txt", ".png", ".jpg", ".jpeg", ".xlsx", ".md"}
-DOC_KINDS = ("contract", "charter", "scope", "other")
+DOC_KINDS = ("tender_book", "proposal", "contract", "charter", "scope", "minutes", "report", "correspondence", "other")
 
 
 class ProjectPatch(BaseModel):
@@ -80,19 +80,29 @@ class DocIn(BaseModel):
     kind: str
     filename: str = Field(min_length=1, max_length=200)
     content_b64: str
+    description: str | None = Field(None, max_length=500)
 
 
 def doc_out(d: Document) -> dict:
-    return {"id": d.id, "kind": d.kind, "filename": d.filename, "size": d.size, "uploaded_by": d.uploaded_by, "uploaded_at": d.uploaded_at}
+    return {"id": d.id, "kind": d.kind, "filename": d.filename, "size": d.size, "uploaded_by": d.uploaded_by, "uploaded_at": d.uploaded_at, "description": d.description}
 
 
 @router.get("/{pid}/documents")
-def list_documents(pid: int, db=Depends(get_db), user: User = Depends(current_user)):
+def list_documents(pid: int, q: str | None = None, kind: str | None = None, db=Depends(get_db), user: User = Depends(current_user)):
     p = get_project(db, pid)
     if not can_view(db, user, p):
         raise HTTPException(403, "No access to this project")
     from ..models import DocumentVersion
-    return [{**doc_out(d), "version": db.query(DocumentVersion).filter_by(document_id=d.id).count() + 1} for d in db.query(Document).filter_by(project_id=pid).order_by(Document.id)]
+    names = {u.id: u.full_name for u in db.query(User)}
+    rows = []
+    for d in db.query(Document).filter_by(project_id=pid).order_by(Document.id.desc()):
+        if kind and d.kind != kind:
+            continue
+        hay = " ".join([d.filename, d.kind, d.description or "", names.get(d.uploaded_by, "")]).lower()
+        if q and q.strip().lower() not in hay:
+            continue
+        rows.append({**doc_out(d), "uploader": names.get(d.uploaded_by), "version": db.query(DocumentVersion).filter_by(document_id=d.id).count() + 1})
+    return rows
 
 
 @router.post("/{pid}/documents", status_code=201)
@@ -110,7 +120,7 @@ def upload_document(pid: int, body: DocIn, db=Depends(get_db), user: User = Depe
         raise HTTPException(422, "content_b64 is not valid base64")
     if not raw or len(raw) > MAX_DOC_BYTES:
         raise HTTPException(422, f"File must be between 1 byte and {MAX_DOC_BYTES // 1024 // 1024} MB")
-    d = Document(project_id=pid, kind=body.kind, filename=name, size=len(raw), content=raw, uploaded_by=user.id)
+    d = Document(project_id=pid, kind=body.kind, filename=name, size=len(raw), content=raw, uploaded_by=user.id, description=(body.description or "").strip() or None)
     db.add(d)
     db.flush()
     log(db, user.id, "document.uploaded", "project", pid, {"document_id": d.id, "filename": name, "kind": body.kind})
@@ -136,6 +146,8 @@ def document_content(pid: int, did: int, db=Depends(get_db), user: User = Depend
     d = db.get(Document, did)
     if not can_view(db, user, p) or not d or d.project_id != pid:
         raise HTTPException(404, "Document not found")
+    log(db, user.id, "document.downloaded", "project", pid, {"document_id": did, "filename": d.filename})
+    db.commit()
     return {"filename": d.filename, "content_b64": base64.b64encode(d.content).decode()}
 
 
@@ -262,3 +274,19 @@ def unassign(pid: int, uid: int, db=Depends(get_db), user: User = Depends(requir
     db.delete(row)
     log(db, user.id, "staff.unassigned", "project", pid, {"user_id": uid})
     db.commit()
+
+
+@router.get("/{pid}/documents/{did}/history")
+def document_history(pid: int, did: int, db=Depends(get_db), user: User = Depends(current_user)):
+    """Who did what to this document and when: upload, new versions, deletion (from the audit log)."""
+    from ..models import AuditLog
+    p = get_project(db, pid)
+    if not can_view(db, user, p):
+        raise HTTPException(403, "No access to this project")
+    names = {u.id: u.full_name for u in db.query(User)}
+    out = []
+    for a in db.query(AuditLog).filter(AuditLog.action.like("document.%"), AuditLog.entity == "project", AuditLog.entity_id == pid).order_by(AuditLog.id):
+        det = a.detail or {}
+        if det.get("document_id") == did:
+            out.append({"at": a.ts, "action": a.action, "by": names.get(a.actor_id), "detail": {k: v for k, v in det.items() if k != "document_id"}})
+    return out

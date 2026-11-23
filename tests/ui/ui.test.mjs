@@ -22,7 +22,7 @@ async function login(page, id) {
 const SHOTS = process.env.SHOTS_DIR;
 const shot = (page, n) => (SHOTS ? page.screenshot({ path: `${SHOTS}/${n}.png`, fullPage: true }) : null);
 const step = async (label, fn) => { try { await fn(); console.log("ok  ", label); } catch (e) { problems.push(`${label}: ${e.message.split("\n").slice(0, 3).join(" ")}`); try { await p.screenshot({ path: "/tmp/fail-" + label.replace(/\W+/g, "_") + ".png" }); } catch {} console.log("FAIL", label, e.message.split("\n")[0]); } };
-const tab = (p, name) => p.click(`button[role=tab]:has-text("${name}")`);
+const tab = async (p, name) => { const ex = p.locator(`button[role=tab]:text-is("${name}")`); if (await ex.count()) return ex.first().click(); return p.click(`button[role=tab]:has-text("${name}")`); };
 
 let p = await newPage("pm");
 await login(p, "pm1");
@@ -425,6 +425,9 @@ await step("depth: risk responses, reserves, quality, engagement, document versi
   await p.waitForSelector("#reserves-card td:has-text('UI test draw')");
   await tab(p, "Scope"); await p.waitForSelector("#quality-card td:has-text('Trial balance')");
   await tab(p, "Details"); await p.waitForSelector("#engagement-card td .badge");
+  await tab(p, "Documents"); await p.waitForSelector("#documents-card td:has-text('scope-statement.txt')");
+  await p.fill("#doc-q", "zzz-nothing"); await p.waitForSelector("#doc-list .empty"); await p.fill("#doc-q", "scope-statement"); await p.waitForSelector("#doc-list td:has-text('scope-statement.txt')");
+  await p.locator("tr:has(td:has-text('scope-statement.txt')) [data-act=doc-history]").click(); await p.waitForSelector(".modal li"); await p.click(".modal button:has-text('Close')");
   await p.locator("tr:has(td:has-text('scope-statement.txt')) button:has-text('Versions')").click(); await p.waitForSelector("#versions td:has-text('v1')"); await p.click(".modal button:has-text('Close')");
 });
 p = await newPage("h-pmo"); await login(p, "pmo1");
@@ -487,6 +490,15 @@ await step("risks and issues: closing needs a note, shows in history, reopen nee
   await q.waitForSelector("button[data-act=close]");
 });
 
+await step("start a project from the book: preview, confirm, land on the draft plan", async () => {
+  const q = await newPage("bookstart"); await login(q, "pmo1");
+  await q.goto(BASE + "#/projects"); await q.waitForSelector("#book-start");
+  await q.click("#book-start summary"); await q.fill("#bk-text", "Project scope\nProject name: Data lake build\nPhase 1: Discovery (2 months)\n1. Document all source systems and databases\n2. Prepare the data flow diagram\nPhase 1 deliverables: Data inventory, Discovery report.\nPhase 2: Build (3 months)\n1. Configure the platform\n2. Build the data pipelines\nPhase 2 deliverables: Configured platform.\nThe contractor must deliver within 5 months.");
+  await q.click("#bk-read"); await q.waitForSelector("#bk-number"); await q.screenshot({ path: "/tmp/shots/bookstart-check.png", fullPage: true });
+  await q.fill("#bk-number", "BOOK-UI-1"); await q.click("#bk-create"); await q.waitForSelector(".err:has-text('did not state a project name'), [role=alert]:has-text('did not state')"); await q.fill("#bk-name", "Data lake build"); await q.click("#bk-create");
+  await q.waitForSelector("#brief-review", { timeout: 20000 });
+});
+
 await step("project book: paste, analyse, review, apply as a plan", async () => {
   const pid = await p.evaluate(async () => {
     const tok = JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage)[0])).token;
@@ -494,7 +506,7 @@ await step("project book: paste, analyse, review, apply as a plan", async () => 
     const r = await fetch("/projects", { method: "POST", headers: H, body: JSON.stringify({ number: "BK-UI-1", name: "Book test", state: "planning", planned_start: "2027-01-03", planned_end: "2027-06-30" }) });
     return (await r.json()).id;
   });
-  await p.goto(BASE + "#/projects/" + pid); await tab(p, "Project book"); await p.waitForSelector("#brief-card");
+  await p.goto(BASE + "#/projects/" + pid); await tab(p, "Plan draft"); await p.waitForSelector("#brief-card");
   await p.fill("#brief-text", "Project scope\nPhase 1: Discovery (2 months)\n1. Document all source systems and databases\n2. Prepare the data flow diagram\n3. Assess the current infrastructure\nPhase 1 deliverables: Data inventory, Data flow diagram, Discovery report.\nPhase 2: Build (3 months)\n1. Configure the platform\n2. Build the data pipelines\nPhase 2 deliverables: Configured platform, Pipeline documentation.\nThe contractor must deliver within 5 months.");
   await p.click("#brief-go"); await p.waitForSelector("#brief-review");
   await p.waitForSelector("#brief-domains #dom-cost");

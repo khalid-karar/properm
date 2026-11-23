@@ -1,15 +1,12 @@
 // Project "Details" tab: intake fields, team, documents and stakeholders.
-import { api, fileToB64, saveDocument } from "../api.js";
+import { api } from "../api.js";
 import { t } from "../i18n.js";
-import { versionsButton } from "./projdepth.js";
 import { badge, errorBox, field, guarded, h, mount, table, toast } from "../ui.js";
 
-const KINDS = ["contract", "charter", "scope", "other"];
-const fmtSize = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
 export async function details(body, p, { pid, me, dir, canManage, render }) {
   const byId = Object.fromEntries(dir.map(u => [u.id, u]));
-  const [docs, stakes] = await Promise.all([api("GET", `/projects/${pid}/documents`), api("GET", `/projects/${pid}/stakeholders`)]);
+  const [stakes] = await Promise.all([api("GET", `/projects/${pid}/stakeholders`)]);
   const editable = canManage && p.state !== "archived";
   const afterBaseline = p.baseline_version > 0;
 
@@ -55,21 +52,6 @@ export async function details(body, p, { pid, me, dir, canManage, render }) {
       h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/projects/${pid}/assignments/${id}`); await render(); }) }, t("remove"))]), t("none")),
       h("div", { class: "row", style: "margin-top:12px" }, field(t("staff"), who), addBtn)] : null);
 
-  // ----- documents -----
-  const kind = h("select", {}, KINDS.map(k => h("option", { value: k }, t(`doc_${k}`)))), file = h("input", { type: "file", accept: ".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg,.xlsx" }), derr = h("div");
-  const up = h("button", { class: "btn", type: "button" }, t("upload"));
-  up.addEventListener("click", guarded(up, async () => {
-    mount(derr);
-    const fl = file.files[0];
-    if (!fl) { mount(derr, h("div", { class: "err" }, t("choose_file"))); return; }
-    try { await api("POST", `/projects/${pid}/documents`, { kind: kind.value, filename: fl.name, content_b64: await fileToB64(fl) }); toast(t("saved")); await render(); } catch (e) { mount(derr, errorBox(e)); }
-  }));
-  const documents = h("div", { class: "card" }, h("h2", {}, t("documents")),
-    table([t("type"), t("file"), t("size"), t("date"), ""], docs.map(d => [t(`doc_${d.kind}`), d.filename, fmtSize(d.size), String(d.uploaded_at).slice(0, 10),
-      h("span", { class: "row", style: "gap:6px" }, h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, () => saveDocument(`/projects/${pid}/documents/${d.id}/content`, d.filename)) }, t("download")), versionsButton(pid, d, { canManage: editable, render }),
-        canManage ? h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/projects/${pid}/documents/${d.id}`); await render(); }) }, t("remove")) : null)]), t("none")),
-    editable ? h("div", { class: "row", style: "margin-top:12px" }, field(t("type"), kind), field(t("file"), file), up) : null, derr);
-
   // ----- stakeholders -----
   const s = { name: h("input"), org: h("input"), role: h("input"), power: h("input", { type: "number", min: "1", max: "5", value: "3", style: "width:70px" }), interest: h("input", { type: "number", min: "1", max: "5", value: "3", style: "width:70px" }), eng: h("input", { style: "min-width:220px" }) };
   const serr = h("div"), sadd = h("button", { class: "btn", type: "button" }, t("add"));
@@ -83,5 +65,5 @@ export async function details(body, p, { pid, me, dir, canManage, render }) {
       canManage ? h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/projects/${pid}/stakeholders/${x.id}`); await render(); }) }, t("remove")) : ""]), t("none")),
     editable ? h("div", { class: "row", style: "margin-top:12px" }, field(t("name"), s.name), field(t("organisation"), s.org), field(t("role"), s.role), field(t("power"), s.power), field(t("interest"), s.interest), field(t("engagement"), s.eng), sadd) : null, serr);
 
-  mount(body, info, team, documents, stake);
+  mount(body, info, team, stake);
 }

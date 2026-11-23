@@ -19,7 +19,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
     try {
       let document_id = sel.value ? Number(sel.value) : null;
       if (file.files[0]) {
-        const d = await api("POST", `/projects/${pid}/documents`, { kind: "scope", filename: file.files[0].name, content_b64: await fileToB64(file.files[0]) });
+        const d = await api("POST", `/projects/${pid}/documents`, { kind: "tender_book", filename: file.files[0].name, content_b64: await fileToB64(file.files[0]) });
         document_id = d.id;
       }
       const r = await api("POST", `/projects/${pid}/brief/analyze`, document_id ? { document_id } : { text: text.value });

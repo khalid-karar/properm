@@ -456,3 +456,99 @@ def reject(pid: int, did: int, db=Depends(get_db), user: User = Depends(require_
     log(db, user.id, "brief.rejected", "project", pid, {"draft_id": d.id})
     db.commit()
     return {"status": "rejected"}
+
+
+# ---------------- start a project from the book ----------------
+
+class BookIn(BaseModel):
+    filename: str | None = Field(None, max_length=200)
+    content_b64: str | None = None
+    text: str | None = None
+    lang: str | None = None
+
+
+class BookConfirm(BookIn):
+    number: str = Field(min_length=1, max_length=40)
+    name: str = Field(min_length=1, max_length=300)
+    planned_start: date
+    planned_end: date
+    client: str | None = Field(None, max_length=200)
+    state: str = "planning"
+
+
+def _book_pages(body: BookIn):
+    import base64
+    import binascii
+    import os
+    from .intake import DOC_EXT, MAX_DOC_BYTES
+    if body.content_b64:
+        name = os.path.basename((body.filename or "book.txt").replace("\\", "/"))
+        if os.path.splitext(name)[1].lower() not in DOC_EXT:
+            raise HTTPException(422, "File type not allowed (pdf, docx, doc, txt, md, png, jpg, xlsx)")
+        try:
+            raw = base64.b64decode(body.content_b64, validate=True)
+        except (binascii.Error, ValueError):
+            raise HTTPException(422, "content_b64 is not valid base64")
+        if not raw or len(raw) > MAX_DOC_BYTES:
+            raise HTTPException(422, f"File must be between 1 byte and {MAX_DOC_BYTES // 1024 // 1024} MB")
+        try:
+            rd = docread.read_document(name, raw)
+        except docread.ReadError as e:
+            raise HTTPException(422, str(e))
+        return name, raw, rd["pages"], rd["warnings"]
+    if body.text and len(body.text.strip()) >= 40:
+        return None, None, [docread.clean(body.text)], []
+    raise HTTPException(422, "Upload the book, or paste at least a few lines of its text")
+
+
+def _suggest_number(db, tender: str | None) -> str:
+    if tender and not db.query(Project).filter_by(number=tender).first():
+        return tender
+    n = db.query(Project).count() + 1
+    while db.query(Project).filter_by(number=f"PRJ-{date.today().year}-{n:03d}").first():
+        n += 1
+    return f"PRJ-{date.today().year}-{n:03d}"
+
+
+@router.post("/project-intake/book/preview")
+def book_preview(body: BookIn, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE))):
+    """Read the book and propose the project number, name, dates and phases. Nothing is created."""
+    _, _, pages, warnings = _book_pages(body)
+    r = brief.analyze(pages, body.lang or "auto")
+    meta = r["meta"]
+    start = date.today()
+    months = int(meta.get("duration_months") or sum(max(1, ph.get("months", 1)) for ph in r["phases"]) or 6)
+    tender = meta.get("tender_number")
+    return {"number": _suggest_number(db, tender), "tender_number": tender, "number_from_book": bool(tender) and not db.query(Project).filter_by(number=tender).first(),
+            "name": meta.get("name") or "", "language": meta.get("language"), "pages": meta.get("pages"), "planned_start": start, "planned_end": add_months(start, months) - timedelta(days=1),
+            "duration_months": months, "phases": [{"n": ph["n"], "name": ph["name"], "start_month": ph["start_month"], "end_month": ph["end_month"]} for ph in r["phases"]],
+            "counts": _counts(r), "warnings": warnings}
+
+
+@router.post("/project-intake/book/confirm", status_code=201)
+def book_confirm(body: BookConfirm, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE))):
+    """The user confirmed (and maybe corrected) the proposal: create the project, keep the book as a document, and leave a draft plan ready to review."""
+    from .projects import new_project
+    if body.state not in ("tendering", "planning"):
+        raise HTTPException(422, "Initial state must be tendering or planning")
+    if body.planned_end < body.planned_start:
+        raise HTTPException(422, "planned_end before planned_start")
+    if db.query(Project).filter_by(number=body.number).first():
+        raise HTTPException(409, "project_number already exists")
+    if user.role == "PM" and get_params(db).get("intake_required"):
+        raise HTTPException(403, "New projects start as a proposal that a decision maker approves (Proposals page)")
+    name, raw, pages, _ = _book_pages(body)
+    p = new_project(db, {"number": body.number.strip(), "name": body.name.strip(), "state": body.state, "planned_start": body.planned_start, "planned_end": body.planned_end,
+                         "client": body.client}, user.id, user.id)
+    doc_id = None
+    if raw is not None:
+        d = Document(project_id=p.id, kind="tender_book", filename=name, size=len(raw), content=raw, uploaded_by=user.id, description="Project book the plan was drafted from")
+        db.add(d)
+        db.flush()
+        doc_id = d.id
+    db.commit()
+    try:
+        out = analyze(p.id, AnalyzeIn(document_id=doc_id, text=None if doc_id else body.text, lang=body.lang or "auto"), db, user)
+    except HTTPException as e:                  # the project exists even if the reader is switched off or rate limited
+        return {"project_id": p.id, "draft_id": None, "counts": {}, "warnings": [str(e.detail)]}
+    return {"project_id": p.id, "draft_id": out["draft_id"], "counts": out["counts"], "warnings": out["warnings"]}
