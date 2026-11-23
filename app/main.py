@@ -65,6 +65,8 @@ def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = Tr
         app.include_router(r)
 
     app.add_middleware(OutboxDispatch, session_factory=app.state.Session)
+    from .hardening import Hardening
+    app.add_middleware(Hardening)
 
     if serve_ui:
         app.mount("/ui", StaticFiles(directory=Path(__file__).parent / "static", html=True), name="ui")
