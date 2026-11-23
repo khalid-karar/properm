@@ -1,0 +1,41 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+concurrency: { group: "ci-${{ github.ref }}", cancel-in-progress: true }
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13", cache: pip }
+      - run: pip install -r requirements.txt pytest-xdist ruff
+      - name: Lint
+        run: ruff check .
+      - name: Migrations apply on an empty database
+        run: DATABASE_URL=sqlite:///./ci_mig.db alembic upgrade head
+      - name: Tests (parallel)
+        run: python -m pytest -q -n auto
+        env: { PROPERM_SECRET: "ci-secret-ci-secret-ci-secret-1234567" }
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13", cache: pip }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: pip install -r requirements.txt
+      - name: Text keys (English and Arabic)
+        run: node tests/ui/i18n_audit.mjs
+      - name: JavaScript syntax
+        run: for f in $(find app/static/js -name '*.js'); do cp "$f" /tmp/x.mjs && node --check /tmp/x.mjs || exit 1; done
+      - name: Browser test
+        run: |
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+          PLAYWRIGHT_PATH="$PWD/node_modules/playwright/index.mjs" bash tests/ui/run.sh

@@ -1,0 +1,7 @@
+line-length = 200
+target-version = "py313"
+[lint]
+select = ["E9", "F", "B006", "B008"]
+ignore = ["F401", "F841", "B008"]          # imports kept for re-export in a few modules; FastAPI uses Depends() in defaults
+[lint.per-file-ignores]
+"tests/*" = ["F811", "F841"]       # pytest fixtures are imported by name

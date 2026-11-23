@@ -1,9 +1,10 @@
+import fs from "fs";
 import { createHmac } from "node:crypto";
 // End-to-end UI test against a freshly seeded demo server. Run with: bash tests/ui/run.sh
 // Needs Playwright (npm i playwright) and Chrome. Override with PLAYWRIGHT_PATH and CHROME_PATH.
 const { chromium } = await import(process.env.PLAYWRIGHT_PATH || "playwright");
 const BASE = (process.env.BASE_URL || "http://localhost:8765") + "/ui/";
-const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome", args: ["--no-sandbox"] });
+const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || (fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined), args: ["--no-sandbox"] });
 const problems = [];
 async function newPage(name) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
