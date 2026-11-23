@@ -310,3 +310,27 @@ def test_start_project_from_the_book(c, world):
     docs = c.get(f"/projects/{pid}/documents", headers=pm).json()
     assert [d["kind"] for d in docs] == ["tender_book"]
     assert c.get(f"/projects/{pid}/brief", headers=pm).json()[0]["id"] == ok.json()["draft_id"]
+
+
+def test_translation_needs_the_saudi_model(monkeypatch, c, world):
+    import json as _json
+
+    from app import ai
+    h = world["h"]
+    pid = c.post("/projects", headers=h["pm1"], json={"number": "TR-1", "name": "Tr", "state": "planning"}).json()["id"]
+    a = c.post(f"/projects/{pid}/brief/analyze", headers=h["pm1"], json={"text": AR_BOOK})
+    did = a.json()["draft_id"]
+    url = f"/projects/{pid}/brief/{did}/translate"
+    r = c.post(url, headers=h["pm1"], json={"target": "en"})
+    assert r.status_code == 200 and r.json()["status"] == "unavailable"                  # stub mode: nothing is translated, nothing is invented
+    assert "translations" not in c.get(f"/projects/{pid}/brief/{did}", headers=h["pm1"]).json()["draft"]
+    assert c.post(url, headers=h["pm1"], json={"target": "fr"}).status_code == 422
+    monkeypatch.setenv("PROPERM_AI_BASE_URL", "http://localhost:9999")
+    monkeypatch.setattr(ai, "_live", lambda task, payload, prompt: _json.dumps({"items": ["EN:" + x for x in _json.loads(prompt.splitlines()[-1])]}, ensure_ascii=False))
+    r = c.post(url, headers=h["pm1"], json={"target": "en"})
+    assert r.status_code == 200 and r.json()["status"] == "ok" and r.json()["translated"] > 5
+    d = c.get(f"/projects/{pid}/brief/{did}", headers=h["pm1"]).json()["draft"]
+    first = d["activities"][0]["name"]
+    assert d["translations"]["en"]["activities.0.name"] == {"src": first, "t": "EN:" + first}
+    monkeypatch.setattr(ai, "_live", lambda task, payload, prompt: '{"items": ["only one"]}')
+    assert c.post(url, headers=h["pm1"], json={"target": "en"}).status_code == 502

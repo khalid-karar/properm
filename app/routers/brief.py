@@ -552,3 +552,50 @@ def book_confirm(body: BookConfirm, db=Depends(get_db), user: User = Depends(req
     except HTTPException as e:                  # the project exists even if the reader is switched off or rate limited
         return {"project_id": p.id, "draft_id": None, "counts": {}, "warnings": [str(e.detail)]}
     return {"project_id": p.id, "draft_id": out["draft_id"], "counts": out["counts"], "warnings": out["warnings"]}
+
+
+# ---------------- translation of what was extracted ----------------
+TRANSLATABLE = {"phases": ("name",), "activities": ("name", "description"), "requirements": ("title", "text"), "deliverables": ("name", "description"),
+                "risks": ("title", "response"), "team": ("title",), "compliance": ("title",)}
+
+
+class TranslateIn(BaseModel):
+    target: str = Field(pattern="^(en|ar)$")
+
+
+@router.post("/projects/{pid}/brief/{did}/translate")
+def translate_draft(pid: int, did: int, body: TranslateIn, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE))):
+    """Translate the extracted text with the Saudi-hosted model. Without a live model nothing is translated and the original stays as the only text."""
+    p, d = _draft(db, user, pid, did)
+    st = ai.status()
+    if st["mode"] != "live" or st["blocked"]:
+        return {"status": "unavailable", "reason": "No Saudi-hosted language model is connected, so the extracted text is shown in the language of the book."}
+    out = copy.deepcopy(d.output)
+    items: list[tuple[str, str]] = []
+    for i, o in enumerate(out.get("objectives", [])):
+        if str(o).strip():
+            items.append((f"objectives.{i}", str(o)))
+    for sec, fields in TRANSLATABLE.items():
+        for i, row in enumerate(out.get(sec, [])):
+            for f in fields:
+                if str(row.get(f) or "").strip():
+                    items.append((f"{sec}.{i}.{f}", str(row[f])))
+    tr = out.setdefault("translations", {}).setdefault(body.target, {})
+    name = "English" if body.target == "en" else "Arabic"
+    try:
+        for k in range(0, len(items), 40):
+            chunk = items[k:k + 40]
+            prompt = (f"Translate each string into {name}. Keep numbers, codes and names. Return only JSON: {{\"items\": [\"...\"]}} with exactly {len(chunk)} strings in the same order.\n"
+                      + json.dumps([v for _, v in chunk], ensure_ascii=False))
+            data = ai.extract_json(ai._live("translate", {}, prompt))
+            res = data.get("items") if isinstance(data, dict) else None
+            if not isinstance(res, list) or len(res) != len(chunk):
+                raise ai.AiError(502, "The model returned a translation that does not match the text")
+            for (key, src), t_ in zip(chunk, res):
+                tr[key] = {"src": src, "t": str(t_)}
+    except ai.AiError as e:
+        raise HTTPException(502, getattr(e, "msg", None) or "Translation failed")
+    d.output = out
+    log(db, user.id, "brief.translated", "project", pid, {"draft_id": did, "target": body.target, "strings": len(items)})
+    db.commit()
+    return {"status": "ok", "translated": len(items), "translations": out["translations"]}

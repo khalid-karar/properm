@@ -1,6 +1,6 @@
 // Project "Brief" tab: upload the project book (Arabic or English; text, DOCX, PDF or scan), review what the AI read, then apply it as a plan.
 import { api, fileToB64 } from "../api.js";
-import { t } from "../i18n.js";
+import { getLang, t } from "../i18n.js";
 import { badge, errorBox, field, guarded, h, mount, num, stat, table, toast } from "../ui.js";
 
 const SECTIONS = ["requirements", "deliverables", "activities", "milestones", "risks", "compliance", "charter", "assumptions", "domains"];
@@ -60,7 +60,9 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
 
   // ---- editable lists: every item is a card with wrapped text boxes (Arabic reads right-to-left), plus add / delete ----
   const autosize = (el) => { if (!el.offsetParent) return; el.style.height = "auto"; el.style.height = Math.min(400, el.scrollHeight + 2) + "px"; };
-  const SPAN = { s: 2, m: 3, l: 6, xl: 12 };
+  // translation of an extracted field into the viewer's language (only shown while the original text is unchanged)
+  let TR = {};
+  const trLine = (key, value) => { const x = TR[key]; return x && x.src === value && x.t ? h("div", { class: "tr muted small", dir: "auto" }, "↳ ", x.t) : null; };
   function editList(dr, key, fields, blank, { title, addLabel, onChange } = {}) {
     const box = h("div", { class: "elist", id: `el-${key}` });
     const draw = () => {
@@ -84,7 +86,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
               inp.addEventListener("input", () => { it[k] = inp.value; autosize(inp); });
               requestAnimationFrame(() => autosize(inp));
             }
-            return h("label", { class: `f f-${size}` }, h("span", { class: "fl" }, t(lbl)), inp);
+            return h("label", { class: `f f-${size}` }, h("span", { class: "fl" }, t(lbl)), inp, kind === "num" || kind === "select" ? null : trLine(`${key}.${i}.${k}`, it[k] ?? ""));
           }),
           h("button", { class: "btn small danger del", type: "button", "aria-label": t("delete"), onClick: () => { items.splice(i, 1); onChange?.(); draw(); } }, t("delete")))));
     };
@@ -97,6 +99,9 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
   async function review(did) {
     const r = await api("GET", `/projects/${pid}/brief/${did}`);
     const dr = r.draft, st = { ...r.staffing };
+    const vl = getLang(), docLang = dr.meta.language === "ar" ? "ar" : "en";
+    TR = (dr.translations || {})[vl] || {};
+    const trBox = h("div", { id: "tr-box", class: "small" });
     const staff = dir.filter(u => ["STAFF", "PM"].includes(u.role) && u.active !== false);
     const start = h("input", { type: "date", id: "brief-start", value: String(r.start).slice(0, 10) });
     const chk = Object.fromEntries(SECTIONS.map(s => [s, h("input", { type: "checkbox", checked: true, id: `brief-sec-${s}` })]));
@@ -104,7 +109,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
     const aerr = h("div"), res = h("div", { id: "brief-result" });
     const assign = {};                                     // task code -> user id chosen by the reviewer (null = unassigned)
     (dr.activities || []).forEach(a => { assign[a.code] = (st[a.code] || {}).user_id || null; });
-    const stats = h("div", { class: "stats" });
+    const stats = h("div", { class: "grid" });
     const redrawStats = () => mount(stats, stat(t("requirements"), c("requirements")), stat(t("brief_deliverables"), c("deliverables")), stat(t("brief_tasks"), c("activities")),
       stat(t("brief_unassigned"), (dr.activities || []).filter(a => !assign[a.code]).length), stat(t("brief_phases"), c("phases")));
     redrawStats();
@@ -133,7 +138,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
             if (kind !== "num") { inp.value = a[k] ?? ""; requestAnimationFrame(() => autosize(inp)); }
             inp.setAttribute("aria-label", t(lbl));
             inp.addEventListener("input", () => { a[k] = kind === "num" ? Number(inp.value) : inp.value; if (kind !== "num") autosize(inp); });
-            return h("label", { class: `f f-${size}` }, h("span", { class: "fl" }, t(lbl)), inp);
+            return h("label", { class: `f f-${size}` }, h("span", { class: "fl" }, t(lbl)), inp, kind === "num" ? null : trLine(`activities.${i}.${k}`, a[k] ?? ""));
           };
           const ph = h("select", { "aria-label": t("brief_phase") }, ...phaseOpts(dr).slice(1).map(([v, txt]) => h("option", { value: v }, txt)));
           ph.value = String(a.phase);
@@ -157,6 +162,16 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
         mount(res, h("div", { class: "card ok" }, h("h3", {}, t("brief_applied")), table([t("type"), t("rows")], Object.entries(o.created || o).filter(([, v]) => typeof v === "number").map(([k, v]) => [k, num(v, 0)]))));
       } catch (e) { mount(aerr, errorBox(e)); }
     });
+    const trBanner = () => {
+      if (vl === docLang) return null;
+      const have = Object.keys(TR).length > 0;
+      return h("div", { class: "card", id: "tr-note", style: "margin:8px 0" }, h("p", { class: "small" }, have ? t("tr_have") : t("tr_none").replace("{lang}", docLang === "ar" ? "العربية" : "English")),
+        h("button", { class: "btn small secondary", type: "button", id: "tr-go", onClick: guarded(null, async () => {
+          const x = await api("POST", `/projects/${pid}/brief/${did}/translate`, { target: vl });
+          if (x.status !== "ok") { mount(trBox, h("p", { class: "warn" }, `${t("tr_unavailable")} ${x.reason || ""}`)); return; }
+          dr.translations = x.translations; TR = x.translations[vl] || {}; toast(t("tr_done")); await review(did);
+        }) }, t("tr_translate")), trBox);
+    };
     const PRI = () => [["must", t("brief_must")], ["should", t("brief_should")]];
     const sec = (id, titleKey, ...kids) => h("details", { class: "card sec", id, open: id === "sec-tasks" }, h("summary", {}, h("h3", { style: "display:inline" }, t(titleKey))), ...kids);
     out.addEventListener("toggle", (ev) => { if (ev.target.open) ev.target.querySelectorAll("textarea.ta").forEach(autosize); }, true);
@@ -164,7 +179,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
       h("div", { class: "card", id: "brief-review" }, h("h2", {}, dr.meta.name || t("brief_review")),
         h("p", { class: "muted small" }, `${dr.meta.language === "ar" ? "العربية" : "English"} · ${dr.meta.pages} p · ${dr.meta.source?.method || ""} · ${r.status}`),
         ...(dr.warnings || []).map(w => h("p", { class: "warn" }, w)), ...(dr.notes || []).map(w => h("p", { class: "muted small" }, w)),
-        stats, h("p", { class: "muted small" }, t("brief_edit_hint")), h("p", { class: "muted small" }, (dr.assumptions || []).join(" "))),
+        trBanner(), stats, h("p", { class: "muted small" }, t("brief_edit_hint")), h("p", { class: "muted small" }, (dr.assumptions || []).join(" "))),
       sec("sec-phases", "brief_phases", editList(dr, "phases", [["name", "name", "l", "text"], ["start_month", "brief_from_month", "s", "num"], ["end_month", "brief_to_month", "s", "num"]],
         (items) => ({ n: Math.max(0, ...items.map(x => x.n)) + 1, name: "", start_month: 0, end_month: 1, months: 1, source_page: null }), { title: t("brief_phases"), addLabel: t("brief_add_phase"), onChange: () => { (dr.phases || []).forEach(p => { p.months = Math.max(1, (p.end_month || 0) - (p.start_month || 0)); }); redrawStats(); } })),
       sec("sec-tasks", "brief_tasks", taskBox),

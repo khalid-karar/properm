@@ -499,6 +499,19 @@ await step("start a project from the book: preview, confirm, land on the draft p
   await q.waitForSelector("#brief-review", { timeout: 20000 });
 });
 
+await step("arabic book viewed in English: shows the original and says it is not translated", async () => {
+  const q = await newPage("trbanner"); await login(q, "pmo1");
+  const pid = await q.evaluate(async () => {
+    const tok = JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage)[0])).token;
+    const H = { "Content-Type": "application/json", Authorization: "Bearer " + tok };
+    const r = await (await fetch("/projects", { method: "POST", headers: H, body: JSON.stringify({ number: "TR-UI-1", name: "Tr", state: "planning", planned_start: "2027-01-03", planned_end: "2027-06-30" }) })).json();
+    await fetch(`/projects/${r.id}/brief/analyze`, { method: "POST", headers: H, body: JSON.stringify({ text: "نطاق العمل\nالمرحلة الأولى: الاكتشاف (شهران)\n1. حصر الأنظمة ومصادر البيانات\n2. إعداد مخطط تدفق البيانات\nمخرجات المرحلة الأولى: سجل البيانات، تقرير الاكتشاف.\nالمرحلة الثانية: البناء (3 أشهر)\n1. إعداد المنصة\n2. بناء مسارات البيانات\nيجب على المقاول التسليم خلال 5 أشهر." }) });
+    return r.id;
+  });
+  await q.goto(BASE + "#/projects/" + pid); await tab(q, "Plan draft"); await q.waitForSelector("#tr-note");
+  await q.click("#tr-go"); await q.waitForSelector("#tr-box .warn:has-text('Not translated')");
+});
+
 await step("project book: paste, analyse, review, apply as a plan", async () => {
   const pid = await p.evaluate(async () => {
     const tok = JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage)[0])).token;
