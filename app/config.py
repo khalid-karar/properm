@@ -30,6 +30,8 @@ DEFAULT_PARAMS = {
     "spi_warning": 0.9, "spi_critical": 0.8,
     "slip_tolerance_days": 7,       # overdue activity: warning beyond this, critical beyond 3x
     "risk_score_warning": 15, "risk_score_critical": 20,
+    "ai_enabled": 1.0,              # 1 = AI assistant on, 0 = off for everyone
+    "ai_hourly_limit": 30.0,        # AI requests per person per hour
     "alert_cooldown_days": 7,       # a dismissed alert is not re-raised within this many days
 }
 

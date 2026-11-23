@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from .. import ai
 from ..audit import log
-from ..deps import current_user, get_db, require_roles
+from ..deps import current_user, get_db, get_params, require_roles
 from ..models import Activity, AiDraft, Alert, Project, User
 from .alerts import _visible
 from .exports import project_summary
@@ -14,7 +14,6 @@ from .projects import ActivityIn, add_activity, can_manage, can_view_cost, get_p
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 MANAGE = ("PM", "PMO", "ADMIN")
-HOURLY_LIMIT = 30
 
 
 def d_out(d: AiDraft) -> dict:
@@ -23,8 +22,11 @@ def d_out(d: AiDraft) -> dict:
 
 
 def _run(db, user: User, task: str, payload: dict, kind: str, project_id=None, alert_id=None, input_text=None) -> AiDraft:
+    params = get_params(db)
+    if not params["ai_enabled"]:
+        raise HTTPException(403, "The AI assistant is switched off by the administrator")
     since = datetime.now(timezone.utc) - timedelta(hours=1)
-    if db.query(AiDraft).filter(AiDraft.created_by == user.id, AiDraft.created_at >= since).count() >= HOURLY_LIMIT:
+    if db.query(AiDraft).filter(AiDraft.created_by == user.id, AiDraft.created_at >= since).count() >= int(params["ai_hourly_limit"]):
         raise HTTPException(429, "AI request limit reached for this hour")
     st = ai.status()
     try:
@@ -42,8 +44,8 @@ def _run(db, user: User, task: str, payload: dict, kind: str, project_id=None, a
 
 
 @router.get("/status")
-def ai_status(user: User = Depends(current_user)):
-    return ai.status()
+def ai_status(db=Depends(get_db), user: User = Depends(current_user)):
+    return {**ai.status(), "enabled": bool(get_params(db)["ai_enabled"])}
 
 
 class PlanIn(BaseModel):

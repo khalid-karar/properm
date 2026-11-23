@@ -8,7 +8,8 @@ from sqlalchemy import func
 from .. import rules
 from ..workcal import effective_capacity, non_working_reason
 from ..audit import emit, log
-from ..config import NON_PROJECT_CODES, WEEK_STARTS_ON_SUNDAY
+from ..config import WEEK_STARTS_ON_SUNDAY
+from ..lists import active_codes
 from ..deps import current_user, get_db, get_params, get_severities, require_roles
 from ..models import (Activity, ActivityStaffLimit, Assignment, PeriodLock, Project, RuleViolation,
                       TimesheetEntry, User)
@@ -84,7 +85,7 @@ def build_ctx(db, user: User, d: EntryIn, exclude_id: int | None, today: date) -
     ctx.exact_duplicate = db.query(dup.exists()).scalar()
 
     if d.code:
-        ctx.is_nonproject, ctx.code_valid, ctx.is_leave = True, d.code in NON_PROJECT_CODES, d.code == "LEAVE"
+        ctx.is_nonproject, ctx.code_valid, ctx.is_leave = True, d.code in active_codes(db), d.code == "LEAVE"
         return ctx
     p = db.get(Project, d.project_id)
     a = db.get(Activity, d.activity_id)

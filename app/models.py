@@ -485,3 +485,15 @@ class Snapshot(Base):
     spi: Mapped[float | None] = mapped_column(Float, nullable=True)
     open_risks: Mapped[int] = mapped_column(Integer, default=0)
     open_alerts: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ConfigItem(Base):
+    """Administrator-maintained list entries (non-project codes, risk categories, KPI templates, closure items)."""
+    __tablename__ = "config_items"
+    __table_args__ = (UniqueConstraint("list_key", "code"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    list_key: Mapped[str] = mapped_column(String(30))
+    code: Mapped[str] = mapped_column(String(40))
+    label: Mapped[str] = mapped_column(String(200))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    data: Mapped[dict] = mapped_column(JSON, default=dict)

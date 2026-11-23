@@ -76,6 +76,13 @@ await step("admin cannot deactivate self from the UI", async () => {
 });
 
 
+await step("config page: add a risk category, AI admin test", async () => {
+  await p.goto(BASE + "#/config"); await p.waitForSelector("h2:has-text('AI administration')"); await p.waitForSelector("h2:has-text('Risk categories')");
+  const rc = p.locator(".card:has(h2:has-text('Risk categories'))");
+  await rc.locator("label:has-text('Code') input").fill("Legal"); await rc.locator("label:has-text('Name') input").fill("Legal"); await rc.locator("button:has-text('Add')").click(); await rc.locator("td:has-text('Legal')").first().waitFor();
+  await p.click("button:has-text('Test connection')"); await p.waitForSelector(".ok:has-text('Model answered')");
+});
+
 p = await newPage("staff"); await login(p, "s1");
 await step("staff sees change tab w/o cost, no allocations tab", async () => {
   await p.goto(BASE + "#/projects/1").catch(() => {});
@@ -127,12 +134,13 @@ await step("details tab: edit client, add stakeholder", async () => {
   await p.fill("label:has-text('Client') input", "Ministry X"); await Promise.all([p.waitForResponse(r => r.request().method() === "PATCH" && r.url().endsWith("/projects/1")), p.locator(".card:has(h2:has-text('Project details')) button:has-text('Save')").click()]);
   await p.goto(BASE + "#/projects/1"); await tab(p, "Details"); await p.waitForSelector("label:has-text('Client') input");
   if ((await p.inputValue("label:has-text('Client') input")) !== "Ministry X") throw new Error("client not saved");
-  const sc = p.locator(".card:has(h2:has-text('Stakeholders'))"); await sc.locator("label:has-text('Name') input").first().fill("Dr Salem"); await sc.locator("button:has-text('Add')").click(); await p.waitForSelector("td:has-text('Dr Salem')");
+  const sc = p.locator(".card:has(h2:has-text('Stakeholders'))"); await sc.getByLabel("Name", { exact: true }).fill("Dr Khalid Test"); await sc.locator("button:has-text('Add')").click(); await sc.locator("td:has-text('Dr Khalid Test')").waitFor();
 });
 await step("plan tab: milestone and KPI", async () => {
   await p.goto(BASE + "#/projects/1"); await tab(p, "Plan"); await p.waitForSelector("h2:has-text('Milestones')");
-  await p.fill("label:has-text('Name') >> nth=0 >> input", "Go-live"); await p.fill("label:has-text('Due date') input", "2027-03-01"); await p.click("button:has-text('Add') >> nth=0"); await p.waitForSelector("td:has-text('Go-live')");
-  await p.fill("label:has-text('Name') >> nth=1 >> input", "Uptime"); await p.fill("label:has-text('Target') input", "99"); await p.click("button:has-text('Add') >> nth=1"); await p.waitForSelector("td:has-text('Uptime')");
+  const mc = p.locator(".card:has(h2:has-text('Milestones'))"), kc = p.locator(".card:has(h2:has-text('KPIs'))");
+  await mc.locator("label:has-text('Name') input").fill("Handover"); await mc.locator("label:has-text('Due date') input").fill("2027-03-01"); await mc.locator("button:has-text('Add')").click(); await mc.locator("td:has-text('Handover')").waitFor();
+  await kc.locator("label:has-text('Name') input").fill("Uptime"); await kc.locator("label:has-text('Target') input").fill("99"); await kc.locator("button:has-text('Add')").click(); await kc.locator("td:has-text('Uptime')").waitFor();
 });
 
 p = await newPage("audit"); await login(p, "pmo1");

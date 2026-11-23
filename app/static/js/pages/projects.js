@@ -166,9 +166,9 @@ async function detail(root, me, pid) {
       h("p", {}, badge(c.ready ? t("closure_ready") : t("closure_not_ready"), c.ready ? "GREEN" : "AMBER")),
       table(["", t("closure"), t("note")], c.items.map(i => [
         i.auto ? h("span", { title: t("system_checked") }, i.satisfied ? "✓" : "✗")
-          : h("input", { type: "checkbox", checked: i.done, disabled: !editable, "aria-label": t(`ci_${i.key}`),
+          : h("input", { type: "checkbox", checked: i.done, disabled: !editable, "aria-label": i.label || t(`ci_${i.key}`),
             onChange: guarded(null, async (e) => { await api("PUT", `/projects/${pid}/closure/${i.key}`, { done: e.target.checked }); await render(); }) }),
-        h("span", {}, t(`ci_${i.key}`), i.auto ? h("span", { class: "muted" }, ` (${t("system_checked")})`) : null),
+        h("span", {}, i.label || t(`ci_${i.key}`), i.auto ? h("span", { class: "muted" }, ` (${t("system_checked")})`) : null),
         i.detail || i.note || ""]), t("none"))));
   }
 
@@ -217,17 +217,18 @@ async function detail(root, me, pid) {
   }
 
   async function risks(body, p) {
-    const [rs, is] = await Promise.all([api("GET", `/projects/${pid}/risks`), api("GET", `/projects/${pid}/issues`)]);
+    const [rs, is, lists] = await Promise.all([api("GET", `/projects/${pid}/risks`), api("GET", `/projects/${pid}/issues`), api("GET", "/config/lists")]);
+    const rcat = h("select", {}, h("option", { value: "" }, "—"), lists.risk_category.map(x => h("option", { value: x.code }, x.label)));
     const rt = h("input"), rp = h("input", { type: "number", min: "1", max: "5", value: "3", style: "width:70px" }), ri = h("input", { type: "number", min: "1", max: "5", value: "3", style: "width:70px" });
     const it = h("input"), isv = h("select", {}, ["low", "medium", "high", "critical"].map(s => h("option", { value: s }, st(s)))), idue = h("input", { type: "date" });
     const err = h("div");
     const addR = h("button", { class: "btn", type: "button" }, t("add_risk")), addI = h("button", { class: "btn", type: "button" }, t("add_issue"));
-    addR.addEventListener("click", guarded(addR, async () => { mount(err); try { await api("POST", `/projects/${pid}/risks`, { title: rt.value.trim(), probability: Number(rp.value), impact: Number(ri.value) }); await render(); } catch (e) { mount(err, errorBox(e)); } }));
+    addR.addEventListener("click", guarded(addR, async () => { mount(err); try { await api("POST", `/projects/${pid}/risks`, { title: rt.value.trim(), probability: Number(rp.value), impact: Number(ri.value), category: rcat.value || null }); await render(); } catch (e) { mount(err, errorBox(e)); } }));
     addI.addEventListener("click", guarded(addI, async () => { mount(err); try { await api("POST", `/projects/${pid}/issues`, { title: it.value.trim(), severity: isv.value, due_date: idue.value || null }); await render(); } catch (e) { mount(err, errorBox(e)); } }));
     const statusSel = (kind, item, options) => canManage ? h("select", { value: item.status, onChange: guarded(null, async (ev) => { await api("PATCH", `/projects/${pid}/${kind}/${item.id}`, { status: ev.target.value }); await render(); }) }, options.map(o => h("option", { value: o }, st(o)))) : st(item.status);
     mount(body,
-      h("div", { class: "card" }, h("h2", {}, t("risks")), table([t("title"), t("probability"), t("impact"), t("score"), t("status")], rs.map(r => [r.title, r.probability, r.impact, badge(r.score, r.score >= 20 ? "critical" : r.score >= 15 ? "warning" : "info"), statusSel("risks", r, ["open", "mitigating", "occurred", "closed"])]), t("none")),
-        canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("title"), rt), field(t("probability"), rp), field(t("impact"), ri), addR) : null),
+      h("div", { class: "card" }, h("h2", {}, t("risks")), table([t("title"), t("category"), t("probability"), t("impact"), t("score"), t("status")], rs.map(r => [r.title, r.category || "—", r.probability, r.impact, badge(r.score, r.score >= 20 ? "critical" : r.score >= 15 ? "warning" : "info"), statusSel("risks", r, ["open", "mitigating", "occurred", "closed"])]), t("none")),
+        canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("title"), rt), field(t("category"), rcat), field(t("probability"), rp), field(t("impact"), ri), addR) : null),
       h("div", { class: "card" }, h("h2", {}, t("issues")), table([t("title"), t("severity"), t("due_date"), t("status")], is.map(i => [i.title, badge(st(i.severity), i.severity === "critical" ? "critical" : i.severity === "high" ? "warning" : "info"), i.due_date || "—", statusSel("issues", i, ["open", "in_progress", "resolved", "closed"])]), t("none")),
         canManage ? h("div", { class: "row", style: "margin-top:12px" }, field(t("title"), it), field(t("severity"), isv), field(t("due_date"), idue), addI) : null), err);
   }

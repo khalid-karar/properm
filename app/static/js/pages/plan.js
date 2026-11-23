@@ -10,6 +10,7 @@ export async function plan(body, p, { pid, dir, canManage, render }) {
   const byId = Object.fromEntries(dir.map(u => [u.id, u]));
   const acts = p.activities.filter(a => a.phase === "execution");
   const editable = canManage && p.state !== "archived";
+  const tpl = (await api("GET", "/config/lists")).kpi_template;
   const [ms, kpis, deps, limits] = await Promise.all([
     api("GET", `/projects/${pid}/milestones`), api("GET", `/projects/${pid}/kpis`), api("GET", `/projects/${pid}/dependencies`),
     canManage ? api("GET", `/projects/${pid}/limits`) : [],
@@ -33,6 +34,8 @@ export async function plan(body, p, { pid, dir, canManage, render }) {
 
   // KPIs
   const k = { name: h("input"), unit: h("input", { style: "width:80px" }), target: h("input", { type: "number", step: "any", style: "width:110px" }), hib: h("select", {}, h("option", { value: "1" }, t("higher_better")), h("option", { value: "0" }, t("lower_better"))) };
+  const tsel = h("select", { onChange: () => { const x = tpl.find(y => y.code === tsel.value); if (x) { k.name.value = x.label; k.unit.value = x.data.unit || ""; k.hib.value = x.data.higher_is_better === false ? "0" : "1"; } } },
+    h("option", { value: "" }, t("from_template")), tpl.map(x => h("option", { value: x.code }, x.label)));
   const kcard = h("div", { class: "card" }, h("h2", {}, t("kpis")),
     table([t("name"), t("target"), t("actual"), t("achievement"), t("kpi_status"), ""], kpis.map(x => {
       const inp = h("input", { type: "number", step: "any", value: x.actual ?? "", style: "width:100px" });
@@ -40,7 +43,7 @@ export async function plan(body, p, { pid, dir, canManage, render }) {
         x.achievement_pct != null ? h("div", { style: "min-width:90px" }, `${x.achievement_pct}%`, bar(x.achievement_pct, x.rag === "red")) : "—", x.rag ? badge(RAG[x.rag], RAG[x.rag]) : "—",
         editable ? delBtn(async () => { await api("DELETE", `/projects/${pid}/kpis/${x.id}`); await render(); }) : ""];
     }), t("none")),
-    editable ? form([field(t("name"), k.name), field(t("unit"), k.unit), field(t("target"), k.target), field(t("direction"), k.hib)],
+    editable ? form([field(t("template"), tsel), field(t("name"), k.name), field(t("unit"), k.unit), field(t("target"), k.target), field(t("direction"), k.hib)],
       () => api("POST", `/projects/${pid}/kpis`, { name: k.name.value.trim(), unit: k.unit.value.trim() || null, target: Number(k.target.value), higher_is_better: k.hib.value === "1" })) : null);
 
   // dependencies

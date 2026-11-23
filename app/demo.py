@@ -86,6 +86,23 @@ def seed(app, pw, c):
     ok(c.post(f"/projects/{b_pid}/benefits", headers=pm, json={"title": "Single source of truth for reporting", "metric": "Manual reports per month", "unit": "reports", "baseline": 40, "target": 10, "due_date": d(150)}))
     ok(c.post("/calendar/holidays", headers=pmo, json={"day": d(30), "name": "Demo public holiday"}))
     ok(c.post("/alerts/evaluate", headers=pmo))
+    # plan depth and intake examples on ALPHA-01
+    ok(c.patch(f"/projects/{a_pid}", headers=pm, json={"client": "Ministry of Digital Services", "sponsor": "Dr. Salem Al-Otaibi", "scope_statement": "Replace the legacy finance system with the new ERP across all departments."}))
+    ok(c.post(f"/projects/{a_pid}/stakeholders", headers=pm, json={"name": "Dr. Salem Al-Otaibi", "organisation": "Ministry", "role": "Sponsor", "power": 5, "interest": 4, "engagement": "Monthly steering meeting"}))
+    ok(c.post(f"/projects/{a_pid}/milestones", headers=pm, json={"name": "Design sign-off", "due_date": d(-20)}))
+    ok(c.post(f"/projects/{a_pid}/milestones", headers=pm, json={"name": "Go-live", "due_date": d(55)}))
+    ms = c.get(f"/projects/{a_pid}/milestones", headers=pm).json()
+    ok(c.patch(f"/projects/{a_pid}/milestones/{ms[0]['id']}", headers=pm, json={"achieved_on": d(-18)}))
+    k = ok(c.post(f"/projects/{a_pid}/kpis", headers=pm, json={"name": "On-time delivery", "unit": "%", "target": 95}))
+    ok(c.put(f"/projects/{a_pid}/kpis/{k['id']}/actual", headers=pm, json={"actual": 88}))
+    # a few weeks of history so the trend charts have something to show
+    with app.state.Session() as db:
+        from datetime import date as _d, timedelta as _td
+        from .models import Snapshot
+        for w in range(8, 0, -1):
+            db.add(Snapshot(project_id=a_pid, snap_date=_d.today() - _td(days=7 * w), rag="GREEN" if w > 3 else "AMBER", progress_pct=round(45 - 5 * w, 1) if w < 8 else 0.0,
+                            cpi=round(1.1 - 0.02 * w, 2), spi=round(0.85 + 0.02 * w, 2), open_risks=1, open_alerts=0 if w > 3 else 1))
+        db.commit()
     print("Demo data ready. Users: admin, pm1, pmo1, dm1, s1, s2, s3 (all with the demo password).")
 
 

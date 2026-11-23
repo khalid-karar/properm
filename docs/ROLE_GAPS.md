@@ -100,3 +100,8 @@ Can: users (create, edit, deactivate, reset password, CCB flag, grade, capacity,
 5. My to-do page and approvals improvements (X1, P10, S1).
 6. Monthly/quarterly reports and PDF/Excel export (O7, O9).
 7. Admin configuration and AI administration (A4, A6).
+
+
+## Status after the 2026-11-23 build-out
+Done: S1, S2 (project breakdown), S4 (cap hints), P1, P2, P3 (milestones, KPIs, dependencies only), P4, P5, P9, P10, P13 (delegate in Admin), O1, O2, O3, O7, O9 (Excel and print/PDF), D1, D2, D3, A1 (future rates removable; history stays append-only by design), A2, A4, A6 (project types stay fixed on purpose), X1, X2.
+Still open: S3, S5-S7, P6-P8, P11, P12, P14, O4-O6, O8, O10, D4-D8, G1-G3, A3, A5, A7, A8, X3-X5, and the other plan domains (quality, communication, procurement).

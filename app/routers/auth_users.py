@@ -89,9 +89,9 @@ def directory(db=Depends(get_db), _: User = Depends(current_user)):
 
 
 @router.get("/config/codes")
-def codes(_: User = Depends(current_user)):
-    from ..config import NON_PROJECT_CODES
-    return NON_PROJECT_CODES
+def codes(db=Depends(get_db), _: User = Depends(current_user)):
+    from ..lists import active_codes
+    return active_codes(db)
 
 
 @router.post("/users", status_code=201)

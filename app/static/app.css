@@ -101,6 +101,7 @@ td input,td select{padding:6px 8px}
 /* ---------- messages ---------- */
 .err{background:var(--red-s);border:1px solid #fecdca;color:#912018;padding:10px 14px;border-radius:var(--radius-s);margin:10px 0}
 .warn{background:var(--amber-s);border:1px solid #fedf89;color:#93370d;padding:10px 14px;border-radius:var(--radius-s);margin:10px 0}
+.ok{background:var(--green-s);border:1px solid #abefc6;color:#05603a;padding:10px 14px;border-radius:var(--radius-s);margin:10px 0}
 .err ul,.warn ul{margin:4px 0 0;padding-inline-start:18px}
 
 /* ---------- tabs ---------- */

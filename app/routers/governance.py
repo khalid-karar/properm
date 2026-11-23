@@ -8,6 +8,7 @@ from sqlalchemy import func
 from ..alerts import rag_status
 from ..audit import emit, log
 from ..config import CLOSURE_ITEMS
+from ..lists import active as active_list
 from ..deps import current_user, get_db, require_roles
 from ..evm import compute_evm
 from ..models import Benefit, ClosureItem, CostEntry, Holiday, Issue, Program, Project, TimesheetEntry, User
@@ -26,6 +27,9 @@ def ensure_closure_items(db, pid: int) -> None:
     for key, _auto in CLOSURE_ITEMS:
         if key not in have:
             db.add(ClosureItem(project_id=pid, key=key))
+    for x in active_list(db, "closure_item"):
+        if f"x:{x['code']}" not in have:
+            db.add(ClosureItem(project_id=pid, key=f"x:{x['code']}"))
     db.flush()
 
 
@@ -42,14 +46,17 @@ def _auto_check(db, pid: int, key: str) -> tuple[bool, str]:
 def closure_status(db, pid: int) -> list[dict]:
     ensure_closure_items(db, pid)
     auto = dict(CLOSURE_ITEMS)
+    custom = {f"x:{x['code']}": x["label"] for x in active_list(db, "closure_item")}
     out = []
     for i in db.query(ClosureItem).filter_by(project_id=pid).order_by(ClosureItem.id):
+        if i.key.startswith("x:") and i.key not in custom:
+            continue                                   # switched off by the administrator
         if auto.get(i.key):
             ok, detail = _auto_check(db, pid, i.key)
             out.append({"key": i.key, "auto": True, "satisfied": ok, "done": ok, "detail": detail, "note": i.note})
         else:
             out.append({"key": i.key, "auto": False, "satisfied": i.done, "done": i.done, "done_by": i.done_by,
-                        "done_at": i.done_at, "note": i.note})
+                        "done_at": i.done_at, "note": i.note, **({"label": custom[i.key]} if i.key in custom else {})})
     return out
 
 
@@ -77,9 +84,9 @@ def set_closure(pid: int, key: str, body: ClosureIn, db=Depends(get_db), user: U
     if p.state != "closing":
         raise HTTPException(409, "Closure items can be changed while the project is closing")
     auto = dict(CLOSURE_ITEMS)
-    if key not in auto:
+    if key not in auto and not (key.startswith("x:") and key[2:] in {x["code"] for x in active_list(db, "closure_item")}):
         raise HTTPException(404, "Unknown closure item")
-    if auto[key]:
+    if auto.get(key):
         raise HTTPException(409, "This item is checked by the system, not ticked by hand")
     ensure_closure_items(db, pid)
     it = db.query(ClosureItem).filter_by(project_id=pid, key=key).one()

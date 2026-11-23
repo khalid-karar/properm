@@ -207,6 +207,90 @@
       ]
     },
     {
+      "en": "Project intake and plan depth",
+      "ar": "استلام المشروع وعمق الخطة",
+      "subs": [
+        {
+          "en": "Client, sponsor, scope, documents, stakeholders, team and manager reassignment",
+          "ar": "العميل والراعي والنطاق والمستندات وأصحاب المصلحة والفريق وإعادة تعيين المدير",
+          "s": "done"
+        },
+        {
+          "en": "Edit and delete activities in planning",
+          "ar": "تعديل الأنشطة وحذفها في مرحلة التخطيط",
+          "s": "done"
+        },
+        {
+          "en": "Milestones, KPIs, dependencies and per-person activity limits",
+          "ar": "المراحل ومؤشرات الأداء والاعتمادية وحدود الساعات لكل شخص",
+          "s": "done"
+        }
+      ]
+    },
+    {
+      "en": "Oversight and insight",
+      "ar": "الرقابة والرؤية",
+      "subs": [
+        {
+          "en": "Audit log viewer and period lock screen",
+          "ar": "عرض سجل التدقيق وشاشة إقفال الفترة",
+          "s": "done"
+        },
+        {
+          "en": "Charts: S-curve, CPI/SPI trend, heat map, hours vs plan",
+          "ar": "الرسوم: منحنى S واتجاه CPI/SPI وخريطة المخاطر والساعات مقابل الخطة",
+          "s": "done"
+        },
+        {
+          "en": "Executive summary and decision queue",
+          "ar": "الملخص التنفيذي وقائمة القرارات",
+          "s": "done"
+        }
+      ]
+    },
+    {
+      "en": "Daily work",
+      "ar": "العمل اليومي",
+      "subs": [
+        {
+          "en": "My to-do page",
+          "ar": "صفحة مهامي",
+          "s": "done"
+        },
+        {
+          "en": "Approvals: filters, bulk approve, decision history",
+          "ar": "الموافقات: تصفية واعتماد جماعي وسجل القرارات",
+          "s": "done"
+        },
+        {
+          "en": "Withdraw an entry, activity cap hints, weekly project breakdown",
+          "ar": "سحب إدخال وتلميحات حد النشاط وتوزيع الأسبوع حسب المشروع",
+          "s": "done"
+        }
+      ]
+    },
+    {
+      "en": "Reporting and configuration",
+      "ar": "التقارير والإعدادات",
+      "subs": [
+        {
+          "en": "Monthly, quarterly and annual reports with Excel, CSV and print/PDF",
+          "ar": "تقارير شهرية وربع سنوية وسنوية مع Excel وCSV وطباعة/PDF",
+          "s": "done"
+        },
+        {
+          "en": "Configurable lists (time codes, risk categories, KPI library, closure items)",
+          "ar": "قوائم قابلة للضبط (رموز الوقت وفئات المخاطر ومكتبة المؤشرات وبنود الإقفال)",
+          "s": "done"
+        },
+        {
+          "en": "AI administration (status, on/off, limit, connection test, usage)",
+          "ar": "إدارة الذكاء الاصطناعي (الحالة والتشغيل والحد واختبار الاتصال والاستخدام)",
+          "s": "done"
+        }
+      ]
+    },
+    {
       "en": "Production readiness",
       "ar": "الجاهزية للإنتاج",
       "subs": [
