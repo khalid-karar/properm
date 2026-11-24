@@ -18,7 +18,7 @@ export async function usageCard() {
         tenantsLoaded = true;
         for (const x of u.by_tenant || []) if (x.tenant_id != null) tenant.append(h("option", { value: x.tenant_id }, x.name));
       }
-      const max = Math.max(1, ...(u.by_tenant || []).map(x => x.cost));
+      const max = Math.max(1e-9, ...(u.by_tenant || []).map(x => x.cost));
       mount(body,
         h("div", { class: "grid" }, stat(t("usage_month"), sar(u.month.cost)), stat(t("usage_forecast"), sar(u.month.forecast)),
           stat(`${t("usage_period")} (${u.days} ${t("usage_days")})`, sar(u.total.cost)), stat(t("usage_calls"), num(u.total.calls, 0)),
