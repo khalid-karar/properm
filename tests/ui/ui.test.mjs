@@ -55,7 +55,12 @@ await step("baseline version bumped & change shows approved", async () => { awai
 await step("resource load page", async () => { await p.goto(BASE + "#/load"); await p.waitForSelector("td:has-text('45')"); await p.waitForSelector(".badge:has-text('Over-allocated')"); await shot(p, "14-load"); });
 
 p = await newPage("login"); 
-await step("login page shows build timeline", async () => { await p.goto(BASE); await p.waitForSelector(".timeline .light.done"); if (!(await p.locator(".timeline details.ms").count())) throw new Error("no milestones"); });
+await step("login page: build progress needs the password", async () => {
+  await p.goto(BASE); await p.waitForSelector("#ms-password");
+  if (await p.locator(".timeline details.ms").count()) throw new Error("milestones visible before the password");
+  await p.fill("#ms-password", "ui-build-pass"); await p.click("#ms-open");
+  await p.waitForSelector(".timeline .light.done"); if (!(await p.locator(".timeline details.ms").count())) throw new Error("no milestones");
+});
 
 p = await newPage("admin"); await login(p, "admin");
 await step("admin edits a user", async () => {
