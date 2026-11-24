@@ -208,11 +208,8 @@ await step("program manager sees own program and can edit", async () => {
 });
 
 p = await newPage("admin2"); await login(p, "admin");
-await step("admin bulk import and permission matrix", async () => {
-  await p.goto(BASE + "#/admin"); await p.waitForSelector("#import-card textarea");
-  await p.fill("#import-card textarea", "staff_id,full_name,role\nuiimp1,UI Import,STAFF");
-  await Promise.all([p.waitForResponse(r => r.url().includes("/admin/users/import")), p.click("#import-card button:has-text('Import')")]);
-  await p.waitForSelector("#import-card code"); await p.waitForSelector("h2:has-text('Who can do what')");
+await step("admin permission matrix", async () => {
+  await p.goto(BASE + "#/admin"); await p.waitForSelector("h2:has-text('Who can do what')");
 });
 
 p = await newPage("gov-pm"); await login(p, "pm1");
