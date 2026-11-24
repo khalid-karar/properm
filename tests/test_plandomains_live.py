@@ -108,3 +108,22 @@ def test_offline_domains_are_rules_and_unchanged(c, world):
     r = c.post(f"/projects/{pid}/brief/analyze", headers=h["pm1"], json={"text": AR_BOOK})
     d = c.get(f"/projects/{pid}/brief/{r.json()['draft_id']}", headers=h["pm1"]).json()["draft"]
     assert all(v["by"] == "rules" for v in d["domains"].values())
+
+
+def test_progress_is_reported_and_private(monkeypatch, c, world):
+    monkeypatch.setenv("PROPERM_AI_BASE_URL", "http://localhost:9999")
+    r0 = result(AR_BOOK)
+
+    def fake(task, payload, prompt, cfg=None):
+        if "drafting one part of a project plan" in prompt:
+            return json.dumps(good(next(n for n in plandomains.DOMAINS if plandomains.ASK[n] in prompt), r0))
+        return "not json"
+    monkeypatch.setattr(ai, "_live", fake)
+    h = world["h"]
+    pid = c.post("/projects", headers=h["pm1"], json={"number": "D-9", "name": "Progress", "state": "planning"}).json()["id"]
+    assert c.get("/project-intake/progress/abc123", headers=h["pm1"]).status_code == 404
+    r = c.post(f"/projects/{pid}/brief/analyze", headers={**h["pm1"], "X-Progress-Id": "abc123"}, json={"text": AR_BOOK})
+    assert r.status_code == 201, r.text
+    j = c.get("/project-intake/progress/abc123", headers=h["pm1"]).json()
+    assert j["pct"] == 100 and j["step"] == "done"
+    assert c.get("/project-intake/progress/abc123", headers=h["pmo1"]).status_code == 404     # another user cannot see it

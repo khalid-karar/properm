@@ -433,3 +433,9 @@ details.dom{background:color-mix(in srgb,var(--text) 3%,var(--card));border-colo
 details.dom[open]>summary,details.sec[open]>summary{border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:8px}
 details.dom>summary:hover,details.sec>summary:hover{color:var(--accent,#C9A24B)}
 details.sec{background:color-mix(in srgb,var(--text) 2%,var(--card));border-color:color-mix(in srgb,var(--text) 16%,var(--card));border-inline-start:4px solid var(--navy,#101828)}
+
+/* progress box for long AI jobs */
+.prog{margin:12px 0;display:flex;flex-direction:column;gap:10px;border-inline-start:4px solid var(--accent,#C9A24B)}
+.prog .bar{height:14px}
+.prog .bar>span{transition:width .6s ease}
+.prog-msg{font-weight:600}

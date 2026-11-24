@@ -162,13 +162,20 @@ def validate(name: str, items, result: dict) -> list[dict]:
     return cleaned
 
 
-def generate_live(result: dict, run) -> tuple[dict, list[str]]:
+def generate_live(result: dict, run, on_done=None) -> tuple[dict, list[str]]:
     """Rules build the baseline for every domain; then each domain gets its own model call (all six run in parallel). A domain whose reply is cut off, not JSON,
-    or fails validation keeps the rules version, and a note says so. `run(prompt) -> reply text`."""
+    or fails validation keeps the rules version, and a note says so. `run(prompt) -> reply text`. `on_done(name)` is called as each domain finishes (from a worker thread)."""
     from . import ai
     doms = generate(result)
 
     def one(name):
+        try:
+            return _one(name)
+        finally:
+            if on_done:
+                on_done(name)
+
+    def _one(name):
         try:
             data = ai.extract_json(run(domain_prompt(name, result)))
             items = validate(name, data.get("items") if isinstance(data, dict) else None, result)

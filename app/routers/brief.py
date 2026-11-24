@@ -7,10 +7,10 @@ import re
 from datetime import date, datetime, timedelta, timezone
 from math import ceil
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from .. import ai, brief, docread, plandomains, rules
+from .. import ai, brief, docread, plandomains, progress, rules
 from ..audit import log
 from ..config import WEEK_STARTS_ON_SUNDAY
 from ..deps import current_user, get_db, get_params, require_roles
@@ -94,12 +94,15 @@ class AnalyzeIn(BaseModel):
     lang: str = "auto"
 
 
-def _refine(db, result: dict, lang: str) -> list[str]:
+def _refine(db, result: dict, lang: str, tick=None) -> list[str]:
     """When the Saudi-hosted model is live, let it re-read each phase. Rules stay as the fallback for any phase it fails on."""
     notes = []
     if ai.status()["mode"] != "live":
         return notes
-    for ph in result["phases"]:
+    total = len(result["phases"])
+    for idx, ph in enumerate(result["phases"]):
+        if tick:
+            tick(idx, total)
         text = ph.get("text")
         if not text:
             continue
@@ -128,7 +131,21 @@ def _refine(db, result: dict, lang: str) -> list[str]:
 
 
 @router.post("/projects/{pid}/brief/analyze", status_code=201)
-def analyze(pid: int, body: AnalyzeIn, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE))):
+def analyze_endpoint(pid: int, body: AnalyzeIn, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE)), progress_id: str | None = Header(None, alias="X-Progress-Id")):
+    return analyze(pid, body, db, user, progress_id)
+
+
+@router.get("/project-intake/progress/{key}")
+def analyze_progress(key: str, user: User = Depends(require_roles(*MANAGE))):
+    """What the running analysis is doing: {pct, step, info, seconds}. 404 until the job reports its first step."""
+    j = progress.get(user.id, key)
+    if not j:
+        raise HTTPException(404, "No progress yet")
+    return j
+
+
+def analyze(pid: int, body: AnalyzeIn, db, user: User, progress_id: str | None = None):
+    say = lambda pct, step, **info: progress.update(user.id, progress_id, pct, step, **info)
     p = get_project(db, pid)
     need_manage(db, user, p)
     if p.state not in ("tendering", "planning"):
@@ -140,6 +157,7 @@ def analyze(pid: int, body: AnalyzeIn, db=Depends(get_db), user: User = Depends(
     if db.query(AiDraft).filter(AiDraft.created_by == user.id, AiDraft.created_at >= since).count() >= int(prm["ai_hourly_limit"]):
         raise HTTPException(429, "AI request limit reached for this hour")
     warnings, source = [], None
+    say(3, "read")
     if body.document_id:
         doc = db.get(Document, body.document_id)
         if not doc or doc.project_id != pid:
@@ -153,14 +171,20 @@ def analyze(pid: int, body: AnalyzeIn, db=Depends(get_db), user: User = Depends(
         pages, source = [docread.clean(body.text)], {"method": "pasted"}
     else:
         raise HTTPException(422, "Give a document_id of an uploaded file, or paste at least a few lines of text")
+    say(10, "rules")
     result = brief.analyze(pages, body.lang)
     result["meta"]["source"] = source
     result["domains"] = plandomains.generate(result)
-    notes = _refine(db, result, result["meta"]["language"])
+    say(15, "phases", n=0, total=len(result["phases"]))
+    notes = _refine(db, result, result["meta"]["language"], tick=lambda i, n: say(15 + 40 * i / max(1, n), "phase", n=i + 1, total=n))
     if ai.status()["mode"] == "live":
         cfg = ai.resolve()                              # resolved here: the worker threads have no request/tenant context
-        result["domains"], dnotes = plandomains.generate_live(result, lambda prompt: ai._live("brief", {}, prompt, cfg))
+        done = []
+        say(55, "sections", n=0, total=len(plandomains.DOMAINS))
+        result["domains"], dnotes = plandomains.generate_live(result, lambda prompt: ai._live("brief", {}, prompt, cfg),
+                                                              on_done=lambda name: (done.append(name), say(55 + 40 * len(done) / len(plandomains.DOMAINS), "sections", n=len(done), total=len(plandomains.DOMAINS))))
         notes += dnotes
+    say(96, "save")
     for ph in result["phases"]:
         ph.pop("text", None)
     if not result["activities"]:
@@ -171,6 +195,7 @@ def analyze(pid: int, body: AnalyzeIn, db=Depends(get_db), user: User = Depends(
     db.flush()
     log(db, user.id, "brief.analyzed", "project", pid, {"draft_id": d.id, "pages": len(pages), "requirements": len(result["requirements"]), "tasks": len(result["activities"]), "mode": st["mode"], "offsite_demo": st["offsite_demo"]})
     db.commit()
+    say(100, "done")
     return {"draft_id": d.id, "mode": st["mode"], "warnings": warnings, "counts": _counts(result)}
 
 
@@ -530,7 +555,7 @@ def book_preview(body: BookIn, db=Depends(get_db), user: User = Depends(require_
 
 
 @router.post("/project-intake/book/confirm", status_code=201)
-def book_confirm(body: BookConfirm, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE))):
+def book_confirm(body: BookConfirm, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE)), progress_id: str | None = Header(None, alias="X-Progress-Id")):
     """The user confirmed (and maybe corrected) the proposal: create the project, keep the book as a document, and leave a draft plan ready to review."""
     from .projects import new_project
     if body.state not in ("tendering", "planning"):
@@ -552,7 +577,7 @@ def book_confirm(body: BookConfirm, db=Depends(get_db), user: User = Depends(req
         doc_id = d.id
     db.commit()
     try:
-        out = analyze(p.id, AnalyzeIn(document_id=doc_id, text=None if doc_id else body.text, lang=body.lang or "auto"), db, user)
+        out = analyze(p.id, AnalyzeIn(document_id=doc_id, text=None if doc_id else body.text, lang=body.lang or "auto"), db, user, progress_id)
     except HTTPException as e:                  # the project exists even if the reader is switched off or rate limited
         return {"project_id": p.id, "draft_id": None, "counts": {}, "warnings": [str(e.detail)]}
     return {"project_id": p.id, "draft_id": out["draft_id"], "counts": out["counts"], "warnings": out["warnings"]}

@@ -1,6 +1,7 @@
 // Project "Brief" tab: upload the project book (Arabic or English; text, DOCX, PDF or scan), review what the AI read, then apply it as a plan.
 import { api, fileToB64 } from "../api.js";
 import { aiLabel } from "../aistatus.js";
+import { withProgress } from "../progress.js";
 import { getLang, t } from "../i18n.js";
 import { badge, errorBox, field, guarded, h, mount, num, stat, table, toast } from "../ui.js";
 
@@ -14,7 +15,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
   const sel = h("select", { id: "brief-doc" }, h("option", { value: "" }, "—"), ...docs.map(d => h("option", { value: d.id }, d.filename)));
   const file = h("input", { type: "file", id: "brief-file", accept: ".pdf,.docx,.txt,.md,.png,.jpg" });
   const text = h("textarea", { id: "brief-text", rows: 5, placeholder: t("brief_paste") });
-  const err = h("div");
+  const err = h("div"), progBox = h("div", { id: "brief-progress" });
   const go = guarded(null, async () => {
     mount(err);
     try {
@@ -23,7 +24,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
         const d = await api("POST", `/projects/${pid}/documents`, { kind: "tender_book", filename: file.files[0].name, content_b64: await fileToB64(file.files[0]) });
         document_id = d.id;
       }
-      const r = await api("POST", `/projects/${pid}/brief/analyze`, document_id ? { document_id } : { text: text.value });
+      const r = await withProgress(progBox, (hd) => api("POST", `/projects/${pid}/brief/analyze`, document_id ? { document_id } : { text: text.value }, hd));
       toast(t("brief_done"));
       await review(r.draft_id);
     } catch (e) { mount(err, errorBox(e)); }
@@ -203,7 +204,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
 
   body.append(h("div", { class: "card", id: "brief-card" }, h("h2", {}, t("tab_brief")), h("p", { class: "muted small" }, t("brief_note")),
     h("div", { class: "row" }, field(t("brief_pick"), sel), field(t("brief_upload"), file)), field(t("brief_or_paste"), text),
-    h("button", { class: "btn", id: "brief-go", type: "button", onClick: go }, t("brief_analyze")), err),
+    h("button", { class: "btn", id: "brief-go", type: "button", onClick: go }, t("brief_analyze")), err, progBox),
     out);
   const open = drafts.find(d => d.status === "draft");
   if (open) await review(open.id);

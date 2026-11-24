@@ -1,6 +1,7 @@
 // Start a project from its book: drop the file, check the pre-filled number, name, dates and phases, confirm, and land on the draft plan.
 import { api, fileToB64 } from "../api.js";
 import { aiLabel } from "../aistatus.js";
+import { withProgress } from "../progress.js";
 import { t } from "../i18n.js";
 import { badge, errorBox, field, guarded, h, mount, table, toast } from "../ui.js";
 
@@ -20,13 +21,13 @@ export function bookStartCard() {
   const review = (pv) => {
     const num = h("input", { id: "bk-number", value: pv.number }), name = h("textarea", { id: "bk-name", class: "ta", rows: "2", dir: "auto", style: "min-width:260px;flex:2" }, pv.name);
     const start = h("input", { type: "date", id: "bk-start", value: String(pv.planned_start).slice(0, 10) }), end = h("input", { type: "date", id: "bk-end", value: String(pv.planned_end).slice(0, 10) });
-    const e2 = h("div");
+    const e2 = h("div"), pbox = h("div");
     const go = h("button", { class: "btn gold", type: "button", id: "bk-create" }, t("bk_create"));
     go.addEventListener("click", guarded(go, async () => {
       mount(e2);
       if (!name.value.trim() || !num.value.trim()) { mount(e2, errorBox({ message: t("bk_need_name") })); name.focus(); return; }
       try {
-        const r = await api("POST", "/project-intake/book/confirm", { ...payload, number: num.value.trim(), name: name.value.trim(), planned_start: start.value, planned_end: end.value });
+        const r = await withProgress(pbox, (hd) => api("POST", "/project-intake/book/confirm", { ...payload, number: num.value.trim(), name: name.value.trim(), planned_start: start.value, planned_end: end.value }, hd));
         toast(t("bk_created"));
         try { sessionStorage.setItem("properm.opentab", "brief"); } catch { /* ignore */ }
         location.hash = `#/projects/${r.project_id}`;
@@ -38,7 +39,7 @@ export function bookStartCard() {
       ...(pv.warnings || []).map(w => h("p", { class: "warn" }, w)),
       h("div", { class: "row" }, field(t("number"), num), field(t("name"), name), field(t("planned_start"), start), field(t("planned_end"), end)),
       pv.phases.length ? table([t("brief_phase"), t("name"), t("brief_from_month"), t("brief_to_month")], pv.phases.map(ph => [ph.n, ph.name, ph.start_month, ph.end_month])) : null,
-      h("p", { class: "muted small" }, t("bk_note")), go, e2));
+      h("p", { class: "muted small" }, t("bk_note")), go, e2, pbox));
   };
   return h("div", { class: "card", id: "book-start" }, h("h2", {}, t("bk_title"), " ", aiLabel()), h("p", { class: "muted small" }, t("bk_intro")), h("p", { class: "muted small" }, t("ai_rules_note")),
     h("div", { class: "row" }, field(t("file"), file), read), h("details", { style: "margin-top:8px" }, h("summary", { class: "small" }, t("bk_or_paste")), text), err, out);
