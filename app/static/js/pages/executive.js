@@ -8,7 +8,7 @@ export default async function (root) {
   const [d, inv] = await Promise.all([api("GET", "/dashboards/executive"), api("GET", "/dashboards/investment")]);
   const e = d.evm, money = (v) => (v == null ? "—" : `${Number(v).toLocaleString()} ${e.currency}`);
   mount(root, h("h1", {}, t("nav_executive")), h("p", { class: "muted" }, `${t("as_of")} ${d.as_of} `, h("button", { class: "btn small secondary", type: "button", id: "board-pack", onClick: () => openReport("/reports/board-pack.html") }, t("board_pack"))),
-    h("div", { class: "grid", style: "margin-bottom:16px" }, stat(t("projects"), d.projects), ["RED", "AMBER", "GREEN"].map(k => stat(t(`rag_${k}`), d.rag_counts[k])),
+    h("div", { class: "grid", style: "margin-bottom:16px" }, stat(t("projects"), d.projects), ["RED", "AMBER", "GREEN"].map(k => stat(t(`rag_${k}`), d.rag_counts[k], k)),
       stat(t("pending_decisions"), h("a", { href: "#/decisions" }, d.pending_decisions)), stat(t("overdue_milestones"), d.overdue_milestones)),
     h("div", { class: "grid2" },
       h("div", { class: "card" }, h("h2", {}, t("portfolio_cost")), h("div", { class: "grid" }, stat("BAC", money(e.BAC)), stat("EV", money(e.EV)), stat("AC", money(e.AC)), stat("CPI", e.CPI == null ? "—" : num(e.CPI, 2))),

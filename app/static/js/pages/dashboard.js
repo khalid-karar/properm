@@ -22,7 +22,7 @@ export default async function (root, { me, arg }) {
       h("option", { value: "" }, t("all")), ["RED", "AMBER", "GREEN", "GREY"].map(x => h("option", { value: x }, t(`rag_${x}`))));
     mount(root, h("h1", {}, `${t("nav_dashboard")} · ${t("portfolio")}`),
       h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv("/export/portfolio.csv", "portfolio.csv")) }, t("export_csv")), xlsxBtn("/export/portfolio.xlsx", "portfolio.xlsx")),
-      h("div", { class: "grid", style: "margin-bottom:16px" }, ["RED", "AMBER", "GREEN", "GREY"].map(k => stat(t(`rag_${k}`), d.rag_counts[k]))),
+      h("div", { class: "grid", style: "margin-bottom:16px" }, ["RED", "AMBER", "GREEN", "GREY"].map(k => stat(t(`rag_${k}`), d.rag_counts[k], k))),
       h("div", { class: "card" }, h("div", { class: "row", style: "margin-bottom:10px" }, field(t("filter_rag"), sel)),
         table([t("project"), t("state"), t("rag"), t("progress"), "CPI", "SPI", t("open_alerts"), t("top_alert")],
           d.projects.map(p => [h("a", { href: `#/dashboard/${p.project_id}` }, `${p.number} · ${p.name}`), t(p.state), rag(p.rag),

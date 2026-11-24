@@ -37,7 +37,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
     const names = Object.keys(COLS);
     const drawOne = (name) => {
       const dom = dr.domains[name];
-      const rows = dom.items.map(it => ({ it, inp: COLS[name].map(k => { let i; if (NUM.has(k)) { i = h("input", { value: it[k] ?? "", "aria-label": k, style: "width:70px", type: "number" }); } else { i = h("textarea", { rows: 1, dir: "auto", class: "ta", "aria-label": k, style: "width:100%;min-width:160px" }); i.value = it[k] ?? ""; i.addEventListener("input", () => autosize(i)); requestAnimationFrame(() => autosize(i)); } return [k, i]; }) }));
+      const rows = dom.items.map(it => ({ it, inp: COLS[name].map(k => { let i; if (NUM.has(k)) { i = h("input", { value: it[k] ?? "", "aria-label": k, type: "number" }); } else { i = h("textarea", { rows: 1, dir: "auto", class: "ta", "aria-label": k, style: "width:100%" }); i.value = it[k] ?? ""; i.addEventListener("input", () => autosize(i)); requestAnimationFrame(() => autosize(i)); } return [k, i]; }) }));
       const fb = h("input", { placeholder: t("dom_feedback"), id: `dom-fb-${name}`, style: "width:100%" });
       const hist = dom.history.slice(-3).reverse();
       const post = async (action, extra = {}) => {
@@ -47,7 +47,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
       };
       const wrap = h("details", { class: "dom", id: `dom-${name}`, open: dom.status === "proposed" },
         h("summary", {}, `${t("dom_" + name)} · `, badge(t("dom_s_" + dom.status), dom.status === "proposed" ? "warning" : "ok"), ` · ${dom.items.length}`),
-        h("div", { style: "overflow-x:auto" }, table(COLS[name].map(k => t("dom_f_" + k)), rows.map(r => r.inp.map(([, i]) => i)), t("none"))),
+        h("div", {}, ...(rows.length ? rows.map(r => h("div", { class: "item" }, ...r.inp.map(([k, i]) => h("label", { class: `f f-${NUM.has(k) ? "s" : ["engagement", "information", "text", "note"].includes(k) ? "xl" : "m"}` }, h("span", { class: "fl" }, t("dom_f_" + k)), i)))) : [h("p", { class: "muted small" }, t("none"))])),
         h("div", { class: "row" },
           h("button", { class: "btn small", type: "button", id: `dom-accept-${name}`, onClick: guarded(null, () => post("accept")) }, t("dom_accept")),
           h("button", { class: "btn small secondary", type: "button", id: `dom-save-${name}`, onClick: guarded(null, () => post("modify", { items: rows.map(r => Object.fromEntries(r.inp.map(([k, i]) => [k, NUM.has(k) ? Number(i.value) : i.value]))) })) }, t("dom_save"))),

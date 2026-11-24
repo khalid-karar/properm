@@ -55,7 +55,12 @@ export function timeline({ rows, links = [], marks = [], labels }) {
       const y = HEAD + i * RH;
       if (it.t === "ms") {
         const row = h("div", { class: "tl-row ms", style: `top:${y}px;height:${RH}px` }, h("div", { class: "tl-lab", style: `width:${LW}px` }, `◆ ${L.milestones}`));
-        marks.forEach(m => row.append(h("span", { class: `tl-dia ${m.done ? "done" : ""}`, title: `${m.label} · ${m.date}`, style: `inset-inline-start:${LW + px(D(m.date)) - 7}px` }), h("span", { class: "tl-dl", title: m.label, style: `inset-inline-start:${LW + px(D(m.date)) + 12}px` }, m.label)));
+        const ms = [...marks].sort((a, b) => D(a.date) - D(b.date));
+        ms.forEach((m, i) => {
+          const x = px(D(m.date)), room = i + 1 < ms.length ? px(D(ms[i + 1].date)) - x - 18 : 140;
+          row.append(h("span", { class: `tl-dia ${m.done ? "done" : ""}`, title: `${m.label} · ${m.date}`, style: `inset-inline-start:${LW + x - 7}px` }),
+            room >= 70 ? h("span", { class: "tl-dl", title: m.label, style: `inset-inline-start:${LW + x + 12}px;max-width:${Math.min(room, 220)}px;overflow:hidden;text-overflow:ellipsis` }, m.label) : null);
+        });
         inner.append(row);
       } else if (it.t === "g") {
         const g = it.g, s = Math.min(...g.rows.map(r => D(r.start))), e = Math.max(...g.rows.map(r => D(r.end)));
@@ -67,7 +72,7 @@ export function timeline({ rows, links = [], marks = [], labels }) {
         const r = it.r; yOf.set(r.id, y);
         const w = Math.max(6, px(D(r.end)) - px(D(r.start)));
         inner.append(h("div", { class: "tl-row", style: `top:${y}px;height:${RH}px` },
-          h("div", { class: "tl-lab", style: `width:${LW}px`, title: `${r.label} · ${r.start} → ${r.end}` }, h("span", {}, r.label)),
+          h("div", { class: "tl-lab", style: `width:${LW}px`, title: `${r.label} · ${r.start} → ${r.end}` }, h("span", {}, ...(/^\S+ /.test(r.label) ? [r.label.split(" ")[0] + " ", h("bdi", {}, r.label.slice(r.label.indexOf(" ") + 1))] : [r.label]))),
           h("span", { class: `tl-bar ${r.critical ? "crit" : ""}`, title: `${r.label}\n${r.start} → ${r.end}${r.pct != null ? `\n${Math.round(r.pct)}%` : ""}`, style: `inset-inline-start:${LW + px(D(r.start))}px;width:${w}px` }, h("span", { style: `width:${Math.round(r.pct || 0)}%` }))));
       }
     });

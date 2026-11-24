@@ -84,7 +84,7 @@ function shell(active, main) {
     h("button", { type: "button", class: "btn-ghost", id: "theme-btn", "aria-label": t("theme_toggle"), title: t("theme_toggle"), onClick: () => { try { localStorage.setItem(THEME_KEY, isDark() ? "light" : "dark"); } catch { /* ignore */ } applyTheme(); } }, "◐"),
     h("button", { type: "button", class: "btn-ghost", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); unmountAssistant(); route(); } }, getLang() === "en" ? "العربية" : "English"),
     h("a", { class: "who", href: "#/profile", title: t("nav_profile") }, h("span", { class: "avatar" }, initials(me.full_name)),
-      h("span", { class: "tx" }, h("div", { class: "nm" }, me.full_name), h("div", { class: "rl" }, me.role))),
+      h("span", { class: "tx" }, h("div", { class: "nm" }, me.full_name), h("div", { class: "rl" }, t("role_" + me.role)))),
     h("button", { type: "button", class: "btn-ghost", onClick: () => { session.clear(); me = null; unmountAssistant(); location.hash = "#/login"; } }, t("logout")));
   const banner = h("div", { class: "offsite-banner", id: "offsite-banner", hidden: true }, t("ai_offsite_banner"));
   api("GET", "/ai/status").then(s => { if (s.offsite_demo) { banner.hidden = false; banner.setAttribute("role", "alert"); } }).catch(() => {});

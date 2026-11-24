@@ -40,7 +40,7 @@ export default async function (root, { me }) {
   }
   mount(root,
     h("div", { class: "welcome" },
-      h("div", {}, h("h1", {}, `${hello}، ${first}`.replace("،", getLang() === "ar" ? "،" : ",")), h("p", { class: "muted" }, `${new Date().toLocaleDateString(getLang() === "ar" ? "ar-SA" : "en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · `, badge(me.role, "gold"))),
+      h("div", {}, h("h1", {}, `${hello}، ${first}`.replace("،", getLang() === "ar" ? "،" : ",")), h("p", { class: "muted" }, `${new Date().toLocaleDateString(getLang() === "ar" ? "ar-SA" : "en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · `, badge(t("role_" + me.role), "gold"))),
       h("button", { class: "btn gold ask-btn", type: "button", onClick: () => window.dispatchEvent(new CustomEvent("properm-ask", { detail: t("asst_q_today") })) }, icon("spark"), " ", t("asst_ask_me"))),
     h("div", { class: "tiles" }, tiles),
     h("div", { class: "grid2" },

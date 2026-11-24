@@ -385,7 +385,7 @@ def apply(pid: int, did: int, body: ApplyIn, db=Depends(get_db), user: User = De
         for ph in phases.values():
             _, due = span(start, {"start_month": ph["start_month"], "end_month": ph["end_month"]})
             lastact = last_in_phase.get(ph["n"])
-            db.add(Milestone(project_id=pid, name=(f"{ph['name']} - اكتمال" if d.output.get("meta", {}).get("language") == "ar" else f"{ph['name']} complete")[:300], due_date=due, activity_id=lastact.id if lastact else None))
+            db.add(Milestone(project_id=pid, name=(f"اكتمال {ph['name']}" if d.output.get("meta", {}).get("language") == "ar" else f"{ph['name']} complete")[:300], due_date=due, activity_id=lastact.id if lastact else None))
             n["milestones"] += 1
     if "risks" in secs:
         for r in out.get("risks", []):

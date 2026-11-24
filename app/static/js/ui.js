@@ -116,10 +116,10 @@ export const num = (v, d = 1) => (v == null ? "—" : Number(v).toLocaleString(u
 export function table(headers, rows, empty) {
   if (!rows.length && empty) return h("div", { class: "empty" }, empty);
   return h("div", { class: "table-wrap", tabindex: "0" }, h("table", {}, h("thead", {}, h("tr", {}, headers.map(x => h("th", {}, x)))),
-    h("tbody", {}, rows.map(r => h("tr", {}, r.map(c => h("td", {}, c)))))));
+    h("tbody", {}, rows.map(r => h("tr", {}, r.map(c => h("td", typeof c === "string" && /^\d{4}-\d{2}-\d{2}$/.test(c) ? { style: "white-space:nowrap" } : {}, c)))))));
 }
 
-export function stat(label, value) { return h("div", { class: `stat ${{ RED: "red", AMBER: "amber", GREEN: "green", GREY: "grey" }[label] || ""}` }, h("div", { class: "v" }, value), h("div", { class: "l" }, label)); }
+export function stat(label, value, tone) { return h("div", { class: `stat ${{ RED: "red", AMBER: "amber", GREEN: "green", GREY: "grey" }[tone || label] || ""}` }, h("div", { class: "v" }, value), h("div", { class: "l" }, label)); }
 
 export function bar(pct, over = false) { return h("div", { class: `bar ${over ? "over" : ""}` }, h("span", { style: `width:${Math.max(0, Math.min(100, pct || 0))}%` })); }
 
