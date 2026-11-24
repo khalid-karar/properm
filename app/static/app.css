@@ -419,3 +419,9 @@ td,.tl-lab span,.tl-dl{unicode-bidi:plaintext}
 :root[data-theme=dark] aside.side nav a:hover,:root[data-theme=dark] aside.side nav a.active{color:#fff}
 @media (max-width:640px){table.stack td:has(> ul.checks){display:block}table.stack td:has(> ul.checks)::before{display:block;margin-bottom:6px}table.stack ul.checks{padding:0}table.stack ul.checks li{max-width:100%;white-space:normal}}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) aside.side nav a{color:#cdd8ee}:root:not([data-theme=light]) aside.side nav a:hover,:root:not([data-theme=light]) aside.side nav a.active{color:#fff}}
+
+/* QA fixes: Arabic names inside English tables, long names, wrapping */
+td, th { unicode-bidi: plaintext; text-align: start; }
+input[type="text"], input:not([type]), textarea, select { max-width: 100%; }
+.card h1, h1 { overflow-wrap: anywhere; }
+td { overflow-wrap: anywhere; }
