@@ -87,7 +87,6 @@ def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = Tr
         if ":memory:" in database_url:
             kwargs["poolclass"] = StaticPool
     kwargs["json_serializer"] = _dump_json
-    kwargs["json_deserializer"] = json.loads   # Oracle hands JSON numbers back as Decimal unless told otherwise
     engine = create_engine(database_url, **kwargs)
     if redirect:
         Base.metadata.drop_all(engine)
