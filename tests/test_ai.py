@@ -107,3 +107,58 @@ def test_offsite_model_is_refused_unless_demo_flag_and_never_in_production(monke
     monkeypatch.setenv("PROPERM_ENV", "production")           # the flag is ignored in production
     s = ai.status()
     assert s["offsite_demo"] is False and s["blocked"] is True
+
+
+OCI_URL = "https://inference.generativeai.me-riyadh-1.oci.oraclecloud.com"
+OCI_MODEL = "ocid1.generativeaimodel.oc1.me-riyadh-1.amaaaaaaexample"
+
+
+def test_oci_host_guard_saudi_regions_only():
+    assert ai.host_in_kingdom(OCI_URL) and ai.host_in_kingdom(OCI_URL.replace("me-riyadh-1", "me-jeddah-1"))
+    assert not ai.host_in_kingdom(OCI_URL.replace("me-riyadh-1", "eu-frankfurt-1"))
+    assert not ai.host_in_kingdom(OCI_URL.replace("https", "http"))
+    assert not ai.host_in_kingdom("https://inference.generativeai.me-riyadh-1.oci.oraclecloud.com.evil.com")
+    assert not ai.host_in_kingdom("https://evil.com/inference.generativeai.me-riyadh-1.oci.oraclecloud.com")
+
+
+class _Resp:
+    def __init__(self, text, finish="COMPLETE"):
+        self.data = type("D", (), {"chat_response": type("C", (), {"text": text, "finish_reason": finish})()})()
+
+
+def _fake_client(monkeypatch, resp, seen=None):
+    class Client:
+        def chat(self, details):
+            if seen is not None:
+                seen["details"] = details
+            return resp
+    monkeypatch.setattr(ai, "_oci_client", lambda url: Client())
+
+
+def test_oci_live_call_validates_and_rejects_truncated_output(monkeypatch):
+    monkeypatch.setenv("PROPERM_AI_BASE_URL", OCI_URL)
+    monkeypatch.setenv("PROPERM_AI_MODEL", OCI_MODEL)
+    monkeypatch.setenv("PROPERM_OCI_COMPARTMENT", "ocid1.compartment.oc1..example")
+    st = ai.status()
+    assert st["mode"] == "live" and st["provider"] == "oci" and st["in_kingdom"] is True and st["blocked"] is False
+    seen = {}
+    good = json.dumps({"activities": [{"code": "A01", "name": "Design", "planned_hours": 40}], "assumptions": []})
+    _fake_client(monkeypatch, _Resp("```json\n" + good + "\n```"), seen)
+    out = ai.run("plan", {"brief": "- Design", "lang": "en"})
+    assert out["activities"][0]["code"] == "A01"
+    d = seen["details"]
+    assert d.compartment_id == "ocid1.compartment.oc1..example" and d.serving_mode.model_id == OCI_MODEL
+    assert d.chat_request.max_tokens == 4000 and "<data>" in d.chat_request.message
+    _fake_client(monkeypatch, _Resp(good[:30], finish="MAX_TOKENS"))                      # cut off: must not become a draft
+    with pytest.raises(ai.AiError) as e:
+        ai.run("plan", {"brief": "- Design", "lang": "en"})
+    assert e.value.status == 502 and "token limit" in e.value.msg
+
+
+def test_oci_needs_compartment_and_model_ocid(monkeypatch):
+    monkeypatch.setenv("PROPERM_AI_BASE_URL", OCI_URL)
+    monkeypatch.setenv("PROPERM_AI_MODEL", "qwen")
+    monkeypatch.delenv("PROPERM_OCI_COMPARTMENT", raising=False)
+    with pytest.raises(ai.AiError) as e:
+        ai._live("plan", {}, "x")
+    assert e.value.status == 500 and "OCI AI is not set up" in e.value.msg

@@ -7,4 +7,5 @@ httpx>=0.27,<1
 alembic>=1.13,<2
 oracledb>=2.0,<27     # Oracle Database: DATABASE_URL=oracle+oracledb://USER:PASS@HOST:1521/?service_name=SVC
 pypdf>=4.0,<7
+oci>=2.130,<3          # OCI Generative AI (Riyadh); imported only when PROPERM_AI_BASE_URL is an OCI inference endpoint
 pytest>=8.0,<10

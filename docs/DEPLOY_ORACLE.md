@@ -20,8 +20,25 @@ Decision (2026-11-23): database and backend on Oracle Cloud in a Saudi region (R
 | `PROPERM_SECRET` | a long random string (32+ characters) |
 | `PROPERM_CORS_ORIGINS` | your Netlify address |
 | `PROPERM_ENV` | `production` (this also disables the off-Kingdom AI switch below) |
-| `PROPERM_AI_BASE_URL` | the in-Kingdom Qwen endpoint, when you have one |
-| `PROPERM_AI_MODEL`, `PROPERM_AI_API_KEY` | model name and key for that endpoint |
+| `PROPERM_AI_BASE_URL` | the in-Kingdom model endpoint: an OCI Generative AI address (see below) or a Saudi-hosted OpenAI-compatible server |
+| `PROPERM_AI_MODEL`, `PROPERM_AI_API_KEY` | model name and key for an OpenAI-compatible endpoint. For OCI: the model OCID, and no key |
+| `PROPERM_OCI_COMPARTMENT` | OCI only: OCID of the compartment that holds the Generative AI policy (`properm`) |
+| `PROPERM_AI_MAX_TOKENS` | longest reply the model may write (default 4000). A reply cut off at this limit is rejected, never saved as a draft |
+
+## OCI Generative AI in Riyadh (the in-Kingdom model)
+Tested 2026-11-24 in the console: `cohere.command-a-03-2025` answers in `me-riyadh-1`, pay per token, English and Arabic.
+
+One-time setup in the OCI console (Default identity domain, root compartment):
+1. Dynamic group `properm-instances`, rule `instance.compartment.id = '<properm compartment OCID>'`.
+2. Policy `properm-genai`: `Allow dynamic-group properm-instances to use generative-ai-family in compartment properm`.
+
+Backend variables on the VM (`~/properm.env`):
+
+    PROPERM_AI_BASE_URL=https://inference.generativeai.me-riyadh-1.oci.oraclecloud.com
+    PROPERM_AI_MODEL=<model OCID shown by "View code" in the Generative AI playground>
+    PROPERM_OCI_COMPARTMENT=<properm compartment OCID>
+
+No key is stored: the VM signs each request as itself (instance principal). Only the Riyadh and Jeddah endpoints count as inside the Kingdom; any other OCI region is refused. For a local test with a user key instead, set `PROPERM_OCI_AUTH=config` (reads `~/.oci/config`). Admin → AI shows the provider as `oci`.
 
 ## OpenRouter for demos and testing only
 A staging or demo server (never the production one) may use OpenRouter while there is no in-Kingdom model:
