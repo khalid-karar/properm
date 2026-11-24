@@ -593,7 +593,7 @@ class TranslateIn(BaseModel):
 
 
 @router.post("/projects/{pid}/brief/{did}/translate")
-def translate_draft(pid: int, did: int, body: TranslateIn, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE))):
+def translate_draft(pid: int, did: int, body: TranslateIn, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE)), progress_id: str | None = Header(None, alias="X-Progress-Id")):
     """Translate the extracted text with the Saudi-hosted model. Without a live model nothing is translated and the original stays as the only text."""
     p, d = _draft(db, user, pid, did)
     st = ai.status()
@@ -611,6 +611,8 @@ def translate_draft(pid: int, did: int, body: TranslateIn, db=Depends(get_db), u
                     items.append((f"{sec}.{i}.{f}", str(row[f])))
     tr = out.setdefault("translations", {}).setdefault(body.target, {})
     name = "English" if body.target == "en" else "Arabic"
+    chunks = max(1, ceil(len(items) / 40))
+    progress.update(user.id, progress_id, 3, "translate", n=0, total=chunks)
     try:
         for k in range(0, len(items), 40):
             chunk = items[k:k + 40]
@@ -622,9 +624,12 @@ def translate_draft(pid: int, did: int, body: TranslateIn, db=Depends(get_db), u
                 raise ai.AiError(502, "The model returned a translation that does not match the text")
             for (key, src), t_ in zip(chunk, res):
                 tr[key] = {"src": src, "t": str(t_)}
+            progress.update(user.id, progress_id, 3 + 92 * (k // 40 + 1) / chunks, "translate", n=k // 40 + 1, total=chunks)
     except ai.AiError as e:
         raise HTTPException(502, getattr(e, "msg", None) or "Translation failed")
+    progress.update(user.id, progress_id, 97, "save")
     d.output = out
     log(db, user.id, "brief.translated", "project", pid, {"draft_id": did, "target": body.target, "strings": len(items)})
     db.commit()
+    progress.update(user.id, progress_id, 100, "done")
     return {"status": "ok", "translated": len(items), "translations": out["translations"]}

@@ -169,7 +169,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
       const have = Object.keys(TR).length > 0;
       return h("div", { class: "card", id: "tr-note", style: "margin:8px 0" }, h("p", { class: "small" }, have ? t("tr_have") : t("tr_none").replace("{lang}", docLang === "ar" ? "العربية" : "English")),
         h("button", { class: "btn small secondary", type: "button", id: "tr-go", onClick: guarded(null, async () => {
-          const x = await api("POST", `/projects/${pid}/brief/${did}/translate`, { target: vl });
+          const x = await withProgress(trBox, (hd) => api("POST", `/projects/${pid}/brief/${did}/translate`, { target: vl }, hd));
           if (x.status !== "ok") { mount(trBox, h("p", { class: "warn" }, `${t("tr_unavailable")} ${x.reason || ""}`)); return; }
           dr.translations = x.translations; TR = x.translations[vl] || {}; toast(t("tr_done")); await review(did);
         }) }, t("tr_translate")), trBox);
