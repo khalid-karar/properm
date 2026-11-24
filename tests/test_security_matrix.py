@@ -4,7 +4,7 @@ import re
 from tests.test_flow import TODAY, app, c, world  # noqa: F401
 from tests.test_gates import mk
 
-PUBLIC = {"/auth/login", "/health", "/build-progress", "/build-progress/enabled", "/ai/status", "/auth/demo-login", "/auth/demo-users", "/config", "/auth/sso/config", "/auth/sso/login", "/auth/sso/callback", "/auth/sso/exchange"}
+PUBLIC = {"/auth/login", "/health", "/build-progress", "/build-progress/enabled", "/ai/status", "/auth/demo-login", "/auth/demo-users", "/config", "/auth/sso/config", "/auth/sso/login", "/auth/sso/callback", "/auth/sso/exchange", "/build-progress", "/build-progress/enabled"}   # the last two are gated by the owner password (PROPERM_BUILD_PASSWORD), off when unset
 
 
 def fill(path, ids):
@@ -66,3 +66,13 @@ def test_security_headers_and_size_cap_and_login_throttle(c, monkeypatch):
     monkeypatch.setattr(hd, "LOGIN_MAX", 3)
     codes = [c.post("/auth/login", json={"staff_id": "nobody", "password": "x"}).status_code for _ in range(5)]
     assert 429 in codes
+
+
+def test_build_progress_is_off_without_password_and_private_with_it(c, monkeypatch):
+    monkeypatch.delenv("PROPERM_BUILD_PASSWORD", raising=False)
+    assert c.get("/build-progress/enabled").json() == {"enabled": False}
+    assert c.post("/build-progress", json={"password": "x"}).status_code == 404
+    monkeypatch.setenv("PROPERM_BUILD_PASSWORD", "owner-secret-123")
+    assert c.get("/build-progress/enabled").json() == {"enabled": True}
+    assert c.post("/build-progress", json={"password": "wrong"}).status_code == 403
+    assert c.post("/build-progress", json={"password": "owner-secret-123"}).status_code == 200
