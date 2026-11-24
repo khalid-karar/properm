@@ -39,7 +39,7 @@ def test_each_domain_gets_its_own_call_and_replies_are_cleaned():
     calls = []
     replies = {n: (lambda p, n=n: calls.append(n) or json.dumps(good(n, r))) for n in plandomains.DOMAINS}
     doms, notes = plandomains.generate_live(r, runner(r, replies))
-    assert calls == list(plandomains.DOMAINS) and all(d["by"] == "model" for d in doms.values()) and len(notes) == 6
+    assert sorted(calls) == sorted(plandomains.DOMAINS) and all(d["by"] == "model" for d in doms.values()) and len(notes) == 6
     s = doms["stakeholders"]["items"][0]
     assert (s["power"], s["interest"]) == (5, 1)                         # out-of-range scores are clamped
     assert doms["communication"]["items"][0]["frequency"] == "monthly"      # unknown frequency is replaced by an allowed one
@@ -86,7 +86,7 @@ def test_analyze_uses_the_model_for_domains_when_live(monkeypatch, c, world):
     monkeypatch.setenv("PROPERM_AI_BASE_URL", "http://localhost:9999")
     r0 = result(AR_BOOK)
 
-    def fake(task, payload, prompt):
+    def fake(task, payload, prompt, cfg=None):
         if "drafting one part of a project plan" in prompt:
             name = next(n for n in plandomains.DOMAINS if plandomains.ASK[n] in prompt)
             return json.dumps(good(name, r0))

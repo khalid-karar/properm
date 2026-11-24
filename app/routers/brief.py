@@ -158,7 +158,8 @@ def analyze(pid: int, body: AnalyzeIn, db=Depends(get_db), user: User = Depends(
     result["domains"] = plandomains.generate(result)
     notes = _refine(db, result, result["meta"]["language"])
     if ai.status()["mode"] == "live":
-        result["domains"], dnotes = plandomains.generate_live(result, lambda prompt: ai._live("brief", {}, prompt))
+        cfg = ai.resolve()                              # resolved here: the worker threads have no request/tenant context
+        result["domains"], dnotes = plandomains.generate_live(result, lambda prompt: ai._live("brief", {}, prompt, cfg))
         notes += dnotes
     for ph in result["phases"]:
         ph.pop("text", None)
