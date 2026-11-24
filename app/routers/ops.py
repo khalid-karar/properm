@@ -55,6 +55,8 @@ def restore(body: RestoreIn, db=Depends(get_db), admin: User = Depends(require_r
     """Replace the whole database with the contents of a backup made by /admin/export.
     dry_run only reports what would happen. Passwords are never in a backup: people who already exist here keep
     their password; people only in the backup get a temporary one (shown once) and must change it."""
+    if admin.tenant_id:
+        raise HTTPException(403, "Only the platform owner can restore a full backup (it replaces every tenant's data)")
     if body.confirm != "RESTORE":
         raise HTTPException(422, "Type RESTORE to confirm")
     tables, unknown, users = _plan(db, body.backup)

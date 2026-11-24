@@ -41,6 +41,7 @@ def _view(row: AiSetting | None) -> dict | None:
 @router.get("/admin/ai/settings")
 def settings(db=Depends(get_db), admin: User = Depends(require_roles("ADMIN"))):
     owner = admin.tenant_id is None
+    db.info["unscoped"] = True          # user counts per tenant: this screen reads across tenants (read-only)
     rows = {r.scope: r for r in db.query(AiSetting).all()}
     out = {"platform_owner": owner, "my_tenant_id": admin.tenant_id, "global": _view(rows.get("global")) if owner else None,
            "env_default": bool(os.environ.get("PROPERM_AI_BASE_URL", "").strip())}
@@ -180,18 +181,26 @@ def patch_tenant(tid: int, body: TenantPatch, db=Depends(get_db), admin: User = 
     return {"id": t.id, "name": t.name, "slug": t.slug, "active": bool(t.active)}
 
 
-class AssignIn(BaseModel):
-    tenant_id: int | None = None
+class TenantAdminIn(BaseModel):
+    staff_id: str = Field(min_length=1, max_length=40)
+    full_name: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=8, max_length=128)
 
 
-@router.put("/admin/users/{uid}/tenant")
-def assign_tenant(uid: int, body: AssignIn, db=Depends(get_db), admin: User = Depends(_owner)):
-    u = db.get(User, uid)
-    if not u:
-        raise HTTPException(404, "User not found")
-    if body.tenant_id is not None and not db.get(Tenant, body.tenant_id):
+@router.post("/admin/tenants/{tid}/admins", status_code=201)
+def create_tenant_admin(tid: int, body: TenantAdminIn, db=Depends(get_db), owner: User = Depends(_owner)):
+    """Creates the first (or another) administrator inside a tenant. That person then manages their own users."""
+    from .. import tenancy
+    from .auth_users import UserIn, create_user
+    if not db.get(Tenant, tid):
         raise HTTPException(404, "Tenant not found")
-    u.tenant_id = body.tenant_id
-    log(db, admin.id, "user.tenant_set", "user", u.id, {"tenant_id": body.tenant_id})
-    db.commit()
-    return {"ok": True, "user_id": u.id, "tenant_id": u.tenant_id}
+    db.info["unscoped"] = True
+    if db.query(User).filter_by(staff_id=body.staff_id).first():
+        raise HTTPException(409, "staff_id already exists (staff IDs are unique across the whole system)")
+    db.info.pop("unscoped", None)
+    tok = tenancy.set_scope(tid)                       # everything created below belongs to the tenant
+    try:
+        out = create_user(UserIn(staff_id=body.staff_id, full_name=body.full_name, password=body.password, role="ADMIN"), db, owner)
+    finally:
+        tenancy.reset_scope(tok)
+    return out

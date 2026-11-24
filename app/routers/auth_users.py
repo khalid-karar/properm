@@ -138,7 +138,7 @@ def create_user(body: UserIn, db=Depends(get_db), admin: User = Depends(require_
     from ..lists import check_department
     check_department(db, body.department)
     acct.enforce_policy(db, body.password)
-    u = User(**body.model_dump(exclude={"password"}), password_hash=hash_pw(body.password), tenant_id=admin.tenant_id)
+    u = User(**body.model_dump(exclude={"password"}), password_hash=hash_pw(body.password))
     db.add(u)
     db.flush()
     acct.password_set(db, u, by_admin=True)

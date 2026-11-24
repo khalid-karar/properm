@@ -63,7 +63,10 @@ export default async function (root) {
     };
     const tName = h("input", { type: "text", placeholder: t("ai_tenant_name") });
     const tSlug = h("input", { type: "text", placeholder: "acme", dir: "ltr", style: "width:120px" });
-    const tErr = h("div");
+    const tErr = h("div"), taErr = h("div");
+    const taSel = h("select", {}, ...ms.tenants.map(x => h("option", { value: x.id }, x.name)));
+    const taSid = h("input", { type: "text", dir: "ltr", style: "width:130px" }), taName = h("input", { type: "text" });
+    const taPw = h("input", { type: "password", autocomplete: "new-password", style: "width:150px" });
     const modelsCard = h("div", { class: "card", id: "ai-models-card" }, h("h2", {}, t("ai_models")), h("p", { class: "muted small" }, t("ai_models_note")),
       ms.platform_owner ? modelForm("global", ms.global, t("ai_default_all"), ms.env_default ? t("ai_default_all_note_env") : t("ai_default_all_note")) : null,
       ...ms.tenants.map(x => modelForm(x.id, x.override, `${t("ai_tenant")}: ${x.name}`, x.override ? t("ai_override_on") : t("ai_override_off"))),
@@ -72,6 +75,9 @@ export default async function (root) {
           h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, async () => { await api("PATCH", `/admin/tenants/${x.id}`, { active: !x.active }); await render(); }) }, x.active ? t("ai_tenant_off") : t("ai_tenant_on"))]), t("none")),
         h("div", { class: "row", style: "margin-top:8px;align-items:end" }, field(t("name"), tName), field(t("code"), tSlug),
           h("button", { class: "btn small", type: "button", onClick: guarded(tErr, async () => { await api("POST", "/admin/tenants", { name: tName.value, slug: tSlug.value }); await render(); }) }, t("add"))), tErr,
+        h("h3", { style: "margin-top:12px" }, t("ten_new_admin")),
+        h("div", { class: "row", style: "align-items:end" }, field(t("ten_pick"), taSel), field(t("staff_id"), taSid), field(t("full_name"), taName), field(t("password"), taPw),
+          h("button", { class: "btn small", type: "button", onClick: guarded(taErr, async () => { await api("POST", `/admin/tenants/${taSel.value}/admins`, { staff_id: taSid.value, full_name: taName.value, password: taPw.value }); toast(t("saved")); await render(); }) }, t("add"))), taErr,
         h("p", { class: "muted small" }, t("ai_tenants_note"))) : null);
     const gov = await api("GET", "/config/governance");
     const tg = (k) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: gov[k], onChange: guarded(null, (ev) => setSetting(k, ev.target.checked ? 1 : 0)) }), " ", t(`gov_${k}`));
