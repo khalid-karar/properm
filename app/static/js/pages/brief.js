@@ -46,7 +46,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
         dr.domains[name] = { status: r.status, items: r.items, history: r.history };
         wrap.replaceWith(drawOne(name));
       };
-      const wrap = h("details", { class: "dom", id: `dom-${name}`, open: dom.status === "proposed" },
+      const wrap = h("details", { class: "dom", id: `dom-${name}`, open: false },
         h("summary", {}, `${t("dom_" + name)} · `, badge(t("dom_s_" + dom.status), dom.status === "proposed" ? "warning" : "ok"), ` · ${dom.items.length}`),
         h("div", {}, ...(rows.length ? rows.map(r => h("div", { class: "item" }, ...r.inp.map(([k, i]) => h("label", { class: `f f-${NUM.has(k) ? "s" : ["engagement", "information", "text", "note"].includes(k) ? "xl" : "m"}` }, h("span", { class: "fl" }, t("dom_f_" + k)), i)))) : [h("p", { class: "muted small" }, t("none"))])),
         h("div", { class: "row" },
@@ -175,7 +175,7 @@ export async function briefTab(body, p, { pid, dir, canManage, render }) {
         }) }, t("tr_translate")), trBox);
     };
     const PRI = () => [["must", t("brief_must")], ["should", t("brief_should")]];
-    const sec = (id, titleKey, ...kids) => h("details", { class: "card sec", id, open: id === "sec-tasks" && (dr.activities || []).length <= 15 }, h("summary", {}, h("h3", { style: "display:inline" }, t(titleKey))), ...kids);
+    const sec = (id, titleKey, ...kids) => h("details", { class: "card sec", id, open: false }, h("summary", {}, h("h3", { style: "display:inline" }, t(titleKey))), ...kids);
     out.addEventListener("toggle", (ev) => { if (ev.target.open) ev.target.querySelectorAll("textarea.ta").forEach(autosize); }, true);
     mount(out,
       h("div", { class: "card", id: "brief-review" }, h("h2", {}, dr.meta.name || t("brief_review")), h("p", {}, aiLabel(), " ", h("span", { class: "muted small" }, t("ai_rules_note"))),
