@@ -129,7 +129,7 @@ def test_live_model_refines_a_phase(monkeypatch, c, world):
     assert r.status_code == 201, r.text
     d = c.get(f"/projects/{pid}/brief/{r.json()['draft_id']}", headers=h["pm1"]).json()["draft"]
     assert any(a.get("by") == "model" and a["name"] == "Interview owners" for a in d["activities"])
-    assert any(q.get("by") == "model" for q in d["requirements"]) and len(d["notes"]) == 2
+    assert any(q.get("by") == "model" for q in d["requirements"]) and len([n for n in d["notes"] if n.startswith("Phase")]) == 2 and all("kept rule-based" in n for n in d["notes"] if n.startswith("Domain"))
 
 
 def doc(c, h, pid, name, raw):
