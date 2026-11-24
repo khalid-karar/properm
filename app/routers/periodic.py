@@ -113,8 +113,8 @@ def _html(rep: dict) -> str:
     tr = "".join("<tr>" + "".join(f"<td>{escape('' if v is None else str(v))}</td>" for v in r) + "</tr>" for r in _table_rows(rep))
     t = rep["totals"]
     cost = ", ".join(f"{v:,.0f} {k}" for k, v in t["cost"].items()) or "—"
-    css = ("body{font:14px/1.5 system-ui,sans-serif;max-width:1100px;margin:24px auto;padding:0 16px;color:#111}h1{color:#1F3864}h2{border-bottom:2px solid #B8860B;padding-bottom:2px}"
-           "table{border-collapse:collapse;width:100%;margin-bottom:12px;font-size:12px}th,td{border:1px solid #ccc;padding:4px 6px;text-align:start}th{background:#1F3864;color:#fff}@media print{body{margin:0}}")
+    css = ("body{font:14px/1.5 system-ui,sans-serif;max-width:1100px;margin:24px auto;padding:0 16px;color:#111}h1{color:#0B1F3A}h2{border-bottom:2px solid #C9A24B;padding-bottom:2px}"
+           "table{border-collapse:collapse;width:100%;margin-bottom:12px;font-size:12px}th,td{border:1px solid #ccc;padding:4px 6px;text-align:start}th{background:#0B1F3A;color:#fff}@media print{body{margin:0}}")
     return (f"<!doctype html><html><head><meta charset='utf-8'><title>{escape(rep['scope']['name'])} {escape(rep['period']['label'])}</title><style>{css}</style></head><body>"
             f"<h1>{escape(rep['scope']['name'])}</h1><p>{escape(rep['period']['kind'].title())} report · {escape(rep['period']['label'])} ({rep['period']['start']} → {rep['period']['end']}) · generated {rep['generated']}</p>"
             f"<p>Hours approved: <b>{t['hours']}</b> · Cost: <b>{escape(cost)}</b> · Milestones achieved: <b>{t['milestones_achieved']}</b>, missed: <b>{t['milestones_missed']}</b> · "
