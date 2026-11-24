@@ -68,7 +68,7 @@ const initials = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]
 
 function shell(active, main) {
   const side = h("aside", { class: "side" },
-    h("div", { class: "brand" }, h("span", { class: "logo" }, "P"), t("app")),
+    h("div", { class: "brand" }, h("img", { class: "logo", src: "brand/logo-mark-reversed.svg", alt: "", width: 28, height: 32 }), t("app")),
     h("nav", { "aria-label": "Main" }, GROUPS.map(([label, items]) => {
       const mine = items.filter(n => (NAV[me.role] || []).includes(n));
       return mine.length ? h("div", { class: "navgroup" }, label ? h("div", { class: "navhead" }, t(label)) : null,
