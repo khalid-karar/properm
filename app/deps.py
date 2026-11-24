@@ -23,7 +23,7 @@ def verify_pw(p: str, h: str) -> bool:
 
 def make_token(user: User, hours: float = 8) -> str:
     exp = datetime.now(timezone.utc) + timedelta(hours=hours)
-    return jwt.encode({"sub": str(user.id), "role": user.role, "exp": exp}, SECRET, algorithm="HS256")
+    return jwt.encode({"sub": str(user.id), "role": user.role, "tid": user.tenant_id, "exp": exp}, SECRET, algorithm="HS256")
 
 
 def get_db(request: Request):

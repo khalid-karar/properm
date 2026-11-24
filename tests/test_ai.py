@@ -75,7 +75,7 @@ def test_live_mode_guard_validation_and_injection(c, world, monkeypatch):
     assert r.status_code == 403 and "Kingdom" in r.text                                   # data never leaves
     monkeypatch.setenv("PROPERM_AI_BASE_URL", "https://llm.example.sa/v1")
     sent = {}
-    def fake(task, payload, prompt):
+    def fake(task, payload, prompt, cfg=None):
         sent["prompt"] = prompt
         return "<think>hmm</think>```json\n" + json.dumps({"activities": [{"code": "X1", "name": "Real work item", "planned_hours": 10}]}) + "\n```"
     monkeypatch.setattr(ai, "_live", fake)

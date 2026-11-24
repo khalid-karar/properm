@@ -52,6 +52,11 @@ def login(body: LoginIn, db=Depends(get_db)):
     from .sso import sso_only
     if sso_only() and not (u and u.role == "ADMIN"):
         raise HTTPException(403, "Password sign-in is turned off. Use single sign-on.")
+    if u and u.tenant_id:
+        from ..models import Tenant
+        t = db.get(Tenant, u.tenant_id)
+        if t and not t.active:
+            raise HTTPException(403, "This organisation's access is switched off. Contact the platform administrator.")
     if u and u.active:
         until = acct.is_locked(db, u)
         if until:
@@ -133,7 +138,7 @@ def create_user(body: UserIn, db=Depends(get_db), admin: User = Depends(require_
     from ..lists import check_department
     check_department(db, body.department)
     acct.enforce_policy(db, body.password)
-    u = User(**body.model_dump(exclude={"password"}), password_hash=hash_pw(body.password))
+    u = User(**body.model_dump(exclude={"password"}), password_hash=hash_pw(body.password), tenant_id=admin.tenant_id)
     db.add(u)
     db.flush()
     acct.password_set(db, u, by_admin=True)

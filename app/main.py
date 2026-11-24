@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from .models import Base
-from .routers import auth_users, projects, timesheets, admin, delivery, registers, reports, alerts, dashboards, governance, notifications, exports, ai as ai_router, intake, plan, oversight, insights, workflow, periodic, config_lists, selfservice, adminplus, gates, control, weekly, portfolio, programs2, security, pmtools, insight2, adminops, scope, agile, strategy, procurement, skills, depth, ops, jobs, imports, sso, tender, brief as brief_router
+from .routers import auth_users, projects, timesheets, admin, delivery, registers, reports, alerts, dashboards, governance, notifications, exports, ai as ai_router, intake, plan, oversight, insights, workflow, periodic, config_lists, selfservice, adminplus, gates, control, weekly, portfolio, programs2, security, pmtools, insight2, adminops, scope, agile, strategy, procurement, skills, depth, ops, jobs, imports, sso, tender, tenants, brief as brief_router
 
 
 class OutboxDispatch:
@@ -43,6 +43,34 @@ class OutboxDispatch:
                     dispatch(db)
             except Exception:
                 pass
+
+
+class TenantContext:
+    """Pure ASGI middleware: reads the tenant id (tid) from the bearer token so the AI layer uses that tenant's model.
+    The signature is checked; a bad or missing token simply means no tenant (the endpoint itself still enforces sign-in)."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            tid = None
+            for k, v in scope.get("headers", []):
+                if k == b"authorization" and v[:7].lower() == b"bearer ":
+                    try:
+                        from .deps import SECRET
+                        import jwt
+                        tid = jwt.decode(v[7:].decode(), SECRET, algorithms=["HS256"]).get("tid")
+                    except Exception:
+                        tid = None
+                    break
+            from . import ai as _ai
+            tok = _ai.set_tenant(tid)
+            try:
+                return await self.app(scope, receive, send)
+            finally:
+                _ai._tenant.reset(tok)
+        return await self.app(scope, receive, send)
 
 
 @asynccontextmanager
@@ -98,10 +126,13 @@ def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = Tr
     origins = [o.strip() for o in os.environ.get("PROPERM_CORS_ORIGINS", "").split(",") if o.strip()]
     if origins:   # only for a UI hosted on another origin (e.g. Netlify); tokens go in a header, not cookies
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["Authorization", "Content-Type"])
-    for r in (auth_users.router, projects.router, projects.pending_router, governance.router, notifications.router, exports.router, ai_router.router, intake.router, plan.router, oversight.router, insights.router, workflow.router, periodic.router, config_lists.router, selfservice.router, adminplus.router, gates.router, control.router, weekly.router, portfolio.router, programs2.router, security.router, pmtools.router, insight2.router, adminops.router, scope.router, agile.router, strategy.router, procurement.router, skills.router, depth.router, ops.router, jobs.router, imports.router, sso.router, brief_router.router, tender.router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
+    for r in (auth_users.router, projects.router, projects.pending_router, governance.router, notifications.router, exports.router, ai_router.router, intake.router, plan.router, oversight.router, insights.router, workflow.router, periodic.router, config_lists.router, selfservice.router, adminplus.router, gates.router, control.router, weekly.router, portfolio.router, programs2.router, security.router, pmtools.router, insight2.router, adminops.router, scope.router, agile.router, strategy.router, procurement.router, skills.router, depth.router, ops.router, jobs.router, imports.router, sso.router, tenants.router, brief_router.router, tender.router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
         app.include_router(r)
 
     app.add_middleware(OutboxDispatch, session_factory=app.state.Session)
+    app.add_middleware(TenantContext)
+    from . import ai as _ai
+    _ai.configure(app.state.Session)
     from .hardening import Hardening
     app.add_middleware(Hardening)
 
