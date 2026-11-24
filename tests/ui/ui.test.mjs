@@ -55,7 +55,12 @@ await step("baseline version bumped & change shows approved", async () => { awai
 await step("resource load page", async () => { await p.goto(BASE + "#/load"); await p.waitForSelector("td:has-text('45')"); await p.waitForSelector(".badge:has-text('Over-allocated')"); await shot(p, "14-load"); });
 
 p = await newPage("login"); 
-await step("login page shows build timeline", async () => { await p.goto(BASE); await p.waitForSelector(".timeline .light.done"); if (!(await p.locator(".timeline details.ms").count())) throw new Error("no milestones"); });
+await step("login page: build progress needs the password", async () => {
+  await p.goto(BASE); await p.waitForSelector("#ms-password");
+  if (await p.locator(".timeline details.ms").count()) throw new Error("milestones visible before the password");
+  await p.fill("#ms-password", "ui-build-pass"); await p.click("#ms-open");
+  await p.waitForSelector(".timeline .light.done"); if (!(await p.locator(".timeline details.ms").count())) throw new Error("no milestones");
+});
 
 p = await newPage("admin"); await login(p, "admin");
 await step("admin edits a user", async () => {
@@ -208,11 +213,8 @@ await step("program manager sees own program and can edit", async () => {
 });
 
 p = await newPage("admin2"); await login(p, "admin");
-await step("admin bulk import and permission matrix", async () => {
-  await p.goto(BASE + "#/admin"); await p.waitForSelector("#import-card textarea");
-  await p.fill("#import-card textarea", "staff_id,full_name,role\nuiimp1,UI Import,STAFF");
-  await Promise.all([p.waitForResponse(r => r.url().includes("/admin/users/import")), p.click("#import-card button:has-text('Import')")]);
-  await p.waitForSelector("#import-card code"); await p.waitForSelector("h2:has-text('Who can do what')");
+await step("admin permission matrix", async () => {
+  await p.goto(BASE + "#/admin"); await p.waitForSelector("h2:has-text('Who can do what')");
 });
 
 p = await newPage("gov-pm"); await login(p, "pm1");

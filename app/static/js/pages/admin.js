@@ -80,18 +80,6 @@ export default async function (root) {
     const setting = (key) => { const i = h("input", { type: "number", step: "any", value: cfg.params[key], style: "width:110px" }); i.addEventListener("change", guarded(i, async () => { await api("PUT", `/admin/settings/${key}`, { value: Number(i.value) }); toast(t("saved_ok")); })); return i; };
 
     const perm = await api("GET", "/admin/permissions");
-    const csvBox = h("textarea", { rows: 5, placeholder: "staff_id,full_name,role,job_title,department,email,capacity_hours_week,password" }), cout = h("div");
-    const impBtn = h("button", { class: "btn", type: "button" }, t("import_users"));
-    impBtn.addEventListener("click", guarded(impBtn, async () => {
-      mount(cout);
-      try {
-        const r = await api("POST", "/admin/users/import", { csv_text: csvBox.value });
-        mount(cout, h("p", {}, `${t("created")}: ${r.created.length} · ${t("import_errors")}: ${r.errors.length}`),
-          r.created.some(x => x.password) ? h("div", {}, h("p", { class: "muted small" }, t("import_pw_note")), table([t("staff_id"), t("password")], r.created.filter(x => x.password).map(x => [x.staff_id, h("code", {}, x.password)]))) : null,
-          r.errors.length ? table([t("line"), t("staff_id"), t("imp_error")], r.errors.map(x => [x.line, x.staff_id || "", x.error])) : null);
-        if (r.created.length) toast(t("saved"));
-      } catch (e) { mount(cout, errorBox(e)); }
-    }));
     const mail = await api("GET", "/admin/mail");
     const mf = { host: h("input", { value: mail.host || "" }), port: h("input", { type: "number", value: mail.port, style: "width:90px" }), user: h("input", { value: mail.username || "", autocomplete: "off" }),
       pw: h("input", { type: "password", autocomplete: "new-password", placeholder: mail.password_set ? t("pw_kept") : "" }), from: h("input", { value: mail.from_addr || "" }),
@@ -116,7 +104,6 @@ export default async function (root) {
         h("h2", { style: "margin-top:14px" }, t("new_user")),
         h("div", { class: "row" }, field(t("staff_id"), f.sid), field(t("full_name"), f.name), field(t("job_title"), f.jt), field(t("department"), f.dep), field(t("password"), f.pw), field(t("role"), f.role), field(t("grade"), f.grade), field(t("capacity"), f.cap), field(t("is_ccb"), f.ccb), field(t("line_manager"), f.lm), addU), uerr),
       secCard, mailCard, backupCard, restoreCard(), retentionCard(), jobsCard(), importCard("staff", "/import/staff"), importCard("timesheets", "/import/timesheets"),
-      h("div", { class: "card", id: "import-card" }, h("h2", {}, t("bulk_import")), h("p", { class: "muted small" }, t("bulk_import_note")), csvBox, h("p", {}, impBtn), cout),
       h("div", { class: "card" }, h("h2", {}, t("rates")), table([t("grade"), t("hourly_rate"), t("currency"), t("effective_from"), ""], rates.map(r => [r.grade, num(r.hourly_rate, 2), r.currency, r.effective_from, r.future ? h("span", { class: "row", style: "gap:6px" }, badge(t("future_rate"), "AMBER"), h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/admin/rates/${r.id}`); await render(); }) }, t("remove"))) : ""]), t("none")),
         h("div", { class: "row", style: "margin-top:12px" }, field(t("grade"), rg), field(t("hourly_rate"), rv), field(t("currency"), rc), field(t("effective_from"), rd), addR), rerr),
       h("div", { class: "card" }, h("h2", {}, t("holidays")), h("p", { class: "muted" }, t("work_week_note")),

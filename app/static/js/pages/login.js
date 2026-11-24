@@ -38,7 +38,7 @@ export default function (root) {
   const starting = window.PROPERM_EMBEDDED ? h("div", { class: "card" }, h("p", { class: "muted" }, t("demo_starting"))) : null;
   const board = h("div", { class: "card timeline" });
   const hero = h("section", { class: "hero" },
-    h("div", { class: "brand" }, h("span", { class: "logo" }, "P"), t("app")),
+    h("div", { class: "brand" }, h("img", { class: "logo", src: "brand/logo-mark-reversed.svg", alt: "", width: 28, height: 32 }), t("app")),
     h("div", {}, h("h1", {}, t("hero_title")), h("p", { class: "lead" }, t("hero_lead"))),
     h("ul", { class: "points" }, [["timesheet", "hero_p1"], ["chart", "hero_p2"], ["shield", "hero_p3"], ["spark", "hero_p4"]].map(([ic, k]) => h("li", {}, icon(ic), h("span", {}, t(k))))),
     h("div", { class: "foot" }, "Smart PMO · Riyadh"));
@@ -60,11 +60,26 @@ export default function (root) {
   }).catch(() => {});
 }
 
-// Build progress: edit app/static/milestones.json as work moves (done / progress / todo).
+// Build progress: edit app/data/milestones.json as work moves (done / progress / todo). Private: the server sends it only for the owner password (PROPERM_BUILD_PASSWORD).
 const STATE = { done: ["✓", "done"], progress: ["…", "progress"], todo: ["○", "todo"] };
 async function timeline(board) {
-  let data;
-  try { data = await (await fetch(new URL("../../milestones.json", import.meta.url), { cache: "no-cache" })).json(); } catch { return; }
+  let on = false;
+  try { on = (await api("GET", "/build-progress/enabled")).enabled; } catch { /* no API (demo) */ }
+  if (!on) { board.hidden = true; return; }
+  const pw = h("input", { type: "password", autocomplete: "off", id: "ms-password", placeholder: t("password") });
+  const msg = h("div");
+  const open = h("button", { class: "btn", type: "button", id: "ms-open" }, t("ms_show"));
+  const unlock = guarded(open, async () => {
+    mount(msg);
+    try { render(board, await api("POST", "/build-progress", { password: pw.value })); }
+    catch (e) { mount(msg, errorBox(e)); }
+  });
+  open.addEventListener("click", unlock);
+  pw.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); unlock(); } });
+  mount(board, h("h2", {}, t("ms_title")), h("p", { class: "muted small" }, t("ms_private")), h("div", { class: "row" }, pw, open), msg);
+}
+
+function render(board, data) {
   const ar = getLang() === "ar";
   const name = (x) => (ar && x.ar) || x.en;
   const light = (s) => h("span", { class: `light ${STATE[s][1]}`, role: "img", "aria-label": t(`ms_${s}`), title: t(`ms_${s}`) }, STATE[s][0]);
