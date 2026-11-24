@@ -1,11 +1,11 @@
 /* PROPERM design system. No external fonts or CDNs: everything is served from this app (data sovereignty). */
 :root{
-  --navy:#1F3864;--navy2:#2c4a82;--navy-d:#14264a;--gold:#B8860B;--gold-soft:#fbf4dd;
+  --navy:#0B1F3A;--navy2:#1B3A63;--navy-d:#061326;--gold:#C9A24B;--gold-soft:#f8f1de;
   --bg:#f5f6fa;--card:#fff;--line:#e4e7ee;--line2:#eef0f5;--text:#101828;--text2:#344054;--muted:#667085;
   --red:#d92d20;--red-s:#fef3f2;--amber:#b54708;--amber-s:#fffaeb;--green:#067647;--green-s:#ecfdf3;--grey:#667085;--grey-s:#f2f4f7;--blue-s:#eef3fb;
   --radius:12px;--radius-s:8px;
   --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);--shadow-l:0 12px 32px rgba(16,24,40,.18);
-  --ring:0 0 0 3px rgba(44,74,130,.18);
+  --ring:0 0 0 3px rgba(27,58,99,.2);
   --font:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic","Noto Sans",Arial,sans-serif;
 }
 *{box-sizing:border-box}
@@ -75,7 +75,7 @@ button.btn:active{transform:translateY(1px)}
 button.btn.secondary{background:#fff;color:var(--text2);border-color:#d0d5dd}
 button.btn.secondary:hover{background:var(--grey-s)}
 button.btn.danger{background:var(--red);border-color:var(--red)}
-button.btn.gold{background:var(--gold);border-color:var(--gold)}
+button.btn.gold{background:var(--gold);border-color:var(--gold);color:var(--navy-d)}
 button.btn.small{padding:5px 11px;font-size:12.5px}
 button.btn:disabled{opacity:.5;cursor:not-allowed}
 
@@ -128,14 +128,14 @@ td input,td select{padding:6px 8px}
 
 /* ---------- login ---------- */
 .login-page{min-height:100vh;display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,520px)}
-.hero{background:radial-gradient(1200px 500px at 0% 0%,#2c4a82 0,transparent 60%),linear-gradient(160deg,var(--navy-d),var(--navy));color:#fff;padding:56px 56px 40px;display:flex;flex-direction:column;gap:28px}
+.hero{background:radial-gradient(1200px 500px at 0% 0%,#1B3A63 0,transparent 60%),linear-gradient(160deg,var(--navy-d),var(--navy));color:#fff;padding:56px 56px 40px;display:flex;flex-direction:column;gap:28px}
 .hero .brand{padding:0;font-size:20px}
 .hero .brand .logo{width:34px;height:39px}
 .hero h1{color:#fff;font-size:38px;line-height:1.12;max-width:520px;margin:12px 0 14px}
 .hero p.lead{font-size:16px;color:#cdd8ee;max-width:480px;margin:0}
 .points{list-style:none;margin:0;padding:0;display:grid;gap:14px;max-width:480px}
 .points li{display:flex;gap:12px;align-items:flex-start;color:#e1e8f6}
-.points .ico{margin-top:2px;color:var(--gold);stroke:#e7c35a}
+.points .ico{margin-top:2px;color:var(--gold);stroke:#E3C47A}
 .hero .foot{margin-top:auto;font-size:12px;color:#8fa0c4}
 .login-side{padding:48px 40px;display:flex;flex-direction:column;gap:18px;justify-content:center;background:var(--bg)}
 .login-side .card{margin:0}
@@ -222,7 +222,7 @@ input.topsearch{max-width:280px;margin-inline-start:8px}@media (max-width:860px)
 /* =====================================================================================
    2026-11 refresh: calmer surfaces, grouped navigation, home tiles, assistant, quick jump
    ===================================================================================== */
-:root{--bg:#f4f6fb;--radius:14px;--shadow:0 1px 2px rgba(16,24,40,.04),0 4px 14px rgba(16,24,40,.05);--accent:#B8860B}
+:root{--bg:#f4f6fb;--radius:14px;--shadow:0 1px 2px rgba(16,24,40,.04),0 4px 14px rgba(16,24,40,.05);--accent:#C9A24B}
 body{background:radial-gradient(900px 380px at 100% -80px,#e9eefb 0,transparent 70%),var(--bg)}
 .card{transition:box-shadow .15s,transform .15s}
 .card:hover{box-shadow:0 2px 4px rgba(16,24,40,.05),0 10px 26px rgba(16,24,40,.08)}
@@ -261,7 +261,7 @@ a.action:hover{background:#f7f9fd;border-color:#c9d2e6;text-decoration:none}
 a.action strong{display:block;font-size:14px}a.action small{display:block;color:var(--muted);font-size:12px}
 
 /* assistant */
-.asst-btn{position:fixed;inset-block-end:22px;inset-inline-end:22px;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(145deg,var(--gold),#d9a21b);color:#fff;display:grid;place-items:center;box-shadow:0 8px 24px rgba(184,134,11,.45);z-index:45;transition:transform .15s}
+.asst-btn{position:fixed;inset-block-end:22px;inset-inline-end:22px;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(145deg,#d8b565,var(--gold));color:var(--navy-d);display:grid;place-items:center;box-shadow:0 8px 24px rgba(201,162,75,.45);z-index:45;transition:transform .15s}
 .asst-btn:hover{transform:scale(1.07)}.asst-btn .ico{width:26px;height:26px;stroke-width:1.6}
 .asst-panel{position:fixed;inset-block-end:90px;inset-inline-end:22px;width:min(390px,calc(100vw - 28px));height:min(560px,calc(100vh - 120px));background:#fff;border-radius:18px;box-shadow:0 20px 56px rgba(16,24,40,.28);display:none;flex-direction:column;z-index:46;overflow:hidden;border:1px solid var(--line)}
 .asst-panel.open{display:flex;animation:pop .18s ease-out}
