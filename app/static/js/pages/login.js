@@ -38,7 +38,7 @@ export default function (root) {
   const starting = window.PROPERM_EMBEDDED ? h("div", { class: "card" }, h("p", { class: "muted" }, t("demo_starting"))) : null;
   const board = h("div", { class: "card timeline" });
   const hero = h("section", { class: "hero" },
-    h("div", { class: "brand" }, h("span", { class: "logo" }, "P"), t("app")),
+    h("div", { class: "brand" }, h("img", { class: "logo", src: "brand/logo-mark-reversed.svg", alt: "", width: 28, height: 32 }), t("app")),
     h("div", {}, h("h1", {}, t("hero_title")), h("p", { class: "lead" }, t("hero_lead"))),
     h("ul", { class: "points" }, [["timesheet", "hero_p1"], ["chart", "hero_p2"], ["shield", "hero_p3"], ["spark", "hero_p4"]].map(([ic, k]) => h("li", {}, icon(ic), h("span", {}, t(k))))),
     h("div", { class: "foot" }, "Smart PMO · Riyadh"));
