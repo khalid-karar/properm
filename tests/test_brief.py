@@ -327,13 +327,15 @@ def test_translation_needs_the_saudi_model(monkeypatch, c, world):
     assert "translations" not in c.get(f"/projects/{pid}/brief/{did}", headers=h["pm1"]).json()["draft"]
     assert c.post(url, headers=h["pm1"], json={"target": "fr"}).status_code == 422
     monkeypatch.setenv("PROPERM_AI_BASE_URL", "http://localhost:9999")
-    monkeypatch.setattr(ai, "_live", lambda task, payload, prompt: _json.dumps({"items": ["EN:" + x for x in _json.loads(prompt.splitlines()[-1])]}, ensure_ascii=False))
-    r = c.post(url, headers=h["pm1"], json={"target": "en"})
+    monkeypatch.setattr(ai, "_live", lambda task, payload, prompt, cfg=None: _json.dumps({"items": ["EN:" + x for x in _json.loads(prompt.splitlines()[-1])]}, ensure_ascii=False))
+    r = c.post(url, headers={**h["pm1"], "X-Progress-Id": "tr-prog-1"}, json={"target": "en"})
     assert r.status_code == 200 and r.json()["status"] == "ok" and r.json()["translated"] > 5
+    j = c.get("/project-intake/progress/tr-prog-1", headers=h["pm1"]).json()                  # the bar can follow the job to the end
+    assert j["pct"] == 100 and j["step"] == "done"
     d = c.get(f"/projects/{pid}/brief/{did}", headers=h["pm1"]).json()["draft"]
     first = d["activities"][0]["name"]
     assert d["translations"]["en"]["activities.0.name"] == {"src": first, "t": "EN:" + first}
-    monkeypatch.setattr(ai, "_live", lambda task, payload, prompt: '{"items": ["only one"]}')
+    monkeypatch.setattr(ai, "_live", lambda task, payload, prompt, cfg=None: '{"items": ["only one"]}')
     assert c.post(url, headers=h["pm1"], json={"target": "en"}).status_code == 502
 
 

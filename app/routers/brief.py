@@ -1,9 +1,12 @@
 """Project book -> reviewed plan (flow chart 1.2 and 1.3). Analyze a tender book or brief (Arabic or English, text, DOCX, PDF or scan),
 review the draft, then apply: requirements, deliverables, milestones, tasks with hours, staff proposals, risks and compliance items."""
 import calendar
+import contextvars
 import copy
 import json
 import re
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from math import ceil
 
@@ -593,7 +596,7 @@ class TranslateIn(BaseModel):
 
 
 @router.post("/projects/{pid}/brief/{did}/translate")
-def translate_draft(pid: int, did: int, body: TranslateIn, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE))):
+def translate_draft(pid: int, did: int, body: TranslateIn, db=Depends(get_db), user: User = Depends(require_roles(*MANAGE)), progress_id: str | None = Header(None, alias="X-Progress-Id")):
     """Translate the extracted text with the Saudi-hosted model. Without a live model nothing is translated and the original stays as the only text."""
     p, d = _draft(db, user, pid, did)
     st = ai.status()
@@ -611,20 +614,39 @@ def translate_draft(pid: int, did: int, body: TranslateIn, db=Depends(get_db), u
                     items.append((f"{sec}.{i}.{f}", str(row[f])))
     tr = out.setdefault("translations", {}).setdefault(body.target, {})
     name = "English" if body.target == "en" else "Arabic"
+    # small chunks, run together: the time is about that of the slowest chunk, not the sum of all of them
+    size = 15
+    parts = [items[k:k + size] for k in range(0, len(items), size)]
+    chunks = max(1, len(parts))
+    progress.update(user.id, progress_id, 3, "translate", n=0, total=chunks)
+    cfg = ai.resolve()                                        # read on the request thread; workers then only make the model call
+    done = {"n": 0}
+    lock = threading.Lock()
+
+    def one(chunk):
+        prompt = (f"Translate each string into {name}. Keep numbers, codes and names. Return only JSON: {{\"items\": [\"...\"]}} with exactly {len(chunk)} strings in the same order.\n"
+                  + json.dumps([v for _, v in chunk], ensure_ascii=False))
+        data = ai.extract_json(ai._live("translate", {}, prompt, cfg))
+        res = data.get("items") if isinstance(data, dict) else None
+        if not isinstance(res, list) or len(res) != len(chunk):
+            raise ai.AiError(502, "The model returned a translation that does not match the text")
+        with lock:
+            done["n"] += 1
+            progress.update(user.id, progress_id, 3 + 92 * done["n"] / chunks, "translate", n=done["n"], total=chunks)
+        return res
+
     try:
-        for k in range(0, len(items), 40):
-            chunk = items[k:k + 40]
-            prompt = (f"Translate each string into {name}. Keep numbers, codes and names. Return only JSON: {{\"items\": [\"...\"]}} with exactly {len(chunk)} strings in the same order.\n"
-                      + json.dumps([v for _, v in chunk], ensure_ascii=False))
-            data = ai.extract_json(ai._live("translate", {}, prompt))
-            res = data.get("items") if isinstance(data, dict) else None
-            if not isinstance(res, list) or len(res) != len(chunk):
-                raise ai.AiError(502, "The model returned a translation that does not match the text")
+        ctxs = [contextvars.copy_context() for _ in parts]    # one copy per worker, taken here: each carries this request's tenant and user for the usage record
+        with ThreadPoolExecutor(max_workers=min(6, chunks)) as ex:
+            replies = list(ex.map(lambda cp: cp[0].run(one, cp[1]), zip(ctxs, parts)))
+        for chunk, res in zip(parts, replies):
             for (key, src), t_ in zip(chunk, res):
                 tr[key] = {"src": src, "t": str(t_)}
     except ai.AiError as e:
         raise HTTPException(502, getattr(e, "msg", None) or "Translation failed")
+    progress.update(user.id, progress_id, 97, "save")
     d.output = out
     log(db, user.id, "brief.translated", "project", pid, {"draft_id": did, "target": body.target, "strings": len(items)})
     db.commit()
+    progress.update(user.id, progress_id, 100, "done")
     return {"status": "ok", "translated": len(items), "translations": out["translations"]}
