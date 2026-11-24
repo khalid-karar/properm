@@ -1,9 +1,31 @@
 from datetime import date, datetime, timezone
-from sqlalchemy import (Index, Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, LargeBinary, String,
+from sqlalchemy import (Index, Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON as _JSON, LargeBinary, String,
                         Text, UniqueConstraint, event)
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.schema import CreateColumn
+from sqlalchemy.types import TypeDecorator
+
+
+def _plain_numbers(v):
+    from decimal import Decimal
+    if isinstance(v, Decimal):
+        return int(v) if v == v.to_integral_value() else float(v)
+    if isinstance(v, dict):
+        return {k: _plain_numbers(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_plain_numbers(x) for x in v]
+    return v
+
+
+class JSON(TypeDecorator):
+    """JSON column. Oracle's native JSON hands numbers back as Decimal (and values over 32 KB only come back through its own reader), so keep the
+    database's reader and turn Decimals into plain int/float here."""
+    impl = _JSON
+    cache_ok = True
+
+    def process_result_value(self, value, dialect):
+        return _plain_numbers(value)
 
 
 def now():
