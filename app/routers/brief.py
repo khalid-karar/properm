@@ -157,6 +157,9 @@ def analyze(pid: int, body: AnalyzeIn, db=Depends(get_db), user: User = Depends(
     result["meta"]["source"] = source
     result["domains"] = plandomains.generate(result)
     notes = _refine(db, result, result["meta"]["language"])
+    if ai.status()["mode"] == "live":
+        result["domains"], dnotes = plandomains.generate_live(result, lambda prompt: ai._live("brief", {}, prompt))
+        notes += dnotes
     for ph in result["phases"]:
         ph.pop("text", None)
     if not result["activities"]:
