@@ -97,12 +97,27 @@ def _allowed_suffixes() -> list[str]:
     return [x.strip().lower() for x in os.environ.get("PROPERM_AI_ALLOWED_HOSTS", ".sa").split(",") if x.strip()]
 
 
+OCI_SAUDI_REGIONS = ("me-riyadh-1", "me-jeddah-1")
+
+
+def is_oci_genai(url: str) -> bool:
+    """True for an OCI Generative AI inference endpoint, e.g. https://inference.generativeai.me-riyadh-1.oci.oraclecloud.com"""
+    host = (urlparse(url).hostname or "").lower()
+    return host.startswith("inference.generativeai.") and host.endswith(".oci.oraclecloud.com")
+
+
+def oci_region(url: str) -> str:
+    return (urlparse(url).hostname or "").lower().split(".")[2] if is_oci_genai(url) else ""
+
+
 def host_in_kingdom(url: str) -> bool:
     host = (urlparse(url).hostname or "").lower()
     if not host:
         return False
     if host == "localhost":
         return True
+    if is_oci_genai(url):                                    # only the Saudi OCI regions; any other OCI region is refused
+        return oci_region(url) in OCI_SAUDI_REGIONS and urlparse(url).scheme == "https"
     try:
         ip = ipaddress.ip_address(host)
         return ip.is_private or ip.is_loopback
@@ -123,7 +138,7 @@ def status(cfg: dict | None = None) -> dict:
     inside = host_in_kingdom(url) if url else None
     blocked = live and inside is False and not offsite_demo_allowed()
     return {"mode": "live" if live else "stub", "model": cfg["model"] if live else "stub", "source": cfg["source"],
-            "host": urlparse(url).hostname if url else None, "in_kingdom": inside,
+            "host": urlparse(url).hostname if url else None, "in_kingdom": inside, "provider": "oci" if url and is_oci_genai(url) else ("openai-compatible" if url else None),
             "configured": bool(url), "offsite_demo": bool(live and inside is False and offsite_demo_allowed()), "blocked": bool(blocked)}
 
 
@@ -149,6 +164,8 @@ def _live(task: str, payload: dict, prompt: str, cfg: dict | None = None) -> str
     url = cfg["url"].rstrip("/")
     if not host_in_kingdom(url) and not offsite_demo_allowed():
         raise AiError(403, "AI host is not inside the Kingdom; refusing to send data. Check PROPERM_AI_BASE_URL / PROPERM_AI_ALLOWED_HOSTS.")
+    if is_oci_genai(url):
+        return _live_oci(url, cfg, prompt)
     body = json.dumps({"model": cfg["model"], "temperature": 0.2,
                        "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}]}).encode()
     req = urllib.request.Request(url + "/chat/completions", data=body, headers={"Content-Type": "application/json", "Authorization": "Bearer " + (cfg["key"] or "none")})
@@ -157,6 +174,38 @@ def _live(task: str, payload: dict, prompt: str, cfg: dict | None = None) -> str
             return json.loads(r.read())["choices"][0]["message"]["content"]
     except Exception as e:
         raise AiError(502, f"AI model unreachable or returned an error ({type(e).__name__})")
+
+
+def _oci_client(url: str):
+    """OCI Generative AI client. Default auth is the VM's instance principal (no keys on disk: dynamic group + policy
+    'use generative-ai-family'). PROPERM_OCI_AUTH=config uses ~/.oci/config instead (local testing only)."""
+    import oci
+    cc = {"timeout": (10, int(os.environ.get("PROPERM_AI_TIMEOUT", "60")))}
+    if os.environ.get("PROPERM_OCI_AUTH", "instance_principal") == "config":
+        conf = oci.config.from_file(profile_name=os.environ.get("PROPERM_OCI_PROFILE", "DEFAULT"))
+        return oci.generative_ai_inference.GenerativeAiInferenceClient(conf, service_endpoint=url, **cc)
+    signer = oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
+    return oci.generative_ai_inference.GenerativeAiInferenceClient({}, signer=signer, service_endpoint=url, **cc)
+
+
+def _live_oci(url: str, cfg: dict, prompt: str) -> str:
+    """Cohere chat on OCI Generative AI in a Saudi region. cfg['model'] is the model OCID (ocid1.generativeaimodel...).
+    A reply that stopped on the token limit is an error: half a JSON document must never become a draft."""
+    compartment = os.environ.get("PROPERM_OCI_COMPARTMENT", "").strip()
+    if not compartment or not cfg["model"].startswith("ocid1.generativeaimodel."):
+        raise AiError(500, "OCI AI is not set up: set PROPERM_OCI_COMPARTMENT and use the model OCID as the model name.")
+    try:
+        from oci.generative_ai_inference import models as m
+        req = m.CohereChatRequest(message=prompt, preamble_override=SYSTEM, temperature=0.2, is_stream=False,
+                                  max_tokens=int(os.environ.get("PROPERM_AI_MAX_TOKENS", "4000")))
+        det = m.ChatDetails(compartment_id=compartment, chat_request=req,
+                            serving_mode=m.OnDemandServingMode(model_id=cfg["model"]))
+        data = _oci_client(url).chat(det).data.chat_response
+    except Exception as e:
+        raise AiError(502, f"AI model unreachable or returned an error ({type(e).__name__})")
+    if str(getattr(data, "finish_reason", "")).upper() in ("MAX_TOKENS", "ERROR_LIMIT", "ERROR"):
+        raise AiError(502, "AI reply was cut off at the token limit; raise PROPERM_AI_MAX_TOKENS or ask for less")
+    return data.text or ""
 
 
 def extract_json(text: str) -> dict:
