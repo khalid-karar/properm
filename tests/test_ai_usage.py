@@ -1,4 +1,4 @@
-"""AI usage and cost: each model call is recorded per tenant and person; owner sees all tenants, a tenant admin only their own."""
+"""AI usage and cost: each model call is recorded per tenant and person; only the platform owner sees it; tenant admins get 403."""
 from app import ai
 from tests.test_flow import app, c, login  # noqa: F401
 
@@ -27,12 +27,9 @@ def test_usage_is_per_tenant_and_private(c):
     by = {x["name"]: x for x in owner["by_tenant"]}
     assert by["Client One"]["chars"] == 110000 and by["Client Two"]["chars"] == 200000
     assert round(by["Client One"]["cost"], 4) == round(110000 / 10000 * 0.05850624, 4)
-    one = c.get("/admin/ai/usage", headers=h1).json()
-    assert one["owner"] is False and one["total"]["calls"] == 2 and "by_tenant" not in one or not one.get("by_tenant")
-    two = c.get("/admin/ai/usage", headers=h2).json()
-    assert two["total"]["calls"] == 1 and two["total"]["chars"] == 200000
-    # a tenant admin cannot look into another tenant
-    assert c.get(f"/admin/ai/usage?tenant_id={t2}", headers=h1).json()["total"]["calls"] == 2
+    # tenant admins do not see usage or cost for now
+    assert c.get("/admin/ai/usage", headers=h1).status_code == 403
+    assert c.get("/admin/ai/usage", headers=h2).status_code == 403
     # owner can drill into one tenant
     assert c.get(f"/admin/ai/usage?tenant_id={t2}", headers=admin).json()["total"]["calls"] == 1
 

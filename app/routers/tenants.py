@@ -223,6 +223,8 @@ def ai_usage(days: int = 30, tenant_id: int | None = None, db=Depends(get_db), a
     from datetime import datetime, timedelta, timezone
     days = max(1, min(int(days), 366))
     owner = admin.tenant_id is None
+    if not owner:   # usage and cost are for the platform owner only, for now
+        raise HTTPException(403, "Usage and cost are visible to the platform administrator only")
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days)
     rate = _rate()

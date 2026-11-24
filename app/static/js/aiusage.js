@@ -10,7 +10,7 @@ export async function usageCard() {
   const body = h("div", {});
   const days = h("select", {}, [7, 30, 90, 365].map(d => h("option", { value: d, selected: d === 30 }, `${d} ${t("usage_days")}`)));
   const tenant = h("select", {}, h("option", { value: "" }, t("usage_all")));
-  let tenantsLoaded = false;
+  let tenantsLoaded = false, hidden = false;
   async function load() {
     try {
       const u = await api("GET", `/admin/ai/usage?days=${days.value}${tenant.value ? `&tenant_id=${tenant.value}` : ""}`);
@@ -31,11 +31,12 @@ export async function usageCard() {
         h("h3", {}, t("usage_by_task")),
         table([t("type"), t("usage_calls"), t("usage_chars"), t("usage_cost")], u.by_task.map(x => [x.task, num(x.calls, 0), kchars(x.chars), sar(x.cost)]), t("none")),
         h("p", { class: "muted small" }, t("usage_note").replace("{rate}", String(u.rate_per_10k_chars))));
-    } catch (e) { mount(body, errorBox(e)); }
+    } catch (e) { if (e.status === 403) hidden = true; else mount(body, errorBox(e)); }
   }
   days.addEventListener("change", load);
   tenant.addEventListener("change", load);
   await load();
+  if (hidden) return null;   // not the platform owner: no card
   return h("div", { class: "card", id: "ai-usage-card" }, h("h2", {}, t("usage_title")), h("p", { class: "muted small" }, t("usage_intro")),
     h("div", { class: "row", style: "align-items:end" }, field(t("usage_period"), days), field(t("ai_tenant"), tenant)), body);
 }
