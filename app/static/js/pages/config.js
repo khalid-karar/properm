@@ -1,6 +1,7 @@
 // Configuration (ADMIN): maintained lists and AI administration.
 import { api } from "../api.js";
 import { t } from "../i18n.js";
+import { usageCard } from "../aiusage.js";
 import { badge, errorBox, field, guarded, h, mount, num, table, toast } from "../ui.js";
 
 const LISTS = ["nonproject_code", "risk_category", "kpi_template", "closure_item", "department", "skill"];
@@ -82,7 +83,7 @@ export default async function (root) {
     const gov = await api("GET", "/config/governance");
     const tg = (k) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: gov[k], onChange: guarded(null, (ev) => setSetting(k, ev.target.checked ? 1 : 0)) }), " ", t(`gov_${k}`));
     const govCard = h("div", { class: "card", id: "gov-card" }, h("h2", {}, t("governance")), h("p", { class: "muted small" }, t("governance_note")), tg("intake_required"), tg("stage_gates"));
-    mount(root, h("h1", {}, t("nav_config")), govCard, aiCard, modelsCard, h("div", { class: "grid2" }, cards));
+    mount(root, h("h1", {}, t("nav_config")), govCard, aiCard, await usageCard(), modelsCard, h("div", { class: "grid2" }, cards));
   }
   await render();
 }
