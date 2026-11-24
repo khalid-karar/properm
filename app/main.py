@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import asyncio
+import json
 import os
 import sys
 from contextlib import asynccontextmanager
@@ -65,6 +66,16 @@ async def _lifespan(app):
         task.cancel()
 
 
+def _dump_json(obj):
+    from decimal import Decimal
+
+    def default(o):
+        if isinstance(o, Decimal):
+            return int(o) if o == o.to_integral_value() else float(o)
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+    return json.dumps(obj, default=default)
+
+
 def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = True) -> FastAPI:
     kwargs = {}
     test_db = os.environ.get("PROPERM_TEST_DATABASE_URL", "")
@@ -75,6 +86,8 @@ def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = Tr
         kwargs["connect_args"] = {"check_same_thread": False}
         if ":memory:" in database_url:
             kwargs["poolclass"] = StaticPool
+    kwargs["json_serializer"] = _dump_json
+    kwargs["json_deserializer"] = json.loads   # Oracle hands JSON numbers back as Decimal unless told otherwise
     engine = create_engine(database_url, **kwargs)
     if redirect:
         Base.metadata.drop_all(engine)
