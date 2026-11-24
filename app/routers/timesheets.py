@@ -83,11 +83,11 @@ def build_ctx(db, user: User, d: EntryIn, exclude_id: int | None, today: date) -
     dup = db.query(TimesheetEntry).filter(
         TimesheetEntry.user_id == user.id, TimesheetEntry.entry_date == d.entry_date, TimesheetEntry.hours == d.hours,
         TimesheetEntry.project_id == d.project_id, TimesheetEntry.activity_id == d.activity_id,
-        TimesheetEntry.nonproject_code == d.code, TimesheetEntry.description == d.description,
-        TimesheetEntry.status != "rejected")
+        TimesheetEntry.nonproject_code == d.code, TimesheetEntry.status != "rejected")
     if exclude_id:
         dup = dup.filter(TimesheetEntry.id != exclude_id)
-    ctx.exact_duplicate = db.query(dup.exists()).scalar()
+    # description is a long-text column: Oracle cannot compare CLOBs in SQL (ORA-22848), so compare it here
+    ctx.exact_duplicate = any((e.description or "") == (d.description or "") for e in dup.all())
 
     if d.code:
         ctx.is_nonproject, ctx.code_valid, ctx.is_leave = True, d.code in active_codes(db), d.code == "LEAVE"
