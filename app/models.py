@@ -36,6 +36,12 @@ class Base(DeclarativeBase):
     pass
 
 
+class Scoped:
+    """Mixin for every table that belongs to a client organisation. NULL = the platform owner's own organisation.
+    Reads are filtered and writes are stamped by app/tenancy.py, so no router has to remember to do it."""
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True, index=True)
+
+
 @compiles(CreateColumn, "oracle")
 def _oracle_autoincrement(element, compiler, **kw):
     """Oracle does not number integer primary keys by itself (SQLite and Postgres do): give every single-column integer primary key an identity, for create_all and for Alembic alike."""
@@ -94,7 +100,7 @@ class AiSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class User(Base):
+class User(Scoped, Base):
     """User and staff master in one record for the MVP (2.1)."""
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -111,10 +117,9 @@ class User(Base):
     line_manager_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     delegate_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     email: Mapped[str | None] = mapped_column(String(200), nullable=True)   # optional; used only for e-mail notifications
-    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)   # NULL = platform owner (manages tenants and the default AI model)
 
 
-class Program(Base):
+class Program(Scoped, Base):
     """A group of related projects (program/portfolio grouping)."""
     __tablename__ = "programs"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -124,7 +129,7 @@ class Program(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class Project(Base):
+class Project(Scoped, Base):
     __tablename__ = "projects"
     id: Mapped[int] = mapped_column(primary_key=True)
     number: Mapped[str] = mapped_column(String(60), unique=True)
@@ -145,7 +150,7 @@ class Project(Base):
     pm = relationship("User", foreign_keys=[pm_id])
 
 
-class Assignment(Base):
+class Assignment(Scoped, Base):
     __tablename__ = "assignments"
     __table_args__ = (UniqueConstraint("project_id", "user_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -153,7 +158,7 @@ class Assignment(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 
-class Activity(Base):
+class Activity(Scoped, Base):
     __tablename__ = "activities"
     __table_args__ = (UniqueConstraint("project_id", "code"),)
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -169,7 +174,7 @@ class Activity(Base):
     baseline_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
-class ActivityStaffLimit(Base):
+class ActivityStaffLimit(Scoped, Base):
     """Per-activity max hours for one staff member (overrides the default cap)."""
     __tablename__ = "activity_staff_limits"
     __table_args__ = (UniqueConstraint("activity_id", "user_id"),)
@@ -179,7 +184,7 @@ class ActivityStaffLimit(Base):
     max_hours: Mapped[float] = mapped_column(Float)
 
 
-class ChangeRequest(Base):
+class ChangeRequest(Scoped, Base):
     __tablename__ = "change_requests"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
@@ -195,7 +200,7 @@ class ChangeRequest(Base):
     new_baseline_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
-class TimesheetEntry(Base):
+class TimesheetEntry(Scoped, Base):
     __tablename__ = "timesheet_entries"
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
@@ -216,7 +221,7 @@ class TimesheetEntry(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class RateCard(Base):
+class RateCard(Scoped, Base):
     """Effective-dated hourly cost rate per grade. Append-only: a change is a new row with a later
     effective_from, so past cost is never repriced (2.1.5)."""
     __tablename__ = "rate_card"
@@ -229,7 +234,7 @@ class RateCard(Base):
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 
-class BaselineRate(Base):
+class BaselineRate(Scoped, Base):
     """Rates in force when a baseline was locked (audit of what the cost baseline was priced with)."""
     __tablename__ = "baseline_rates"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -240,7 +245,7 @@ class BaselineRate(Base):
     currency: Mapped[str] = mapped_column(String(3))
 
 
-class ActivityProgress(Base):
+class ActivityProgress(Scoped, Base):
     """2.6 weekly progress per activity (percent-complete method in the MVP)."""
     __tablename__ = "activity_progress"
     __table_args__ = (UniqueConstraint("activity_id", "week_start"),)
@@ -254,7 +259,7 @@ class ActivityProgress(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class CostEntry(Base):
+class CostEntry(Scoped, Base):
     """2.7 non-labor cost ledger. Labor cost is computed from approved hours x rate, never entered."""
     __tablename__ = "cost_entries"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -272,7 +277,7 @@ class CostEntry(Base):
     approved_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
 
-class PlannedAllocation(Base):
+class PlannedAllocation(Scoped, Base):
     """2.1b planned hours per staff per week (forward-looking capacity)."""
     __tablename__ = "planned_allocations"
     __table_args__ = (UniqueConstraint("project_id", "user_id", "week_start"),)
@@ -283,7 +288,7 @@ class PlannedAllocation(Base):
     hours: Mapped[float] = mapped_column(Float)
 
 
-class Risk(Base):
+class Risk(Scoped, Base):
     __tablename__ = "risks"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
@@ -301,7 +306,7 @@ class Risk(Base):
         return self.probability * self.impact
 
 
-class Issue(Base):
+class Issue(Scoped, Base):
     __tablename__ = "issues"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
@@ -314,7 +319,7 @@ class Issue(Base):
     linked_risk_id: Mapped[int | None] = mapped_column(ForeignKey("risks.id"), nullable=True)
 
 
-class ClosureNote(Base):
+class ClosureNote(Scoped, Base):
     """Why and how a risk or issue was closed (or reopened): never just a status flip."""
     __tablename__ = "closure_notes"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -331,7 +336,7 @@ class ClosureNote(Base):
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class Tender(Base):
+class Tender(Scoped, Base):
     """The bid stage of a project in tendering: go/no-go, estimate settings, submission checklist and the win/lose result."""
     __tablename__ = "tenders"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -349,7 +354,7 @@ class Tender(Base):
     outcome_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class WeeklyReport(Base):
+class WeeklyReport(Scoped, Base):
     __tablename__ = "weekly_reports"
     __table_args__ = (UniqueConstraint("project_id", "week_start"),)
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -361,7 +366,7 @@ class WeeklyReport(Base):
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class Alert(Base):
+class Alert(Scoped, Base):
     """3.3 rule-generated alert; 3.5 triage lifecycle. Deduplicated per (project, rule, subject)."""
     __tablename__ = "alerts"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -381,7 +386,7 @@ class Alert(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class AlertAction(Base):
+class AlertAction(Scoped, Base):
     """Audit trail of every triage step (3.5.4)."""
     __tablename__ = "alert_actions"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -392,7 +397,7 @@ class AlertAction(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class ClosureItem(Base):
+class ClosureItem(Scoped, Base):
     __tablename__ = "closure_items"
     __table_args__ = (UniqueConstraint("project_id", "key"),)
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -404,7 +409,7 @@ class ClosureItem(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class Benefit(Base):
+class Benefit(Scoped, Base):
     """Benefits register: what the project is meant to deliver, and how far it has been realised."""
     __tablename__ = "benefits"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -421,14 +426,14 @@ class Benefit(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class Holiday(Base):
+class Holiday(Scoped, Base):
     __tablename__ = "holidays"
     id: Mapped[int] = mapped_column(primary_key=True)
     day: Mapped[date] = mapped_column(Date, unique=True)
     name: Mapped[str] = mapped_column(String(200))
 
 
-class RuleViolation(Base):
+class RuleViolation(Scoped, Base):
     __tablename__ = "rule_violations"
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
@@ -438,7 +443,7 @@ class RuleViolation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class PeriodLock(Base):
+class PeriodLock(Scoped, Base):
     __tablename__ = "period_locks"
     id: Mapped[int] = mapped_column(primary_key=True)
     locked_through: Mapped[date] = mapped_column(Date)
@@ -446,19 +451,19 @@ class PeriodLock(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class RuleConfig(Base):
+class RuleConfig(Scoped, Base):
     __tablename__ = "rule_config"
     rule: Mapped[str] = mapped_column(String(10), primary_key=True)
     severity: Mapped[str] = mapped_column(String(10))
 
 
-class Setting(Base):
+class Setting(Scoped, Base):
     __tablename__ = "settings"
     key: Mapped[str] = mapped_column(String(60), primary_key=True)
     value: Mapped[float] = mapped_column(Float)
 
 
-class AuditLog(Base):
+class AuditLog(Scoped, Base):
     """Append-only: updates and deletes raise (4.2)."""
     __tablename__ = "audit_log"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -470,7 +475,7 @@ class AuditLog(Base):
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
-class Outbox(Base):
+class Outbox(Scoped, Base):
     """Transactional outbox for events (Section 6). A dispatcher can be added later."""
     __tablename__ = "outbox"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -480,7 +485,7 @@ class Outbox(Base):
     dispatched: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
-class Notification(Base):
+class Notification(Scoped, Base):
     """In-app notification produced from the outbox by app.notify.dispatch."""
     __tablename__ = "notifications"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -496,7 +501,7 @@ class Notification(Base):
     email_error: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
 
-class ReportSchedule(Base):
+class ReportSchedule(Scoped, Base):
     """A recurring report delivered as a notification (and e-mail when configured)."""
     __tablename__ = "report_schedules"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -508,7 +513,7 @@ class ReportSchedule(Base):
     last_run_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
-class AiDraft(Base):
+class AiDraft(Scoped, Base):
     """Output of the AI layer. Always a draft: nothing is applied to project data until a person reviews it."""
     __tablename__ = "ai_drafts"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -526,7 +531,7 @@ class AiDraft(Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class Document(Base):
+class Document(Scoped, Base):
     """Uploaded project file (contract, charter, other). Stored in the database so no extra file service is needed."""
     __tablename__ = "documents"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -540,7 +545,7 @@ class Document(Base):
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
-class Stakeholder(Base):
+class Stakeholder(Scoped, Base):
     __tablename__ = "stakeholders"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
@@ -562,7 +567,7 @@ def _no_delete(mapper, connection, target):
     raise RuntimeError("audit_log is append-only")
 
 
-class Milestone(Base):
+class Milestone(Scoped, Base):
     __tablename__ = "milestones"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
@@ -572,7 +577,7 @@ class Milestone(Base):
     activity_id: Mapped[int | None] = mapped_column(ForeignKey("activities.id"), nullable=True)
 
 
-class ProjectKpi(Base):
+class ProjectKpi(Scoped, Base):
     __tablename__ = "project_kpis"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
@@ -584,7 +589,7 @@ class ProjectKpi(Base):
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
-class ActivityDependency(Base):
+class ActivityDependency(Scoped, Base):
     """Finish-to-start link: `activity_id` cannot start before `predecessor_id` finishes."""
     __tablename__ = "activity_dependencies"
     __table_args__ = (UniqueConstraint("activity_id", "predecessor_id"),)
@@ -593,7 +598,7 @@ class ActivityDependency(Base):
     predecessor_id: Mapped[int] = mapped_column(ForeignKey("activities.id"))
 
 
-class Snapshot(Base):
+class Snapshot(Scoped, Base):
     """One row per project per day, so RAG / CPI / SPI can be shown as a trend (written lazily and on demand)."""
     __tablename__ = "snapshots"
     __table_args__ = (UniqueConstraint("project_id", "snap_date"),)
@@ -608,7 +613,7 @@ class Snapshot(Base):
     open_alerts: Mapped[int] = mapped_column(Integer, default=0)
 
 
-class ConfigItem(Base):
+class ConfigItem(Scoped, Base):
     """Administrator-maintained list entries (non-project codes, risk categories, KPI templates, closure items)."""
     __tablename__ = "config_items"
     __table_args__ = (UniqueConstraint("list_key", "code"),)
@@ -620,7 +625,7 @@ class ConfigItem(Base):
     data: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
-class UserPref(Base):
+class UserPref(Scoped, Base):
     """Personal notification choices (profile page)."""
     __tablename__ = "user_prefs"
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
@@ -628,7 +633,7 @@ class UserPref(Base):
     email_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
-class Proposal(Base):
+class Proposal(Scoped, Base):
     """Project intake: a business case that a decision maker approves before it becomes a project."""
     __tablename__ = "proposals"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -652,7 +657,7 @@ class Proposal(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class GateReview(Base):
+class GateReview(Scoped, Base):
     """Stage gate: checks and a recorded decision before a project moves to the next stage."""
     __tablename__ = "gate_reviews"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -665,7 +670,7 @@ class GateReview(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class DecisionRecord(Base):
+class DecisionRecord(Scoped, Base):
     """Decision log: every governance decision with its rationale and conditions."""
     __tablename__ = "decision_records"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -680,7 +685,7 @@ class DecisionRecord(Base):
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class ActivityForecast(Base):
+class ActivityForecast(Scoped, Base):
     """PM's forecast finish date for an activity (hours to complete come from the weekly progress update)."""
     __tablename__ = "activity_forecasts"
     activity_id: Mapped[int] = mapped_column(ForeignKey("activities.id"), primary_key=True)
@@ -689,7 +694,7 @@ class ActivityForecast(Base):
     updated_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 
-class ProjectAction(Base):
+class ProjectAction(Scoped, Base):
     """Action log: agreed actions with an owner and a due date."""
     __tablename__ = "project_actions"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -703,7 +708,7 @@ class ProjectAction(Base):
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 
-class Lesson(Base):
+class Lesson(Scoped, Base):
     """Lessons learned register, searchable across projects."""
     __tablename__ = "lessons"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -716,7 +721,7 @@ class Lesson(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class LeaveRequest(Base):
+class LeaveRequest(Scoped, Base):
     """Planned leave, approved by the line manager; approved leave lowers planning capacity."""
     __tablename__ = "leave_requests"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -731,7 +736,7 @@ class LeaveRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class WeekSubmission(Base):
+class WeekSubmission(Scoped, Base):
     """A person's declaration that a week's timesheet is complete."""
     __tablename__ = "week_submissions"
     __table_args__ = (UniqueConstraint("user_id", "week_start"),)
@@ -744,7 +749,7 @@ class WeekSubmission(Base):
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class ProjectScore(Base):
+class ProjectScore(Scoped, Base):
     """Strategic scores for a running project, so the whole portfolio can be ranked with the proposals."""
     __tablename__ = "project_scores"
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), primary_key=True)
@@ -755,7 +760,7 @@ class ProjectScore(Base):
     updated_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 
-class ProjectDependency(Base):
+class ProjectDependency(Scoped, Base):
     """Cross-project dependency: a project needs another project's milestone (or finish) by a date."""
     __tablename__ = "project_dependencies"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -767,7 +772,7 @@ class ProjectDependency(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class ProgramRisk(Base):
+class ProgramRisk(Scoped, Base):
     """Risk owned at program level (not by one project)."""
     __tablename__ = "program_risks"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -784,7 +789,7 @@ class ProgramRisk(Base):
         return self.probability * self.impact
 
 
-class AccountSecurity(Base):
+class AccountSecurity(Scoped, Base):
     """Sign-in protection per user: failed attempts, lockout, forced password change."""
     __tablename__ = "account_security"
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
@@ -794,7 +799,7 @@ class AccountSecurity(Base):
     password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class LoginEvent(Base):
+class LoginEvent(Scoped, Base):
     """Sign-in history (successes and failures)."""
     __tablename__ = "login_events"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -805,7 +810,7 @@ class LoginEvent(Base):
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class ProjectTemplate(Base):
+class ProjectTemplate(Scoped, Base):
     """PMO method library: standard activities, milestones, KPIs and risks to start a project from."""
     __tablename__ = "project_templates"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -817,7 +822,7 @@ class ProjectTemplate(Base):
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 
-class ResourceRequest(Base):
+class ResourceRequest(Scoped, Base):
     """A project manager asks the PMO for people instead of assigning them directly."""
     __tablename__ = "resource_requests"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -836,7 +841,7 @@ class ResourceRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class RaciEntry(Base):
+class RaciEntry(Scoped, Base):
     """Responsibility matrix: for each deliverable, who is Responsible, Accountable, Consulted, Informed."""
     __tablename__ = "raci_entries"
     __table_args__ = (UniqueConstraint("project_id", "item", "person"),)
@@ -847,7 +852,7 @@ class RaciEntry(Base):
     letter: Mapped[str] = mapped_column(String(1))
 
 
-class CommItem(Base):
+class CommItem(Scoped, Base):
     """Communication plan line: who gets what information, how and how often."""
     __tablename__ = "comm_items"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -860,7 +865,7 @@ class CommItem(Base):
     last_sent: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
-class MailConfig(Base):
+class MailConfig(Scoped, Base):
     """Mail server settings kept by the administrator (environment variables are used when this is empty)."""
     __tablename__ = "mail_config"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -873,7 +878,7 @@ class MailConfig(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
-class ProgramIssue(Base):
+class ProgramIssue(Scoped, Base):
     __tablename__ = "program_issues"
     id: Mapped[int] = mapped_column(primary_key=True)
     program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"), index=True)
@@ -884,7 +889,7 @@ class ProgramIssue(Base):
     status: Mapped[str] = mapped_column(String(20), default="open")
 
 
-class ProgramBudget(Base):
+class ProgramBudget(Scoped, Base):
     """Funding envelope for a program, compared with the budgets of its projects."""
     __tablename__ = "program_budgets"
     program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"), primary_key=True)
@@ -892,7 +897,7 @@ class ProgramBudget(Base):
     currency: Mapped[str] = mapped_column(String(3), default="SAR")
 
 
-class UserHome(Base):
+class UserHome(Scoped, Base):
     """A person's chosen start page."""
     __tablename__ = "user_home"
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
@@ -900,7 +905,7 @@ class UserHome(Base):
 
 
 # ---------------- V3 step 1: scope and acceptance ----------------
-class ProjectCharter(Base):
+class ProjectCharter(Scoped, Base):
     """Structured project charter (one per project)."""
     __tablename__ = "project_charters"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -918,7 +923,7 @@ class ProjectCharter(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class Assumption(Base):
+class Assumption(Scoped, Base):
     """Assumption / constraint / dependency / exclusion log."""
     __tablename__ = "assumptions"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -931,7 +936,7 @@ class Assumption(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class Deliverable(Base):
+class Deliverable(Scoped, Base):
     """WBS node: a deliverable or a work package under one, with its own acceptance."""
     __tablename__ = "deliverables"
     __table_args__ = (UniqueConstraint("project_id", "code"),)
@@ -952,7 +957,7 @@ class Deliverable(Base):
     decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class Requirement(Base):
+class Requirement(Scoped, Base):
     __tablename__ = "requirements"
     __table_args__ = (UniqueConstraint("project_id", "code"),)
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -968,7 +973,7 @@ class Requirement(Base):
 
 
 # ---------------- V3 step 2: agile / hybrid delivery ----------------
-class Sprint(Base):
+class Sprint(Scoped, Base):
     __tablename__ = "sprints"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
@@ -982,7 +987,7 @@ class Sprint(Base):
     retro_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class BacklogItem(Base):
+class BacklogItem(Scoped, Base):
     __tablename__ = "backlog_items"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
@@ -1000,7 +1005,7 @@ class BacklogItem(Base):
 
 
 # ---------------- V3 step 3: strategy alignment and compliance ----------------
-class StrategicObjective(Base):
+class StrategicObjective(Scoped, Base):
     __tablename__ = "strategic_objectives"
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String(40), unique=True)
@@ -1011,7 +1016,7 @@ class StrategicObjective(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
-class ObjectiveLink(Base):
+class ObjectiveLink(Scoped, Base):
     """A project or a proposal that contributes to a strategic objective."""
     __tablename__ = "objective_links"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1020,7 +1025,7 @@ class ObjectiveLink(Base):
     proposal_id: Mapped[int | None] = mapped_column(ForeignKey("proposals.id"), nullable=True, index=True)
 
 
-class ComplianceRequirement(Base):
+class ComplianceRequirement(Scoped, Base):
     """Library of regulatory / policy requirements (PDPL, NCA ECC, internal policy...) that projects can be held to."""
     __tablename__ = "compliance_requirements"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1031,7 +1036,7 @@ class ComplianceRequirement(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
-class ProjectCompliance(Base):
+class ProjectCompliance(Scoped, Base):
     __tablename__ = "project_compliance"
     __table_args__ = (UniqueConstraint("project_id", "requirement_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1045,7 +1050,7 @@ class ProjectCompliance(Base):
 
 
 # ---------------- V3 step 4: procurement ----------------
-class Contract(Base):
+class Contract(Scoped, Base):
     __tablename__ = "contracts"
     __table_args__ = (UniqueConstraint("project_id", "number"),)
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1062,7 +1067,7 @@ class Contract(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class ContractPayment(Base):
+class ContractPayment(Scoped, Base):
     """Payment milestone of a contract, through to invoice and payment."""
     __tablename__ = "contract_payments"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1077,7 +1082,7 @@ class ContractPayment(Base):
     paid_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
-class VendorReview(Base):
+class VendorReview(Scoped, Base):
     __tablename__ = "vendor_reviews"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
@@ -1090,7 +1095,7 @@ class VendorReview(Base):
 
 
 # ---------------- V3 step 5: skills and team ----------------
-class UserSkill(Base):
+class UserSkill(Scoped, Base):
     __tablename__ = "user_skills"
     __table_args__ = (UniqueConstraint("user_id", "skill"),)
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1101,7 +1106,7 @@ class UserSkill(Base):
     years: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
-class UserCert(Base):
+class UserCert(Scoped, Base):
     __tablename__ = "user_certs"
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
@@ -1111,7 +1116,7 @@ class UserCert(Base):
     expires_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
-class TeamNorm(Base):
+class TeamNorm(Scoped, Base):
     """Team charter: how this team agrees to work together."""
     __tablename__ = "team_norms"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1121,7 +1126,7 @@ class TeamNorm(Base):
 
 
 # ---------------- V3 step 6: depth (risk response, reserves, quality, document versions, stakeholder engagement) ----------------
-class RiskResponse(Base):
+class RiskResponse(Scoped, Base):
     """Response plan for a risk (PMBOK strategies) with trigger, contingency and residual rating."""
     __tablename__ = "risk_responses"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1136,7 +1141,7 @@ class RiskResponse(Base):
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
 
-class Opportunity(Base):
+class Opportunity(Scoped, Base):
     __tablename__ = "opportunities"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
@@ -1149,7 +1154,7 @@ class Opportunity(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class ProjectReserve(Base):
+class ProjectReserve(Scoped, Base):
     __tablename__ = "project_reserves"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), unique=True)
@@ -1157,7 +1162,7 @@ class ProjectReserve(Base):
     management: Mapped[float] = mapped_column(Float, default=0.0)
 
 
-class ReserveDrawdown(Base):
+class ReserveDrawdown(Scoped, Base):
     __tablename__ = "reserve_drawdowns"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
@@ -1172,7 +1177,7 @@ class ReserveDrawdown(Base):
     created_on: Mapped[date] = mapped_column(Date, default=date.today)
 
 
-class QualityItem(Base):
+class QualityItem(Scoped, Base):
     __tablename__ = "quality_items"
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
@@ -1187,7 +1192,7 @@ class QualityItem(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class DocumentVersion(Base):
+class DocumentVersion(Scoped, Base):
     """Earlier versions of a project document (the current one stays on the document itself)."""
     __tablename__ = "document_versions"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1201,7 +1206,7 @@ class DocumentVersion(Base):
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
-class StakeholderEngagement(Base):
+class StakeholderEngagement(Scoped, Base):
     __tablename__ = "stakeholder_engagement"
     id: Mapped[int] = mapped_column(primary_key=True)
     stakeholder_id: Mapped[int] = mapped_column(ForeignKey("stakeholders.id"), unique=True)
@@ -1212,7 +1217,7 @@ class StakeholderEngagement(Base):
     reviewed_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
-class TwoFactor(Base):
+class TwoFactor(Scoped, Base):
     """Optional TOTP second factor per user. Backup codes are stored hashed."""
     __tablename__ = "two_factor"
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
@@ -1222,7 +1227,7 @@ class TwoFactor(Base):
     enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class JobRun(Base):
+class JobRun(Scoped, Base):
     """One scheduled job, once per day (see app/scheduler.py)."""
     __tablename__ = "job_runs"
     __table_args__ = (UniqueConstraint("name", "run_date"),)

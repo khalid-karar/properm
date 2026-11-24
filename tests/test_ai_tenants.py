@@ -52,10 +52,8 @@ def test_default_and_tenant_override(c):
             raw = db.query(AiSetting).filter_by(scope="global").one().api_key_enc
         assert raw and "sekret-1" not in raw and ai._decrypt_key(raw) == "sekret-1"
         # users in tenants
-        u1 = mkuser(c, admin, "t1admin", "ADMIN")
-        u2 = mkuser(c, admin, "t2admin", "ADMIN")
-        assert c.put(f"/admin/users/{u1}/tenant", headers=admin, json={"tenant_id": t1}).status_code == 200
-        assert c.put(f"/admin/users/{u2}/tenant", headers=admin, json={"tenant_id": t2}).status_code == 200
+        assert c.post(f"/admin/tenants/{t1}/admins", headers=admin, json={"staff_id": "t1admin", "full_name": "T1", "password": "password1"}).status_code == 201
+        assert c.post(f"/admin/tenants/{t2}/admins", headers=admin, json={"staff_id": "t2admin", "full_name": "T2", "password": "password1"}).status_code == 201
         h1, h2 = login(c, "t1admin"), login(c, "t2admin")
         # effective model per tenant
         _Fake.seen.clear()

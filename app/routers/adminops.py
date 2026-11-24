@@ -81,7 +81,12 @@ def export_all(include_documents: bool = False, db=Depends(get_db), admin: User 
     out = {"exported_at": datetime.now().isoformat(timespec="seconds"), "format": "properm-export-1", "tables": {}}
     for t in Base.metadata.sorted_tables:
         cols = [c.name for c in t.columns if c.name not in SKIP and (include_documents or not (t.name == "documents" and c.name == "content"))]
-        rows = db.execute(t.select()).mappings().all()
+        if "tenant_id" in t.c and admin.tenant_id:                # a tenant's administrator exports only their own tenant
+            rows = db.execute(t.select().where(t.c.tenant_id == admin.tenant_id)).mappings().all()
+        elif "tenant_id" not in t.c and admin.tenant_id:
+            continue
+        else:                                                     # the platform owner gets the full backup
+            rows = db.execute(t.select()).mappings().all()
         out["tables"][t.name] = [{c: _val(r[c]) for c in cols} for r in rows]
     log(db, admin.id, "data.exported", "system", None, {"tables": len(out["tables"]), "documents": include_documents})
     db.commit()
