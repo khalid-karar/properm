@@ -24,7 +24,7 @@ Set `PROPERM_DEMO_LOGIN=1` to show one-click role buttons on the login page (no 
 `python -m pytest` runs the backend suite. `bash tests/ui/run.sh` runs the browser test against a freshly seeded demo server (needs `npm i playwright` and Chrome; set `PLAYWRIGHT_PATH` / `CHROME_PATH` if they are installed elsewhere).
 
 ### Build progress timeline
-The login page shows milestones with green (done), amber (in progress) and red (not started) lights, read from `app/static/milestones.json`. Change a sub-step's `s` to `done`, `progress` or `todo` and bump `updated`; the percentage counts steps equally, not effort.
+The login page shows milestones with green (done), amber (in progress) and red (not started) lights, read from `app/data/milestones.json` and shown on the login page only after the owner password (`PROPERM_BUILD_PASSWORD`) is entered. Change a sub-step's `s` to `done`, `progress` or `todo` and bump `updated`; the percentage counts steps equally, not effort.
 
 ### Netlify only (no server)
 `netlify.toml` publishes `app/static`; the real Python backend then runs inside the visitor's browser (Pyodide, in a Web Worker) with an in-memory database seeded with demo data and one-click role buttons. First load takes a few seconds; data resets on reload. Demo only. `python3 scripts/build_demo.py` rebuilds `app/static/demo/pyapp.zip` from `app/` and `vendor/` (Netlify runs it; the committed copy is the fallback). The Pyodide runtime in `app/static/pyodide/` is 0.27.7 (Python 3.12); `vendor/` pins FastAPI 0.115 and Starlette 0.46 to match its Pydantic 2.10.
