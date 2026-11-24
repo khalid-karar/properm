@@ -54,13 +54,14 @@ class TenantContext:
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http":
-            tid, authed = None, False
+            tid, authed, sub = None, False, None
             for k, v in scope.get("headers", []):
                 if k == b"authorization" and v[:7].lower() == b"bearer ":
                     try:
                         from .deps import SECRET
                         import jwt
-                        tid = jwt.decode(v[7:].decode(), SECRET, algorithms=["HS256"]).get("tid")
+                        claims = jwt.decode(v[7:].decode(), SECRET, algorithms=["HS256"])
+                        tid, sub = claims.get("tid"), claims.get("sub")
                         authed = True
                     except Exception:
                         tid, authed = None, False
@@ -68,11 +69,13 @@ class TenantContext:
             from . import ai as _ai
             from . import tenancy
             tok = _ai.set_tenant(tid)
+            atok = _ai._actor.set(int(sub) if sub is not None and str(sub).isdigit() else None)
             sc = tenancy.set_scope(tid) if authed else tenancy.set_scope(tenancy.UNSCOPED)
             try:
                 return await self.app(scope, receive, send)
             finally:
                 _ai._tenant.reset(tok)
+                _ai._actor.reset(atok)
                 tenancy.reset_scope(sc)
         return await self.app(scope, receive, send)
 

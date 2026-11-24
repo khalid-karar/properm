@@ -186,8 +186,10 @@ def generate_live(result: dict, run, on_done=None) -> tuple[dict, list[str]]:
 
     # the six calls are independent, so run them together: total time is about one call, not six
     from concurrent.futures import ThreadPoolExecutor
+    import contextvars
+    ctxs = [contextvars.copy_context() for _ in DOMAINS]                  # one copy per worker, taken here: each carries the caller's tenant and user
     with ThreadPoolExecutor(max_workers=len(DOMAINS)) as ex:
-        results = list(ex.map(one, DOMAINS))           # map keeps the DOMAINS order
+        results = list(ex.map(lambda cn: cn[0].run(one, cn[1]), zip(ctxs, DOMAINS)))   # map keeps the DOMAINS order
     notes = []
     for name, items, note in results:
         if items is not None:

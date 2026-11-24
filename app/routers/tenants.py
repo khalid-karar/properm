@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from .. import ai
 from ..audit import log
 from ..deps import get_db, require_roles
-from ..models import AiSetting, Tenant, User
+from ..models import AiSetting, AiUsage, Tenant, User
 
 router = APIRouter(tags=["tenants"])
 
@@ -203,4 +203,67 @@ def create_tenant_admin(tid: int, body: TenantAdminIn, db=Depends(get_db), owner
         out = create_user(UserIn(staff_id=body.staff_id, full_name=body.full_name, password=body.password, role="ADMIN"), db, owner)
     finally:
         tenancy.reset_scope(tok)
+    return out
+
+
+# ---------------- model usage and cost ----------------
+RATE_SAR_PER_10K = 0.05850624      # Oracle "Large Cohere" (Command A), SAR per 10,000 characters (prompt + reply). Override: PROPERM_AI_RATE_SAR_PER_10K
+
+
+def _rate() -> float:
+    try:
+        return float(os.environ.get("PROPERM_AI_RATE_SAR_PER_10K", RATE_SAR_PER_10K))
+    except ValueError:
+        return RATE_SAR_PER_10K
+
+
+@router.get("/admin/ai/usage")
+def ai_usage(days: int = 30, tenant_id: int | None = None, db=Depends(get_db), admin: User = Depends(require_roles("ADMIN"))):
+    """Model calls and what they cost. The platform owner sees every tenant (and can look into one); a tenant administrator sees only their own tenant."""
+    from datetime import datetime, timedelta, timezone
+    days = max(1, min(int(days), 366))
+    owner = admin.tenant_id is None
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days)
+    rate = _rate()
+    cost = lambda chars: round(chars / 10000 * rate, 4)
+    if owner:
+        db.info["unscoped"] = True
+    q = db.query(AiUsage.at, AiUsage.tenant_id, AiUsage.user_id, AiUsage.task, AiUsage.chars_in, AiUsage.chars_out, AiUsage.ok, AiUsage.ms).filter(AiUsage.at >= since)
+    if owner and tenant_id is not None:
+        q = q.filter(AiUsage.tenant_id == tenant_id)
+    rows = q.limit(200000).all()
+    names = {t.id: t.name for t in db.query(Tenant).all()} if owner else {}
+    users = {u.id: u for u in db.query(User).all()}
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    def agg(items, key):
+        out = {}
+        for r in items:
+            k = key(r)
+            a = out.setdefault(k, {"calls": 0, "chars": 0, "failed": 0})
+            a["calls"] += 1
+            a["chars"] += (r.chars_in or 0) + (r.chars_out or 0)
+            a["failed"] += 0 if r.ok else 1
+        return out
+
+    def view(d, name):
+        return {**name, "calls": d["calls"], "failed": d["failed"], "chars": d["chars"], "cost": cost(d["chars"])}
+
+    tot = agg(rows, lambda r: "all").get("all", {"calls": 0, "chars": 0, "failed": 0})
+    mrows = [r for r in rows if r.at.replace(tzinfo=r.at.tzinfo or timezone.utc) >= month_start]
+    mtot = agg(mrows, lambda r: "m").get("m", {"calls": 0, "chars": 0, "failed": 0})
+    elapsed = max(1.0, (now - month_start).total_seconds() / 86400)
+    dim = (month_start.replace(month=month_start.month % 12 + 1, year=month_start.year + (month_start.month == 12)) - month_start).days
+    out = {"currency": "SAR", "rate_per_10k_chars": rate, "days": days, "owner": owner,
+           "total": {"calls": tot["calls"], "failed": tot["failed"], "chars": tot["chars"], "cost": cost(tot["chars"]),
+                     "avg_seconds": round(sum(r.ms or 0 for r in rows) / max(1, len(rows)) / 1000, 1)},
+           "month": {"calls": mtot["calls"], "chars": mtot["chars"], "cost": cost(mtot["chars"]), "forecast": cost(mtot["chars"] / elapsed * dim)},
+           "by_task": sorted((view(d, {"task": k}) for k, d in agg(rows, lambda r: r.task).items()), key=lambda x: -x["chars"]),
+           "by_user": sorted((view(d, {"user_id": k, "name": users[k].full_name if k in users else "(system)", "staff_id": users[k].staff_id if k in users else "",
+                                       "tenant": names.get(users[k].tenant_id, "Owner organisation") if (owner and k in users) else None})
+                             for k, d in agg(rows, lambda r: r.user_id).items()), key=lambda x: -x["chars"])[:50],
+           "by_day": [{"day": k, "calls": d["calls"], "cost": cost(d["chars"])} for k, d in sorted(agg(rows, lambda r: r.at.strftime("%Y-%m-%d")).items())]}
+    if owner:
+        out["by_tenant"] = sorted((view(d, {"tenant_id": k, "name": names.get(k, "Owner organisation")}) for k, d in agg(rows, lambda r: r.tenant_id).items()), key=lambda x: -x["chars"])
     return out

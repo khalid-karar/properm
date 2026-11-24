@@ -15,6 +15,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 from urllib.parse import urlparse
 
@@ -35,6 +36,7 @@ class AiError(Exception):
 # ---- Model settings: tenant override -> default for all tenants (database) -> environment variables -> offline stub ----
 _sessions = None                                            # session factory, set at start-up by configure()
 _tenant: contextvars.ContextVar = contextvars.ContextVar("properm_tenant", default=None)
+_actor: contextvars.ContextVar = contextvars.ContextVar("properm_actor", default=None)   # id of the signed-in user, for the usage record
 
 
 def configure(session_factory) -> None:
@@ -159,8 +161,33 @@ def _stub(task: str, payload: dict) -> str:
     raise AiError(500, "unknown task")
 
 
+def _record_usage(task: str, cfg: dict, chars_in: int, chars_out: int, ok: bool, ms: int) -> None:
+    """Remember one model call. Never lets a bookkeeping problem break the call itself."""
+    if _sessions is None:
+        return
+    try:
+        from .models import AiUsage
+        with _sessions() as db:
+            db.info["unscoped"] = True
+            db.add(AiUsage(tenant_id=_tenant.get(), user_id=_actor.get(), task=task[:30], model=str(cfg.get("model", ""))[:120],
+                           chars_in=chars_in, chars_out=chars_out, ok=ok, ms=ms))
+            db.commit()
+    except Exception:
+        pass
+
+
 def _live(task: str, payload: dict, prompt: str, cfg: dict | None = None) -> str:
     cfg = cfg or resolve()
+    started, out = time.time(), ""
+    try:
+        out = _live_call(task, payload, prompt, cfg)
+        return out
+    finally:
+        # OCI bills prompt + reply characters; the system preamble is part of the prompt
+        _record_usage(task, cfg, len(prompt) + len(SYSTEM), len(out or ""), bool(out), int((time.time() - started) * 1000))
+
+
+def _live_call(task: str, payload: dict, prompt: str, cfg: dict) -> str:
     url = cfg["url"].rstrip("/")
     if not host_in_kingdom(url) and not offsite_demo_allowed():
         raise AiError(403, "AI host is not inside the Kingdom; refusing to send data. Check PROPERM_AI_BASE_URL / PROPERM_AI_ALLOWED_HOSTS.")

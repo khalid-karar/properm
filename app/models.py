@@ -1252,3 +1252,17 @@ _HOT = {
 HOT_INDEXES = [(f"ix_{m.__tablename__}_{'_'.join(cols)}", m.__tablename__, cols) for m, lst in _HOT.items() for cols in lst]
 for _n, _t, _c in HOT_INDEXES:
     Index(_n, *[Base.metadata.tables[_t].c[c] for c in _c])
+
+
+class AiUsage(Scoped, Base):
+    """One row per call to the language model: who asked, how many characters went in and out (the billing unit), how long it took."""
+    __tablename__ = "ai_usage"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    task: Mapped[str] = mapped_column(String(30), default="")
+    model: Mapped[str] = mapped_column(String(120), default="")
+    chars_in: Mapped[int] = mapped_column(default=0)
+    chars_out: Mapped[int] = mapped_column(default=0)
+    ok: Mapped[bool] = mapped_column(default=True)
+    ms: Mapped[int] = mapped_column(default=0)
