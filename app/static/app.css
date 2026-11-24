@@ -425,3 +425,11 @@ td, th { unicode-bidi: plaintext; text-align: start; }
 input[type="text"], input:not([type]), textarea, select { max-width: 100%; }
 .card h1, h1 { overflow-wrap: anywhere; }
 td { overflow-wrap: anywhere; }
+
+/* Plan draft contrast: items must stand apart from the card they sit in (works in light and dark) */
+.item{background:color-mix(in srgb,var(--text) 4%,var(--card));border-color:color-mix(in srgb,var(--text) 14%,var(--card));border-inline-start:4px solid var(--accent,#C9A24B);box-shadow:0 1px 2px rgba(16,24,40,.06);margin:12px 0}
+.item input,.item textarea,.item select{background:var(--card)}
+details.dom{background:color-mix(in srgb,var(--text) 3%,var(--card));border-color:color-mix(in srgb,var(--text) 16%,var(--card));margin:12px 0}
+details.dom[open]>summary,details.sec[open]>summary{border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:8px}
+details.dom>summary:hover,details.sec>summary:hover{color:var(--accent,#C9A24B)}
+details.sec{background:color-mix(in srgb,var(--text) 2%,var(--card));border-color:color-mix(in srgb,var(--text) 16%,var(--card));border-inline-start:4px solid var(--navy,#101828)}
