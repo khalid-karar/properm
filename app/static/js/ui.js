@@ -113,10 +113,11 @@ export const badge = (text, cls) => h("span", { class: `badge ${cls ?? text}` },
 export const field = (label, input) => h("label", {}, label, input);
 export const num = (v, d = 1) => (v == null ? "—" : Number(v).toLocaleString(undefined, { maximumFractionDigits: d }));
 
-export function table(headers, rows, empty) {
+export function table(headers, rows, empty, opts = {}) {
   if (!rows.length && empty) return h("div", { class: "empty" }, empty);
-  return h("div", { class: "table-wrap", tabindex: "0" }, h("table", {}, h("thead", {}, h("tr", {}, headers.map(x => h("th", {}, x)))),
-    h("tbody", {}, rows.map(r => h("tr", {}, r.map(c => h("td", typeof c === "string" && /^\d{4}-\d{2}-\d{2}$/.test(c) ? { style: "white-space:nowrap" } : {}, c)))))));
+  const lab = (i) => (typeof headers[i] === "string" ? headers[i] : "");
+  return h("div", { class: "table-wrap", tabindex: "0" }, h("table", { class: opts.stack === false || (!opts.stack && headers.length < 4) ? "" : "stack" }, h("thead", {}, h("tr", {}, headers.map(x => h("th", {}, x)))),
+    h("tbody", {}, rows.map(r => h("tr", {}, r.map((c, i) => h("td", { "data-label": lab(i), ...(typeof c === "string" && /^\d{4}-\d{2}-\d{2}$/.test(c) ? { style: "white-space:nowrap" } : {}) }, c)))))));
 }
 
 export function stat(label, value, tone) { return h("div", { class: `stat ${{ RED: "red", AMBER: "amber", GREEN: "green", GREY: "grey" }[tone || label] || ""}` }, h("div", { class: "v" }, value), h("div", { class: "l" }, label)); }

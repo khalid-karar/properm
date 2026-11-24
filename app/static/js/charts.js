@@ -75,9 +75,9 @@ export function heatmap(cells, { pLabel, iLabel }) {
 }
 
 /** history: [{date, RED, AMBER, GREEN, GREY}] stacked bars. */
-export function ragStack(history, height = 150) {
+export function ragStack(history, height = 150, W = 760) {
   if (!history.length) return h("p", { class: "muted" }, "—");
-  const W = 760, H = height, m = { l: 28, r: 8, t: 8, b: 24 }, bw = Math.min(40, (W - m.l - m.r) / history.length - 6);
+  const H = height, m = { l: 28, r: 8, t: 8, b: 24 }, bw = Math.min(40, (W - m.l - m.r) / history.length - 6);
   const max = Math.max(...history.map(x => x.RED + x.AMBER + x.GREEN + x.GREY), 1);
   const g = el("g");
   history.forEach((x, i) => {

@@ -5,6 +5,7 @@ import json
 import re
 from datetime import datetime, timezone
 
+from .ar_text import ar_items
 DOMAINS = ("stakeholders", "communication", "quality", "cost", "procurement", "change")
 FIELDS = {
     "stakeholders": ("name", "organisation", "role", "power", "interest", "engagement"),
@@ -76,7 +77,8 @@ GEN = {"stakeholders": _stakeholders, "communication": _communication, "quality"
 
 
 def _fresh(name, r):
-    return {"status": "proposed", "items": GEN[name](r, _ar(r.get("meta"))), "history": []}
+    items = GEN[name](r, _ar(r.get("meta")))
+    return {"status": "proposed", "items": ar_items(items) if _ar(r.get("meta")) else items, "history": []}
 
 
 def generate(result: dict) -> dict:

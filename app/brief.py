@@ -401,6 +401,11 @@ def analyze(pages: list[str], lang: str = "auto") -> dict:
     acc = [t for t in terms if t["kind"] == "acceptance"]
     if acc:
         assumptions.append("Client review and acceptance rules from the book apply to every deliverable (see terms).")
+    if arabic:
+        from .ar_text import ar as _ar
+        risks = [{**r_, "title": _ar(r_["title"]), "response": _ar(r_["response"])} for r_ in risks]
+        comp = [{**c_, "title": _ar(c_["title"])} for c_ in comp]
+        assumptions = [_ar(a_) for a_ in assumptions]
     return {"meta": meta, "objectives": objectives, "phases": phases, "requirements": _number(reqs), "deliverables": delivs, "activities": acts,
             "team": roles, "risks": risks, "compliance": comp, "terms": terms, "assumptions": assumptions}
 

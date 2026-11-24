@@ -1,3 +1,4 @@
+import re
 import base64
 import io
 import zipfile
@@ -334,3 +335,14 @@ def test_translation_needs_the_saudi_model(monkeypatch, c, world):
     assert d["translations"]["en"]["activities.0.name"] == {"src": first, "t": "EN:" + first}
     monkeypatch.setattr(ai, "_live", lambda task, payload, prompt: '{"items": ["only one"]}')
     assert c.post(url, headers=h["pm1"], json={"target": "en"}).status_code == 502
+
+
+def test_arabic_book_gives_arabic_plan_wording():
+    from app import brief, plandomains
+    text = "رقم الكراسة: ABC-123456\nاسم المنافسة: مشروع تجريبي\nيتم اعتماد مخرجات كل مرحلة، وجودة البيانات مهمة، وبالتوازي مع مراحل أخرى.\n"
+    r = brief.analyze([text])
+    assert r["meta"]["language"] == "ar"
+    assert r["risks"] and all(re.search(r"[؀-ۿ]", x["title"]) for x in r["risks"])
+    dom = plandomains.generate(r)
+    assert re.search(r"[؀-ۿ]", dom["communication"]["items"][0]["audience"])
+    assert dom["communication"]["items"][0]["frequency"] == "monthly"

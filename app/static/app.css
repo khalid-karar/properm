@@ -403,3 +403,18 @@ textarea.ta{resize:vertical;min-height:38px;overflow:hidden;line-height:1.5;whit
 td,.tl-lab span,.tl-dl{unicode-bidi:plaintext}
 .table-wrap td:last-child:has(> button.btn){position:sticky;inset-inline-end:0;background:var(--card);box-shadow:-6px 0 8px -6px rgba(16,24,40,.15)}
 [dir=rtl] .table-wrap td:last-child:has(> button.btn){box-shadow:6px 0 8px -6px rgba(16,24,40,.15)}
+.grid2{margin-bottom:18px}
+@media (max-width:640px){
+  table.stack,table.stack tbody,table.stack tr,table.stack td{display:block;width:100%}
+  table.stack thead{display:none}
+  table.stack tr{border:1px solid var(--line,#e4e7ec);border-radius:10px;padding:8px 12px;margin:0 0 10px;background:var(--card)}
+  table.stack td{border:0;padding:4px 0;display:flex;justify-content:space-between;gap:12px;align-items:center;white-space:normal!important}
+  table.stack td::before{content:attr(data-label);color:var(--muted,#667085);font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
+  table.stack td:last-child:has(> button.btn){position:static;box-shadow:none;background:transparent}
+  table.stack td:last-child .row{flex-wrap:wrap!important}
+}
+@media (max-width:640px){table.stack td>*{min-width:0;max-width:100%}table.stack td>ul.checks,table.stack td>div:not(.row){flex:1}}
+:root[data-theme=dark] aside.side nav a{color:#cdd8ee}
+:root[data-theme=dark] aside.side nav a:hover,:root[data-theme=dark] aside.side nav a.active{color:#fff}
+@media (max-width:640px){table.stack td:has(> ul.checks){display:block}table.stack td:has(> ul.checks)::before{display:block;margin-bottom:6px}table.stack ul.checks{padding:0}table.stack ul.checks li{max-width:100%;white-space:normal}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) aside.side nav a{color:#cdd8ee}:root:not([data-theme=light]) aside.side nav a:hover,:root:not([data-theme=light]) aside.side nav a.active{color:#fff}}

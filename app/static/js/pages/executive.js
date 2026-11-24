@@ -13,7 +13,7 @@ export default async function (root) {
     h("div", { class: "grid2" },
       h("div", { class: "card" }, h("h2", {}, t("portfolio_cost")), h("div", { class: "grid" }, stat("BAC", money(e.BAC)), stat("EV", money(e.EV)), stat("AC", money(e.AC)), stat("CPI", e.CPI == null ? "—" : num(e.CPI, 2))),
         e.excluded_currencies.length ? h("p", { class: "muted small" }, `${t("excluded_ccy")}: ${e.excluded_currencies.join(", ")}`) : null),
-      h("div", { class: "card" }, h("h2", {}, t("rag_history")), d.rag_history.length > 1 ? ragStack(d.rag_history) : h("p", { class: "muted" }, t("trend_building")))),
+      h("div", { class: "card" }, h("h2", {}, t("rag_history")), d.rag_history.length > 1 ? ragStack(d.rag_history, 210, 470) : h("p", { class: "muted" }, t("trend_building")))),
     h("div", { class: "card" }, h("h2", {}, t("attention")),
       table([t("project"), t("rag"), t("top_alert")], d.attention.map(x => [h("a", { href: `#/dashboard/${x.project_id}` }, `${x.number} · ${x.name}`), badge(t(`rag_${x.rag}`), x.rag), h("span", { class: "small" }, x.top_alert || "")]), t("none"))),
     h("div", { class: "card" }, h("h2", {}, t("top_risks")), table([t("project"), t("title"), t("score")], d.top_risks.map(r => [h("a", { href: `#/dashboard/${r.project_id}` }, r.project), r.title, badge(r.score, r.score >= 20 ? "critical" : "warning")]), t("none"))),
