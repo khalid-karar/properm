@@ -163,19 +163,29 @@ def validate(name: str, items, result: dict) -> list[dict]:
 
 
 def generate_live(result: dict, run) -> tuple[dict, list[str]]:
-    """Rules build the baseline for every domain; then each domain gets its own model call. A domain whose reply is cut off, not JSON,
+    """Rules build the baseline for every domain; then each domain gets its own model call (all six run in parallel). A domain whose reply is cut off, not JSON,
     or fails validation keeps the rules version, and a note says so. `run(prompt) -> reply text`."""
     from . import ai
-    doms, notes = generate(result), []
-    for name in DOMAINS:
+    doms = generate(result)
+
+    def one(name):
         try:
             data = ai.extract_json(run(domain_prompt(name, result)))
             items = validate(name, data.get("items") if isinstance(data, dict) else None, result)
-            doms[name].update({"items": items, "by": "model"})
-            notes.append(f"Domain {name}: written by the model ({len(items)} items)")
+            return name, items, f"Domain {name}: written by the model ({len(items)} items)"
         except Exception as e:                         # any failure: keep the rules version of this domain
             why = getattr(e, "msg", None) or str(e) or type(e).__name__
-            notes.append(f"Domain {name}: kept rule-based ({why[:120]})")
+            return name, None, f"Domain {name}: kept rule-based ({why[:120]})"
+
+    # the six calls are independent, so run them together: total time is about one call, not six
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=len(DOMAINS)) as ex:
+        results = list(ex.map(one, DOMAINS))           # map keeps the DOMAINS order
+    notes = []
+    for name, items, note in results:
+        if items is not None:
+            doms[name].update({"items": items, "by": "model"})
+        notes.append(note)
     return doms, notes
 
 
