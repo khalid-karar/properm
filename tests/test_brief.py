@@ -335,8 +335,15 @@ def test_translation_needs_the_saudi_model(monkeypatch, c, world):
     d = c.get(f"/projects/{pid}/brief/{did}", headers=h["pm1"]).json()["draft"]
     first = d["activities"][0]["name"]
     assert d["translations"]["en"]["activities.0.name"] == {"src": first, "t": "EN:" + first}
+    # a batch with the wrong number of strings is split and asked again; a string it never gets right stays untranslated, the job does not fail
+    def flaky(task, payload, prompt, cfg=None):
+        xs = _json.loads(prompt.splitlines()[-1])
+        return _json.dumps({"items": ["EN:" + x for x in xs[:-1]] if len(xs) > 3 else ["EN:" + x for x in xs]}, ensure_ascii=False)
+    monkeypatch.setattr(ai, "_live", flaky)
+    r = c.post(url, headers=h["pm1"], json={"target": "en"})
+    assert r.status_code == 200 and r.json()["status"] == "ok"
     monkeypatch.setattr(ai, "_live", lambda task, payload, prompt, cfg=None: '{"items": ["only one"]}')
-    assert c.post(url, headers=h["pm1"], json={"target": "en"}).status_code == 502
+    assert c.post(url, headers=h["pm1"], json={"target": "en"}).status_code == 200
 
 
 def test_arabic_book_gives_arabic_plan_wording():

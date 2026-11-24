@@ -623,13 +623,34 @@ def translate_draft(pid: int, did: int, body: TranslateIn, db=Depends(get_db), u
     done = {"n": 0}
     lock = threading.Lock()
 
-    def one(chunk):
+    class _Mismatch(Exception):
+        pass
+
+    def ask(chunk):
         prompt = (f"Translate each string into {name}. Keep numbers, codes and names. Return only JSON: {{\"items\": [\"...\"]}} with exactly {len(chunk)} strings in the same order.\n"
                   + json.dumps([v for _, v in chunk], ensure_ascii=False))
-        data = ai.extract_json(ai._live("translate", {}, prompt, cfg))
+        reply = ai._live("translate", {}, prompt, cfg)        # a connection or model error stops the job
+        try:
+            data = ai.extract_json(reply)
+        except ai.AiError:
+            raise _Mismatch()
         res = data.get("items") if isinstance(data, dict) else None
         if not isinstance(res, list) or len(res) != len(chunk):
-            raise ai.AiError(502, "The model returned a translation that does not match the text")
+            raise _Mismatch()
+        return [str(x) for x in res]
+
+    def translate(chunk):
+        """The model sometimes returns a different number of strings. Then split the batch and ask again; a single string it cannot do stays untranslated."""
+        try:
+            return ask(chunk)
+        except _Mismatch:
+            if len(chunk) == 1:
+                return [None]
+            mid = len(chunk) // 2
+            return translate(chunk[:mid]) + translate(chunk[mid:])
+
+    def one(chunk):
+        res = translate(chunk)
         with lock:
             done["n"] += 1
             progress.update(user.id, progress_id, 3 + 92 * done["n"] / chunks, "translate", n=done["n"], total=chunks)
@@ -641,7 +662,8 @@ def translate_draft(pid: int, did: int, body: TranslateIn, db=Depends(get_db), u
             replies = list(ex.map(lambda cp: cp[0].run(one, cp[1]), zip(ctxs, parts)))
         for chunk, res in zip(parts, replies):
             for (key, src), t_ in zip(chunk, res):
-                tr[key] = {"src": src, "t": str(t_)}
+                if t_ is not None:
+                    tr[key] = {"src": src, "t": t_}
     except ai.AiError as e:
         raise HTTPException(502, getattr(e, "msg", None) or "Translation failed")
     progress.update(user.id, progress_id, 97, "save")
