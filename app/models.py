@@ -70,6 +70,30 @@ def _install_oracle_bool_is():
 _install_oracle_bool_is()
 
 
+class Tenant(Base):
+    """A client organisation. This step covers its own users and its own AI model; data separation between tenants comes later."""
+    __tablename__ = "tenants"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True)
+    slug: Mapped[str] = mapped_column(String(40), unique=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class AiSetting(Base):
+    """AI model settings. scope 'global' = default for all tenants; scope 'tenant:<id>' = override for one tenant. The key is stored encrypted."""
+    __tablename__ = "ai_settings"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    scope: Mapped[str] = mapped_column(String(40), unique=True)
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)
+    base_url: Mapped[str] = mapped_column(String(300))
+    model: Mapped[str] = mapped_column(String(100), default="qwen")
+    api_key_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class User(Base):
     """User and staff master in one record for the MVP (2.1)."""
     __tablename__ = "users"
@@ -87,6 +111,7 @@ class User(Base):
     line_manager_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     delegate_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     email: Mapped[str | None] = mapped_column(String(200), nullable=True)   # optional; used only for e-mail notifications
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)   # NULL = platform owner (manages tenants and the default AI model)
 
 
 class Program(Base):
