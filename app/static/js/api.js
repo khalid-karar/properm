@@ -37,10 +37,10 @@ async function send(method, path, headers, body) {
   return fetch((window.PROPERM_API || "") + path, { method, headers, body });
 }
 
-export async function api(method, path, body) {
+export async function api(method, path, body, extraHeaders) {
   const s = session.get();
   const res = await send(method, path,
-    { "Content-Type": "application/json", ...(s ? { Authorization: `Bearer ${s.token}` } : {}) },
+    { "Content-Type": "application/json", ...(s ? { Authorization: `Bearer ${s.token}` } : {}), ...(extraHeaders || {}) },
     body === undefined ? undefined : JSON.stringify(body));
   const text = await res.text();
   let data = null;
