@@ -587,7 +587,7 @@ def book_confirm(body: BookConfirm, db=Depends(get_db), user: User = Depends(req
 
 
 # ---------------- translation of what was extracted ----------------
-TRANSLATABLE = {"phases": ("name",), "activities": ("name", "description"), "requirements": ("title", "text"), "deliverables": ("name", "description"),
+TRANSLATABLE = {"phases": ("name",), "activities": ("name", "description", "role"), "requirements": ("title", "text"), "deliverables": ("name", "description"),
                 "risks": ("title", "response"), "team": ("title",), "compliance": ("title",)}
 
 
