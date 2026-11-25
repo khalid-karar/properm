@@ -19,7 +19,7 @@ const templateBtn = (kind) => !TEMPLATES[kind] ? null : h("button", { class: "bt
   document.body.appendChild(a); a.click(); a.remove();
 } }, t("imp_template"));
 
-export function importCard(kind, url, { accept = ".xlsx,.csv", after } = {}) {
+export function importCard(kind, url, { accept = ".xlsx,.csv", after, extra } = {}) {
   const file = h("input", { type: "file", id: `imp-file-${kind}`, accept });
   const skip = h("input", { type: "checkbox", id: `imp-skip-${kind}` });
   const out = h("div", { id: `imp-out-${kind}` });
@@ -31,6 +31,8 @@ export function importCard(kind, url, { accept = ".xlsx,.csv", after } = {}) {
       const pw = Object.entries(r.generated_passwords || {});
       mount(out,
         h("p", { class: r.errors ? "warn" : "ok" }, `${t("imp_ok")}: ${r.ok} · ${t("imp_errors")}: ${r.errors} · ${t("imp_dups")}: ${r.duplicates}`),
+        r.counts ? h("p", { class: "small", id: `imp-counts-${kind}` }, `${t("imp_acts")}: ${r.counts.activities} · ${t("imp_miles")}: ${r.counts.milestones} · ${t("imp_links")}: ${r.counts.links}${r.file_project ? ` · ${r.file_project}` : ""}`) : null,
+        (r.notes || []).length ? h("ul", { class: "small warn", id: `imp-notes-${kind}` }, r.notes.map(n => h("li", {}, n))) : null,
         r.blocked ? h("p", { class: "warn" }, t("imp_blocked")) : null,
         r.committed ? h("p", { class: "ok", id: `imp-done-${kind}` }, `${t("imp_saved")}: ${r.saved}`) : null,
         pw.length ? h("div", { class: "card" }, h("p", { class: "small" }, t("imp_pw")), table([t("staff_id"), t("password")], pw)) : null,
@@ -40,7 +42,7 @@ export function importCard(kind, url, { accept = ".xlsx,.csv", after } = {}) {
     } catch (e) { mount(out, errorBox(e)); }
   });
   return h("div", { class: "card", id: `imp-${kind}` }, h("h2", {}, t(`imp_${kind}`)), h("p", { class: "muted small" }, t(`imp_${kind}_note`)),
-    h("div", { class: "row" }, field(t("brief_upload"), file), h("label", { class: "check small" }, skip, ` ${t("imp_skip")}`), templateBtn(kind)),
+    h("div", { class: "row" }, field(t("brief_upload"), file), h("label", { class: "check small" }, skip, ` ${t("imp_skip")}`), templateBtn(kind), extra || null),
     h("div", { class: "row" }, h("button", { class: "btn secondary", type: "button", id: `imp-preview-${kind}`, onClick: run(false) }, t("preview")),
       h("button", { class: "btn", type: "button", id: `imp-commit-${kind}`, onClick: run(true) }, t("imp_commit"))), out);
 }

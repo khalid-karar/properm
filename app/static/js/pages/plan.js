@@ -76,5 +76,7 @@ export async function plan(body, p, { pid, dir, canManage, render }) {
   if (cp.activities.length) gcard.append(h("p", { class: "small", id: "critical-path" }, h("strong", {}, `${t("critical_path")}: `), cp.critical.join(" → ") || "—", ` · ${t("network_finish")}: ${cp.finish}`,
     cp.activities.some(x => x.pushed_days > 0) ? h("span", { class: "neg" }, ` · ${t("pushed_note")}: ${cp.activities.filter(x => x.pushed_days > 0).map(x => `${x.code} +${x.pushed_days}d`).join(", ")}`) : null));
   const imp = editable && p.state === "planning" ? importCard("plan", `/projects/${pid}/import/plan`, { accept: ".xlsx,.csv,.xml", after: render }) : null;
-  mount(body, h("p", {}, xlsxBtn(`/projects/${pid}/export/plan.xlsx`, `${p.number}-plan.xlsx`)), gcard, mcard, kcard, dcard, lcard, imp);
+  const pname = h("input", { id: "sched-project", placeholder: t("imp_sched_proj"), style: "max-width:220px" });
+  const sched = editable && p.state === "planning" ? importCard("sched", () => `/projects/${pid}/import/schedule${pname.value.trim() ? `?project=${encodeURIComponent(pname.value.trim())}` : ""}`, { accept: ".xer,.xml", after: render, extra: pname }) : null;
+  mount(body, h("p", {}, xlsxBtn(`/projects/${pid}/export/plan.xlsx`, `${p.number}-plan.xlsx`)), gcard, mcard, kcard, dcard, lcard, sched, imp);
 }
