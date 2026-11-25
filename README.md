@@ -126,16 +126,16 @@ Open a project in tendering or planning, tab **Project book**: pick an uploaded 
 | Admin | `POST /admin/restore` (ADMIN, `confirm:"RESTORE"`, `mode` dry_run or replace; one transaction; the audit log is never touched; people already present keep their password, new ones get a temporary password shown once and must change it). Retention: `GET /admin/retention`, `POST /admin/retention/apply` removes old sign-in history and read notifications only; old closed projects are listed, never deleted. Two-factor (TOTP, authenticator app): `/me/2fa`, `/setup`, `/enable` (8 backup codes once), `/disable`, admin reset `POST /admin/users/{id}/2fa/reset`; sign-in takes an optional `otp` (401 `otp_required`); setting `require_2fa_privileged=1` makes ADMIN, PMO and DECISION_MAKER turn it on first. Single sign-on is not built (needs real hosting) |
 
 ## Not built yet (next slices)
-Single sign-on (needs real hosting and an identity provider), saved filters, progress updates by staff, a rate card per role and project (rates are per grade only), forecasting models, PDF/DOCX parsing for the AI brief (paste text for now), a real mail-server test, a built-in scheduler for reports and alert evaluation (call the endpoints from a cron), Postgres with migrations and row-level security (access control is enforced in the API layer today), remaining UI polish (see Web UI).
+Saved filters, progress updates by staff, a rate card per role and project (rates are per grade only), PDF/DOCX parsing for the AI brief (paste text for now), a real mail-server test, a built-in scheduler for reports and alert evaluation (call the endpoints from a cron), Postgres with migrations and row-level security (access control is enforced in the API layer today), remaining UI polish (see Web UI).
 
 ## Assumptions to confirm (see Section 8 of the flow chart)
 - Work week starts Sunday (`WEEK_STARTS_ON_SUNDAY` in `app/config.py`); capacity is a flat `capacity_hours_week` per user until the calendar service exists.
 - Default per-staff activity cap is the activity's planned hours; override per staff via `PUT /projects/{id}/activities/{aid}/limits`.
 - Overtime: above capacity up to 125% needs a reason and acknowledgment (R1 = WARN); above 125% is blocked. Both are configurable.
-- Single organization (no tenant_id yet).
+- Multi-tenant: every row carries a tenant id (see app/tenancy.py).
 
 ## Schema changes
-Tables are created with `create_all`; there are no migrations yet. If you created a dev database from the first commit, delete `properm.db` (`activities` gained `baseline_cost`, `planned_start`, `planned_end`; `users.cost_rate_hour` was replaced by `rate_grade`). Add Alembic before any real data exists. The 2026-11-23 slice added tables (`programs`, `closure_items`, `benefits`, `holidays`, `notifications`, `report_schedules`, `ai_drafts`) and columns (`projects.program_id`, `users.email`); `create_all` adds new tables but not new columns, so delete an old dev database. The V3 build added tables for scope, agile, strategy, compliance, procurement, skills, reserves, quality, document versions, engagement and `two_factor` (new tables only). The role-gap build-out added tables `documents`, `stakeholders`, `milestones`, `project_kpis`, `activity_dependencies`, `snapshots`, `config_items` and columns `projects.client`, `projects.sponsor`, `projects.scope_statement`.
+Tests use `create_all`; production uses Alembic migrations (migrations/versions, run at container start). If you created a dev database from the first commit, delete `properm.db` (`activities` gained `baseline_cost`, `planned_start`, `planned_end`; `users.cost_rate_hour` was replaced by `rate_grade`). Add Alembic before any real data exists. The 2026-11-23 slice added tables (`programs`, `closure_items`, `benefits`, `holidays`, `notifications`, `report_schedules`, `ai_drafts`) and columns (`projects.program_id`, `users.email`); `create_all` adds new tables but not new columns, so delete an old dev database. The V3 build added tables for scope, agile, strategy, compliance, procurement, skills, reserves, quality, document versions, engagement and `two_factor` (new tables only). The role-gap build-out added tables `documents`, `stakeholders`, `milestones`, `project_kpis`, `activity_dependencies`, `snapshots`, `config_items` and columns `projects.client`, `projects.sponsor`, `projects.scope_statement`.
 
 
 ## Added in the overnight build
@@ -143,3 +143,10 @@ Tables are created with `create_all`; there are no migrations yet. If you create
 - Plan domains from the book with per-domain review, Excel/CSV/MS Project import with preview, Excel export
 - CI (GitHub Actions), load test and indexes (docs/SCALE.md), dark mode, first-time tour, accessibility and phone tests
 - Single sign-on via OpenID Connect (docs/SSO.md)
+
+## Added since
+- Earned-schedule forecasting, open API with API keys, finance cost import (docs in the Integrations page)
+- Mobile timesheet and approvals, installable web app
+- P6 (.xer) and MS Project XML schedule import (PR #27)
+- Self-serve 14-day sandbox trial, enabled with `PROPERM_TRIALS=1` (PR #28)
+- Not yet verified on Oracle: migrations 0012-0014 and the schedule import with real files
