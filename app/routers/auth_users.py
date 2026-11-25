@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -57,6 +59,8 @@ def login(body: LoginIn, db=Depends(get_db)):
         t = db.get(Tenant, u.tenant_id)
         if t and not t.active:
             raise HTTPException(403, "This organisation's access is switched off. Contact the platform administrator.")
+        if t and t.trial_until and t.trial_until.replace(tzinfo=t.trial_until.tzinfo or timezone.utc) < datetime.now(timezone.utc):
+            raise HTTPException(403, "This 14-day trial has ended. Request a demo or consultation to continue.")
     if u and u.active:
         until = acct.is_locked(db, u)
         if until:

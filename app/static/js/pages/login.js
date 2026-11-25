@@ -1,4 +1,5 @@
 import { api, session } from "../api.js";
+import { trialCard } from "./trial.js";
 import { getLang, setLang, t } from "../i18n.js";
 import { bar, errorBox, field, guarded, h, icon, mount } from "../ui.js";
 import { resetMe } from "../app.js";
@@ -63,11 +64,13 @@ export default function (root) {
       h("p", { class: "lp-trust" }, t("lp_trust"))),
     h("div", { class: "lp-login", id: "login-card" }, sso, h("p", { class: "muted small lp-login-lead" }, t("lp_signin_lead")), form, starting, quick));
 
+  const trialSlot = h("div", { style: "margin-top:20px" });
+  trialCard(trialSlot);
   const contact = h("section", { class: "lp-sec lp-contact-sec", id: "lp-contact", "data-reveal": "" }, h("div", { class: "lp-contact" },
     h("div", {}, h("h2", { class: "lp-h" }, t("lp_form_title")), h("p", { class: "lp-sub" }, t("lp_form_lead")),
       h("ul", { class: "lp-promise" }, ["lp_pm1", "lp_pm2", "lp_pm3"].map(k => h("li", {}, h("span", { class: "lp-mark", "aria-hidden": "true" }, "✓"), t(k)))),
       h("p", { class: "lp-mail" }, t("lp_or_mail"), " ", h("a", { href: "mailto:info@elevantec.sa", dir: "ltr" }, "info@elevantec.sa")),
-      h("p", { class: "muted small" }, t("lp_privacy"))),
+      h("p", { class: "muted small" }, t("lp_privacy")), trialSlot),
     consultForm()));
   const sticky = h("div", { class: "lp-sticky" }, h("button", { class: "btn gold lg", type: "button", onClick: () => go("lp-contact") }, t("lp_cta_demo")));
   const foot = h("footer", { class: "lp-foot" }, h("div", { class: "brand" }, h("img", { class: "logo", src: "brand/logo-mark-reversed.svg", alt: "", width: 22, height: 25 }), t("app")),

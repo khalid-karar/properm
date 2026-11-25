@@ -20,23 +20,26 @@ def main():
     seed(app, pw, TestClient(app))
 
 
-def seed(app, pw, c):
-    """Fill an empty database. `c` is any client with TestClient's post/get/put API (the browser build passes its own)."""
-    with app.state.Session() as db:
-        if db.query(User).count():
-            raise SystemExit("Database is not empty; refusing to add demo data")
-        db.add(User(staff_id="admin", full_name="Admin User", role="ADMIN", password_hash=hash_pw(pw)))
-        db.commit()
-    tok = lambda sid: {"Authorization": "Bearer " + c.post("/auth/login", json={"staff_id": sid, "password": pw}).json()["access_token"]}
+def seed(app, pw, c, prefix="", tokfn=None, admin_token=None):
+    """Fill an empty database (or, with tokfn and admin_token, one tenant of a shared database: staff ids get `prefix`). `c` is any client with TestClient's post/get/put API (the browser build passes its own)."""
+    if tokfn is None:
+        with app.state.Session() as db:
+            if db.query(User).count():
+                raise SystemExit("Database is not empty; refusing to add demo data")
+            db.add(User(staff_id="admin", full_name="Admin User", role="ADMIN", password_hash=hash_pw(pw)))
+            db.commit()
+        tok = lambda sid: {"Authorization": "Bearer " + c.post("/auth/login", json={"staff_id": sid, "password": pw}).json()["access_token"]}
+    else:
+        tok = lambda sid: tokfn(prefix + sid)
     ok = lambda r: (r.raise_for_status(), r.json())[1]
-    admin = tok("admin")
+    admin = admin_token if tokfn is not None else tok("admin")
     ok(c.post("/admin/rates", headers=admin, json={"grade": "G1", "hourly_rate": 180, "currency": "SAR", "effective_from": "2024-01-01"}))
     ok(c.post("/admin/rates", headers=admin, json={"grade": "G2", "hourly_rate": 320, "currency": "SAR", "effective_from": "2024-01-01"}))
     ids = {}
     for sid, name, role, kw in [("pm1", "Sara Al-Harbi", "PM", {"rate_grade": "G2", "is_ccb": True}), ("pmo1", "Omar Al-Qahtani", "PMO", {}),
                                 ("dm1", "Layla Al-Otaibi", "DECISION_MAKER", {}), ("pg1", "Nasser Al-Dosari", "PROGRAM_MANAGER", {}), ("s1", "Faisal Nasser", "STAFF", {"rate_grade": "G1"}),
                                 ("s2", "Huda Saleh", "STAFF", {"rate_grade": "G1"}), ("s3", "Khaled Mansour", "STAFF", {"rate_grade": "G2"})]:
-        ids[sid] = ok(c.post("/users", headers=admin, json={"staff_id": sid, "full_name": name, "password": pw, "role": role, **kw}))["id"]
+        ids[sid] = ok(c.post("/users", headers=admin, json={"staff_id": prefix + sid, "full_name": name, "password": pw, "role": role, **kw}))["id"]
     pm, pmo = tok("pm1"), tok("pmo1")
     T = date.today()
     d = lambda n: str(T + timedelta(days=n))
@@ -163,7 +166,7 @@ def seed(app, pw, c):
     ok(c.post(f"/projects/{b_pid}/payments", headers=pm, json={"contract_id": k2["id"], "name": "Quarterly fee", "amount": 30000, "due_date": d(-4)}))
     # a couple of failed sign-ins so the security history has something to show
     for _ in range(2):
-        c.post("/auth/login", json={"staff_id": "s3", "password": "wrong-password-1"})
+        c.post("/auth/login", json={"staff_id": prefix + "s3", "password": "wrong-password-1"})
     c.post("/auth/login", json={"staff_id": "unknown.user", "password": "x"})
     # program roadmap: BETA's data platform feeds ALPHA's reporting (late), a program-level risk
     bm = ok(c.post(f"/projects/{b_pid}/milestones", headers=pm, json={"name": "Data platform live", "due_date": d(25)}))

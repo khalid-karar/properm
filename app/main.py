@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from .models import Base
-from .routers import auth_users, projects, timesheets, admin, delivery, registers, reports, alerts, dashboards, governance, notifications, exports, ai as ai_router, intake, plan, oversight, insights, workflow, periodic, config_lists, selfservice, adminplus, gates, control, weekly, portfolio, programs2, security, pmtools, insight2, adminops, scope, agile, strategy, procurement, buildprogress, skills, depth, ops, jobs, imports, sso, tender, tenants, consultations, forecasts, apikeys, feeds, costimport, brief as brief_router
+from .routers import auth_users, projects, timesheets, admin, delivery, registers, reports, alerts, dashboards, governance, notifications, exports, ai as ai_router, intake, plan, oversight, insights, workflow, periodic, config_lists, selfservice, adminplus, gates, control, weekly, portfolio, programs2, security, pmtools, insight2, adminops, scope, agile, strategy, procurement, buildprogress, skills, depth, ops, jobs, imports, sso, tender, tenants, consultations, forecasts, apikeys, feeds, costimport, trial, brief as brief_router
 
 
 class OutboxDispatch:
@@ -132,7 +132,7 @@ def create_app(database_url: str = "sqlite:///./properm.db", serve_ui: bool = Tr
     origins = [o.strip() for o in os.environ.get("PROPERM_CORS_ORIGINS", "").split(",") if o.strip()]
     if origins:   # only for a UI hosted on another origin (e.g. Netlify); tokens go in a header, not cookies
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["Authorization", "Content-Type"])
-    for r in (auth_users.router, projects.router, projects.pending_router, governance.router, notifications.router, exports.router, ai_router.router, intake.router, plan.router, oversight.router, insights.router, workflow.router, periodic.router, config_lists.router, selfservice.router, adminplus.router, gates.router, control.router, weekly.router, portfolio.router, programs2.router, security.router, pmtools.router, insight2.router, adminops.router, scope.router, agile.router, strategy.router, procurement.router, buildprogress.router, skills.router, depth.router, ops.router, jobs.router, imports.router, sso.router, tenants.router, consultations.router, forecasts.router, apikeys.router, feeds.router, costimport.router, brief_router.router, tender.router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
+    for r in (auth_users.router, projects.router, projects.pending_router, governance.router, notifications.router, exports.router, ai_router.router, intake.router, plan.router, oversight.router, insights.router, workflow.router, periodic.router, config_lists.router, selfservice.router, adminplus.router, gates.router, control.router, weekly.router, portfolio.router, programs2.router, security.router, pmtools.router, insight2.router, adminops.router, scope.router, agile.router, strategy.router, procurement.router, buildprogress.router, skills.router, depth.router, ops.router, jobs.router, imports.router, sso.router, tenants.router, consultations.router, forecasts.router, apikeys.router, feeds.router, costimport.router, trial.router, brief_router.router, tender.router, timesheets.router, admin.router, delivery.router, registers.router, reports.router, alerts.router, dashboards.router):
         app.include_router(r)
 
     app.add_middleware(OutboxDispatch, session_factory=app.state.Session)

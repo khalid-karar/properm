@@ -79,7 +79,7 @@ def request_consultation(body: ConsultationIn, request: Request, db=Depends(get_
     row = ConsultationRequest(
         name=body.name, organization=body.organization, job_title=(body.job_title or "").strip() or None, email=body.email,
         phone=(body.phone or "").strip() or None, team_size=body.team_size if body.team_size in SIZES else None,
-        interest="consultation" if body.interest == "consultation" else "demo", message=(body.message or "").strip() or None,
+        interest=body.interest if body.interest in ("consultation", "trial") else "demo", message=(body.message or "").strip() or None,
         lang="ar" if body.lang == "ar" else "en", created_at=datetime.now(timezone.utc))
     db.add(row)
     db.commit()

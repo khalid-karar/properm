@@ -30,7 +30,7 @@ def set_severity(rule: str, body: SeverityIn, db=Depends(get_db), admin: User = 
         raise HTTPException(404, "Unknown rule")
     if body.severity not in ("BLOCK", "WARN", "FLAG"):
         raise HTTPException(422, "severity must be BLOCK, WARN or FLAG")
-    row = db.get(RuleConfig, rule)
+    row = db.query(RuleConfig).filter(RuleConfig.rule == rule).first()
     old = row.severity if row else DEFAULT_SEVERITIES[rule]
     if row:
         row.severity = body.severity
@@ -45,7 +45,7 @@ def set_severity(rule: str, body: SeverityIn, db=Depends(get_db), admin: User = 
 def set_setting(key: str, body: SettingIn, db=Depends(get_db), admin: User = Depends(require_roles("ADMIN"))):
     if key not in DEFAULT_PARAMS:
         raise HTTPException(404, "Unknown setting")
-    row = db.get(Setting, key)
+    row = db.query(Setting).filter(Setting.key == key).first()
     if row:
         row.value = body.value
     else:

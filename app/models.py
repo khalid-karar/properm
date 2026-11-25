@@ -84,6 +84,9 @@ class Tenant(Base):
     slug: Mapped[str] = mapped_column(String(40), unique=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    trial_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)   # set for self-serve sandbox trials only
+    trial_email: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    seed_state: Mapped[str | None] = mapped_column(String(10), nullable=True)                     # loading | ready | failed (sample data)
 
 
 class AiSetting(Base):
@@ -122,8 +125,9 @@ class User(Scoped, Base):
 class Program(Scoped, Base):
     """A group of related projects (program/portfolio grouping)."""
     __tablename__ = "programs"
+    __table_args__ = (UniqueConstraint("tenant_id", "code"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(40), unique=True)
+    code: Mapped[str] = mapped_column(String(40))
     name: Mapped[str] = mapped_column(String(300))
     manager_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -131,8 +135,9 @@ class Program(Scoped, Base):
 
 class Project(Scoped, Base):
     __tablename__ = "projects"
+    __table_args__ = (UniqueConstraint("tenant_id", "number"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    number: Mapped[str] = mapped_column(String(60), unique=True)
+    number: Mapped[str] = mapped_column(String(60))
     name: Mapped[str] = mapped_column(String(300))
     state: Mapped[str] = mapped_column(String(20))
     previous_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -225,7 +230,7 @@ class RateCard(Scoped, Base):
     """Effective-dated hourly cost rate per grade. Append-only: a change is a new row with a later
     effective_from, so past cost is never repriced (2.1.5)."""
     __tablename__ = "rate_card"
-    __table_args__ = (UniqueConstraint("grade", "effective_from"),)
+    __table_args__ = (UniqueConstraint("tenant_id", "grade", "effective_from"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     grade: Mapped[str] = mapped_column(String(40))
     hourly_rate: Mapped[float] = mapped_column(Float)
@@ -428,8 +433,9 @@ class Benefit(Scoped, Base):
 
 class Holiday(Scoped, Base):
     __tablename__ = "holidays"
+    __table_args__ = (UniqueConstraint("tenant_id", "day"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    day: Mapped[date] = mapped_column(Date, unique=True)
+    day: Mapped[date] = mapped_column(Date)
     name: Mapped[str] = mapped_column(String(200))
 
 
@@ -453,13 +459,17 @@ class PeriodLock(Scoped, Base):
 
 class RuleConfig(Scoped, Base):
     __tablename__ = "rule_config"
-    rule: Mapped[str] = mapped_column(String(10), primary_key=True)
+    __table_args__ = (UniqueConstraint("tenant_id", "rule"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    rule: Mapped[str] = mapped_column(String(10))
     severity: Mapped[str] = mapped_column(String(10))
 
 
 class Setting(Scoped, Base):
     __tablename__ = "settings"
-    key: Mapped[str] = mapped_column(String(60), primary_key=True)
+    __table_args__ = (UniqueConstraint("tenant_id", "key"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key: Mapped[str] = mapped_column(String(60))
     value: Mapped[float] = mapped_column(Float)
 
 
@@ -616,7 +626,7 @@ class Snapshot(Scoped, Base):
 class ConfigItem(Scoped, Base):
     """Administrator-maintained list entries (non-project codes, risk categories, KPI templates, closure items)."""
     __tablename__ = "config_items"
-    __table_args__ = (UniqueConstraint("list_key", "code"),)
+    __table_args__ = (UniqueConstraint("tenant_id", "list_key", "code"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     list_key: Mapped[str] = mapped_column(String(30))
     code: Mapped[str] = mapped_column(String(40))
@@ -813,8 +823,9 @@ class LoginEvent(Scoped, Base):
 class ProjectTemplate(Scoped, Base):
     """PMO method library: standard activities, milestones, KPIs and risks to start a project from."""
     __tablename__ = "project_templates"
+    __table_args__ = (UniqueConstraint("tenant_id", "code"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(40), unique=True)
+    code: Mapped[str] = mapped_column(String(40))
     name: Mapped[str] = mapped_column(String(200))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     data: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -1007,8 +1018,9 @@ class BacklogItem(Scoped, Base):
 # ---------------- V3 step 3: strategy alignment and compliance ----------------
 class StrategicObjective(Scoped, Base):
     __tablename__ = "strategic_objectives"
+    __table_args__ = (UniqueConstraint("tenant_id", "code"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(40), unique=True)
+    code: Mapped[str] = mapped_column(String(40))
     name: Mapped[str] = mapped_column(String(300))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     horizon: Mapped[str | None] = mapped_column(String(40), nullable=True)      # e.g. "2030", "FY2027"
@@ -1028,8 +1040,9 @@ class ObjectiveLink(Scoped, Base):
 class ComplianceRequirement(Scoped, Base):
     """Library of regulatory / policy requirements (PDPL, NCA ECC, internal policy...) that projects can be held to."""
     __tablename__ = "compliance_requirements"
+    __table_args__ = (UniqueConstraint("tenant_id", "code"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(40), unique=True)
+    code: Mapped[str] = mapped_column(String(40))
     framework: Mapped[str] = mapped_column(String(60))
     title: Mapped[str] = mapped_column(String(300))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
