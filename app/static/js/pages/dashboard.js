@@ -3,6 +3,7 @@ import { api, downloadCsv } from "../api.js";
 import { st, t } from "../i18n.js";
 import { heatmap, lineChart, pairedBars, COLORS } from "../charts.js";
 import { badge, bar, errorBox, field, guarded, h, mount, num, stat, table } from "../ui.js";
+import { forecastCard } from "./forecast.js";
 
 const EXEC = ["PMO", "ADMIN", "DECISION_MAKER", "PROGRAM_MANAGER"];
 const rag = (r) => badge(t(`rag_${r}`), r);
@@ -18,15 +19,17 @@ export default async function (root, { me, arg }) {
   async function render() {
     const d = await api("GET", `/dashboards/portfolio${filter ? `?rag=${filter}` : ""}`);
     const risks = await api("GET", "/dashboards/top-risks?limit=5");
+    const fc = Object.fromEntries(((await api("GET", "/portfolio/forecast").catch(() => ({ projects: [] }))).projects).map(x => [x.project_id, x]));
     const sel = h("select", { value: filter, onChange: (e) => { filter = e.target.value; render(); } },
       h("option", { value: "" }, t("all")), ["RED", "AMBER", "GREEN", "GREY"].map(x => h("option", { value: x }, t(`rag_${x}`))));
     mount(root, h("h1", {}, `${t("nav_dashboard")} · ${t("portfolio")}`),
       h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv("/export/portfolio.csv", "portfolio.csv")) }, t("export_csv")), xlsxBtn("/export/portfolio.xlsx", "portfolio.xlsx")),
       h("div", { class: "grid", style: "margin-bottom:16px" }, ["RED", "AMBER", "GREEN", "GREY"].map(k => stat(t(`rag_${k}`), d.rag_counts[k], k))),
       h("div", { class: "card" }, h("div", { class: "row", style: "margin-bottom:10px" }, field(t("filter_rag"), sel)),
-        table([t("project"), t("state"), t("rag"), t("progress"), "CPI", "SPI", t("open_alerts"), t("top_alert")],
+        table([t("project"), t("state"), t("rag"), t("progress"), "CPI", "SPI", t("fc_finish"), t("open_alerts"), t("top_alert")],
           d.projects.map(p => [h("a", { href: `#/dashboard/${p.project_id}` }, `${p.number} · ${p.name}`), t(p.state), rag(p.rag),
             p.progress_pct == null ? "—" : `${num(p.progress_pct)}%`, num(p.cpi, 2), num(p.spi, 2),
+            fc[p.project_id]?.forecast_finish ? h("span", {}, fc[p.project_id].forecast_finish, fc[p.project_id].slip_days > 0 ? h("small", { class: "muted" }, ` (+${fc[p.project_id].slip_days} ${t("fc_days")})`) : null) : "—",
             h("span", {}, [p.open_alerts.critical ? badge(p.open_alerts.critical, "critical") : null, " ", p.open_alerts.warning ? badge(p.open_alerts.warning, "warning") : null]),
             h("span", { class: "small" }, p.top_alert || "")]), t("none"))),
       h("div", { class: "card" }, h("h2", {}, t("risks")), table([t("project"), t("title"), t("score")], risks.map(r => [`#${r.project_id}`, r.title, badge(r.score, r.score >= 20 ? "critical" : "warning")]), t("none"))));
@@ -47,9 +50,11 @@ async function project(root, pid) {
     h("div", { class: "card" }, bar(d.progress_pct || 0)),
     e ? h("div", { class: "card" }, h("h2", {}, t("evm")), e.available ? h("div", { class: "grid" }, ["BAC", "PV", "EV", "AC", "CPI", "SPI", "EAC", "VAC"].map(k => stat(k, num(e[k], k === "CPI" || k === "SPI" ? 2 : 0)))) : h("p", { class: "muted" }, `${t("not_available")}: ${e.reason || ""}`),
       (e.warnings || []).length ? h("div", { class: "warn" }, h("ul", {}, e.warnings.map(w => h("li", {}, w)))) : null) : null,
+    h("div", { class: "card", id: "fc-slot" }),
     d.overdue_activities.length ? h("div", { class: "card" }, h("h2", {}, t("overdue")), table([t("activity"), t("planned_end"), t("days_late")], d.overdue_activities.map(a => [a.code, a.planned_end, a.days_late]))) : null,
     h("div", { class: "card" }, h("h2", {}, t("alerts")), table([t("severity"), t("cause"), t("status")], d.alerts.map(a => [badge(st(a.severity), a.severity), a.cause, st(a.status)]), t("none")), h("p", {}, h("a", { href: "#/alerts" }, t("nav_alerts")))));
   const box = h("div"); root.append(box);
+  forecastCard(root.querySelector("#fc-slot"), pid);
   charts(box, pid, !!d.evm);
 }
 

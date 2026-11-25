@@ -38,6 +38,9 @@ DEFAULT_PARAMS = {
     "burn_warning_pct": 0.8,         # hours used as a share of an activity budget before the burn warning can fire
     "burn_gap_pct": 0.25,            # ... and hours used must run this far ahead of the percent complete
     "alert_cooldown_days": 7,
+    # forecast status (amber / red) against the baseline
+    "forecast_slip_warning_days": 14, "forecast_slip_critical_days": 30,
+    "forecast_overrun_warning_pct": 0.05, "forecast_overrun_critical_pct": 0.15,
     "intake_required": 0.0,         # 1 = project managers submit a proposal; a decision maker approves it into a project
     "stage_gates": 0.0,
     "password_min_length": 8.0,     # passwords also need at least one letter and one digit

@@ -50,7 +50,7 @@ export default async function (root, { me }) {
             (dir[e.user_id] || {}).full_name || e.user_id, e.entry_date,
             e.project_id ? (projects[e.project_id] || {}).number || e.project_id : `${t("non_project")}: ${e.code}`,
             num(e.hours), cell(e),
-            h("div", { class: "row", style: "flex-wrap:nowrap" },
+            h("div", { class: "row dec", style: "flex-wrap:nowrap" },
               h("button", { class: "btn small", onClick: guarded(null, () => decide(e.id, { action: "approve" })) }, t("approve")),
               h("button", { class: "btn secondary small", onClick: guarded(null, async () => { const n = await askText(t("adjust"), t("hours")); if (n === null) return; const r = await askText(t("adjust"), t("reason")); if (r === null) return; await decide(e.id, { action: "adjust", hours: Number(n), reason: r }); }) }, t("adjust")),
               h("button", { class: "btn danger small", onClick: guarded(null, async () => { const r = await askText(t("reject"), t("reason")); if (r !== null) await decide(e.id, { action: "reject", reason: r }); }) }, t("reject")))]),

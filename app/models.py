@@ -1283,3 +1283,18 @@ class ConsultationRequest(Base):
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     lang: Mapped[str] = mapped_column(String(5), default="en")
     status: Mapped[str] = mapped_column(String(20), default="new", index=True)   # new | contacted | closed
+
+
+class ApiKey(Scoped, Base):
+    """A key for the read-only data feeds (/api/v1): Power BI, a data warehouse, a finance system pulling project data.
+    Only a hash is kept; the key itself is shown once when it is created. A key sees the whole organisation's project, time and cost data."""
+    __tablename__ = "api_keys"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    prefix: Mapped[str] = mapped_column(String(12))
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

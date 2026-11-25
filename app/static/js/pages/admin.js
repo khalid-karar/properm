@@ -1,6 +1,7 @@
 import { api } from "../api.js";
 import { t } from "../i18n.js";
 import { importCard } from "./importer.js";
+import { apiKeysCard, costImportCard } from "./integrations.js";
 import { jobsCard, restoreCard, retentionCard } from "./ops.js";
 import { badge, errorBox, field, guarded, h, modal, mount, num, table, toast, today } from "../ui.js";
 
@@ -112,12 +113,13 @@ export default async function (root) {
           const a = h("a", { href: url, download: `properm-backup-${d.exported_at.slice(0, 10)}.json` }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
         }) }, t("backup_download"))));
     const reqCard = await requestsCard(render);
+    const keysCard = await apiKeysCard();
     mount(root, h("h1", {}, t("nav_admin")), reqCard,
       h("div", { class: "card" }, h("h2", {}, t("users")), table([t("staff_id"), t("full_name"), t("role"), t("grade"), t("capacity"), t("is_ccb"), t("status"), ""], users.map(u => [u.staff_id, u.full_name, u.role, u.rate_grade || "—", num(u.capacity_hours_week), u.is_ccb ? "✓" : "", badge(u.active ? t("active") : t("inactive"), u.active ? "approved" : "critical"), h("span", { class: "row", style: "gap:6px;flex-wrap:nowrap" }, h("button", { class: "btn small", type: "button", onClick: () => editUser(u, users, me) }, t("edit")),
           u.active && u.id !== me.id ? h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, () => handover(u, users)) }, t("handover")) : null)]), t("none")),
         h("h2", { style: "margin-top:14px" }, t("new_user")),
         h("div", { class: "row" }, field(t("staff_id"), f.sid), field(t("full_name"), f.name), field(t("job_title"), f.jt), field(t("department"), f.dep), field(t("password"), f.pw), field(t("role"), f.role), field(t("grade"), f.grade), field(t("capacity"), f.cap), field(t("is_ccb"), f.ccb), field(t("line_manager"), f.lm), addU), uerr),
-      secCard, mailCard, backupCard, restoreCard(), retentionCard(), jobsCard(), importCard("staff", "/import/staff"), importCard("timesheets", "/import/timesheets"),
+      secCard, mailCard, backupCard, restoreCard(), retentionCard(), jobsCard(), importCard("staff", "/import/staff"), importCard("timesheets", "/import/timesheets"), costImportCard(), keysCard,
       h("div", { class: "card" }, h("h2", {}, t("rates")), table([t("grade"), t("hourly_rate"), t("currency"), t("effective_from"), ""], rates.map(r => [r.grade, num(r.hourly_rate, 2), r.currency, r.effective_from, r.future ? h("span", { class: "row", style: "gap:6px" }, badge(t("future_rate"), "AMBER"), h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, async () => { await api("DELETE", `/admin/rates/${r.id}`); await render(); }) }, t("remove"))) : ""]), t("none")),
         h("div", { class: "row", style: "margin-top:12px" }, field(t("grade"), rg), field(t("hourly_rate"), rv), field(t("currency"), rc), field(t("effective_from"), rd), addR), rerr),
       h("div", { class: "card" }, h("h2", {}, t("holidays")), h("p", { class: "muted" }, t("work_week_note")),

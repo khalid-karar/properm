@@ -10,6 +10,7 @@ export const xlsxBtn = (path, filename) =>
 const TEMPLATES = {
   staff: [["staff_id", "full_name", "role", "job_title", "department", "email", "capacity_hours_week", "password"], ["STAFF2", "Example Name", "STAFF", "Analyst", "", "name@example.com", "40", ""]],
   timesheets: [["staff_id", "date", "hours", "project", "activity", "nonproject_code", "description", "status"], ["STAFF2", "2026-11-23", "8", "PRJ-001", "A1", "", "Design work", "approved"]],
+  costs: [["project", "date", "amount", "currency", "category", "vendor", "reference", "status"], ["PRJ-001", "2026-11-23", "1500", "SAR", "Hardware", "Supplier name", "INV-1001", "invoiced"]],
   plan: [["code", "name", "planned_hours", "planned_start", "planned_end"], ["A1", "Example task", "40", "2026-12-01", "2026-12-10"]],
 };
 const templateBtn = (kind) => !TEMPLATES[kind] ? null : h("button", { class: "btn secondary small", type: "button", id: `imp-template-${kind}`, onClick: () => {
@@ -26,7 +27,7 @@ export function importCard(kind, url, { accept = ".xlsx,.csv", after } = {}) {
     mount(out);
     if (!file.files[0]) return toast(t("imp_pick"));
     try {
-      const r = await api("POST", url, { filename: file.files[0].name, content_b64: await fileToB64(file.files[0]), commit, skip_errors: skip.checked });
+      const r = await api("POST", typeof url === "function" ? url() : url, { filename: file.files[0].name, content_b64: await fileToB64(file.files[0]), commit, skip_errors: skip.checked });
       const pw = Object.entries(r.generated_passwords || {});
       mount(out,
         h("p", { class: r.errors ? "warn" : "ok" }, `${t("imp_ok")}: ${r.ok} · ${t("imp_errors")}: ${r.errors} · ${t("imp_dups")}: ${r.duplicates}`),
