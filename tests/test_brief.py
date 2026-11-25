@@ -335,6 +335,9 @@ def test_translation_needs_the_saudi_model(monkeypatch, c, world):
     d = c.get(f"/projects/{pid}/brief/{did}", headers=h["pm1"]).json()["draft"]
     first = d["activities"][0]["name"]
     assert d["translations"]["en"]["activities.0.name"] == {"src": first, "t": "EN:" + first}
+    role = d["activities"][0].get("role")
+    if role:                                                                                  # the role of a task is translated too
+        assert d["translations"]["en"]["activities.0.role"] == {"src": role, "t": "EN:" + role}
     # a batch with the wrong number of strings is split and asked again; a string it never gets right stays untranslated, the job does not fail
     def flaky(task, payload, prompt, cfg=None):
         xs = _json.loads(prompt.splitlines()[-1])
