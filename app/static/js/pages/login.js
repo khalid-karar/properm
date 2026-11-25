@@ -2,6 +2,7 @@ import { api, session } from "../api.js";
 import { getLang, setLang, t } from "../i18n.js";
 import { bar, errorBox, field, guarded, h, icon, mount } from "../ui.js";
 import { resetMe } from "../app.js";
+import * as S from "./landing-sections.js";
 
 export default function (root) {
   const msg = h("div");
@@ -44,7 +45,9 @@ export default function (root) {
     h("div", { class: "brand" }, h("img", { class: "logo", src: "brand/logo-mark-reversed.svg", alt: "", width: 28, height: 32 }), t("app")),
     h("nav", { class: "lp-links", "aria-label": "Page" },
       h("button", { type: "button", onClick: () => go("lp-features") }, t("lp_nav_features")),
-      h("button", { type: "button", onClick: () => go("lp-how") }, t("lp_nav_how")),
+      h("button", { type: "button", onClick: () => go("lp-roles") }, t("lp_nav_roles")),
+      h("button", { type: "button", onClick: () => go("lp-security") }, t("lp_nav_security")),
+      h("button", { type: "button", onClick: () => go("lp-faq") }, t("lp_nav_faq")),
       h("button", { type: "button", onClick: () => go("lp-contact") }, t("lp_nav_contact"))),
     langBtn,
     h("button", { class: "btn gold", type: "button", onClick: () => { go("login-card"); id.focus({ preventScroll: true }); } }, t("lp_signin")));
@@ -60,18 +63,20 @@ export default function (root) {
       h("p", { class: "lp-trust" }, t("lp_trust"))),
     h("div", { class: "lp-login", id: "login-card" }, sso, h("p", { class: "muted small lp-login-lead" }, t("lp_signin_lead")), form, starting, quick));
 
-  const FEATS = [["timesheet", "f1"], ["chart", "f2"], ["alerts", "f3"], ["approvals", "f4"], ["spark", "f5"], ["shield", "f6"]];
-  const features = h("section", { class: "lp-sec", id: "lp-features" },
-    h("h2", { class: "lp-h" }, t("lp_feat_title")), h("p", { class: "lp-sub" }, t("lp_feat_lead")),
-    h("div", { class: "lp-grid" }, FEATS.map(([ic, k]) => h("div", { class: "lp-feat" }, h("span", { class: "lp-ic" }, icon(ic)), h("h3", {}, t(`lp_${k}_t`)), h("p", {}, t(`lp_${k}_d`))))));
-  const how = h("section", { class: "lp-sec alt", id: "lp-how" },
-    h("h2", { class: "lp-h" }, t("lp_how_title")),
-    h("ol", { class: "lp-steps" }, ["s1", "s2", "s3"].map((k, i) => h("li", {}, h("span", { class: "lp-num" }, String(i + 1)), h("h3", {}, t(`lp_${k}_t`)), h("p", {}, t(`lp_${k}_d`))))));
-  const contact = h("section", { class: "lp-sec", id: "lp-contact" }, h("div", { class: "lp-contact" },
-    h("div", {}, h("h2", { class: "lp-h" }, t("lp_form_title")), h("p", { class: "lp-sub" }, t("lp_form_lead")), h("p", { class: "muted small" }, t("lp_privacy"))),
+  const contact = h("section", { class: "lp-sec lp-contact-sec", id: "lp-contact", "data-reveal": "" }, h("div", { class: "lp-contact" },
+    h("div", {}, h("h2", { class: "lp-h" }, t("lp_form_title")), h("p", { class: "lp-sub" }, t("lp_form_lead")),
+      h("ul", { class: "lp-promise" }, ["lp_pm1", "lp_pm2", "lp_pm3"].map(k => h("li", {}, h("span", { class: "lp-mark", "aria-hidden": "true" }, "✓"), t(k)))),
+      h("p", { class: "lp-mail" }, t("lp_or_mail"), " ", h("a", { href: "mailto:info@elevantec.sa", dir: "ltr" }, "info@elevantec.sa")),
+      h("p", { class: "muted small" }, t("lp_privacy"))),
     consultForm()));
+  const sticky = h("div", { class: "lp-sticky" }, h("button", { class: "btn gold lg", type: "button", onClick: () => go("lp-contact") }, t("lp_cta_demo")));
+  const foot = h("footer", { class: "lp-foot" }, h("div", { class: "brand" }, h("img", { class: "logo", src: "brand/logo-mark-reversed.svg", alt: "", width: 22, height: 25 }), t("app")),
+    h("span", {}, t("lp_footer")), h("a", { href: "mailto:info@elevantec.sa", dir: "ltr" }, "info@elevantec.sa"));
 
-  mount(root, h("div", { class: "lp" }, nav, hero, features, how, contact, h("div", { class: "timeline-wrap" }, board), h("footer", { class: "lp-foot" }, t("lp_footer"))));
+  const page = h("div", { class: "lp" }, nav, hero, S.proof(), S.preview(), S.problem(), S.features(), S.roles(), S.how(), S.security(), S.faq(), contact, h("div", { class: "timeline-wrap" }, board), foot, sticky);
+  mount(root, page);
+  S.reveal(page);
+  document.title = `${t("app")} — ${t("lp_kicker")}`;
   timeline(board);
   id.focus();
   // Demo quick login: the server only answers when PROPERM_DEMO_LOGIN=1, otherwise this stays hidden.
