@@ -6,6 +6,19 @@ import { badge, errorBox, field, guarded, h, modal, mount, num, table, toast, to
 
 const ROLES = ["STAFF", "PM", "PMO", "PROGRAM_MANAGER", "DECISION_MAKER", "ADMIN"];
 
+// Demo / consultation requests from the landing page. Only the platform owner gets data; everyone else gets a 403 and sees no card.
+async function requestsCard(render) {
+  let rows;
+  try { rows = await api("GET", "/consultations"); } catch { return null; }
+  const sel = (r) => h("select", { "aria-label": t("status"), onChange: guarded(null, async (e) => { await api("PATCH", `/consultations/${r.id}`, { status: e.target.value }); toast(t("saved")); }) },
+    ["new", "contacted", "closed"].map(v => h("option", { value: v, selected: v === r.status }, t(`cr_${v}`))));
+  return h("div", { class: "card" }, h("h2", {}, t("cr_title")),
+    table([t("cr_received"), t("name"), t("lp_org"), t("cr_interest"), t("cr_contact"), t("lp_size"), t("status")],
+      rows.map(r => [String(r.created_at).slice(0, 10), h("span", {}, r.name, r.job_title ? h("small", { class: "muted" }, ` · ${r.job_title}`) : null), r.organization,
+        t(`cr_${r.interest}`), h("span", { dir: "ltr" }, [r.email, r.phone].filter(Boolean).join(" · ")), r.team_size || "—", sel(r)]), t("cr_none")),
+    rows.some(r => r.message) ? h("details", {}, h("summary", {}, t("lp_msg")), h("ul", {}, rows.filter(r => r.message).map(r => h("li", {}, h("strong", {}, r.name), ": ", r.message)))) : null);
+}
+
 export default async function (root) {
   function editUser(u, users, me) {
     const f = { jt: h("input", { value: u.job_title || "" }), dep: depInput(u.department), name: h("input", { value: u.full_name }), role: h("select", {}, ROLES.map(r => h("option", { value: r, selected: r === u.role }, r))),
@@ -98,7 +111,8 @@ export default async function (root) {
           const url = URL.createObjectURL(new Blob([JSON.stringify(d, null, 1)], { type: "application/json" }));
           const a = h("a", { href: url, download: `properm-backup-${d.exported_at.slice(0, 10)}.json` }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
         }) }, t("backup_download"))));
-    mount(root, h("h1", {}, t("nav_admin")),
+    const reqCard = await requestsCard(render);
+    mount(root, h("h1", {}, t("nav_admin")), reqCard,
       h("div", { class: "card" }, h("h2", {}, t("users")), table([t("staff_id"), t("full_name"), t("role"), t("grade"), t("capacity"), t("is_ccb"), t("status"), ""], users.map(u => [u.staff_id, u.full_name, u.role, u.rate_grade || "—", num(u.capacity_hours_week), u.is_ccb ? "✓" : "", badge(u.active ? t("active") : t("inactive"), u.active ? "approved" : "critical"), h("span", { class: "row", style: "gap:6px;flex-wrap:nowrap" }, h("button", { class: "btn small", type: "button", onClick: () => editUser(u, users, me) }, t("edit")),
           u.active && u.id !== me.id ? h("button", { class: "btn small secondary", type: "button", onClick: guarded(null, () => handover(u, users)) }, t("handover")) : null)]), t("none")),
         h("h2", { style: "margin-top:14px" }, t("new_user")),

@@ -37,14 +37,41 @@ export default function (root) {
   }).catch(() => {});
   const starting = window.PROPERM_EMBEDDED ? h("div", { class: "card" }, h("p", { class: "muted" }, t("demo_starting"))) : null;
   const board = h("div", { class: "card timeline" });
-  const hero = h("section", { class: "hero" },
+  const go = (id) => document.getElementById(id)?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth", block: "start" });
+  const langBtn = h("button", { class: "lp-lang", type: "button", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); location.reload(); } }, getLang() === "en" ? "العربية" : "English");
+
+  const nav = h("header", { class: "lp-nav" },
     h("div", { class: "brand" }, h("img", { class: "logo", src: "brand/logo-mark-reversed.svg", alt: "", width: 28, height: 32 }), t("app")),
-    h("div", {}, h("h1", {}, t("hero_title")), h("p", { class: "lead" }, t("hero_lead"))),
-    h("ul", { class: "points" }, [["timesheet", "hero_p1"], ["chart", "hero_p2"], ["shield", "hero_p3"], ["spark", "hero_p4"]].map(([ic, k]) => h("li", {}, icon(ic), h("span", {}, t(k))))),
-    h("div", { class: "foot" }, "Smart PMO · Riyadh"));
-  const side = h("section", { class: "login-side" }, sso, form, starting, quick,
-    h("button", { class: "btn secondary", type: "button", onClick: () => { setLang(getLang() === "en" ? "ar" : "en"); location.reload(); } }, getLang() === "en" ? "العربية" : "English"));
-  mount(root, h("div", { class: "login-page" }, hero, side, h("div", { class: "timeline-wrap" }, board)));
+    h("nav", { class: "lp-links", "aria-label": "Page" },
+      h("button", { type: "button", onClick: () => go("lp-features") }, t("lp_nav_features")),
+      h("button", { type: "button", onClick: () => go("lp-how") }, t("lp_nav_how")),
+      h("button", { type: "button", onClick: () => go("lp-contact") }, t("lp_nav_contact"))),
+    langBtn,
+    h("button", { class: "btn gold", type: "button", onClick: () => { go("login-card"); id.focus({ preventScroll: true }); } }, t("lp_signin")));
+
+  const hero = h("section", { class: "lp-hero" },
+    h("div", { class: "lp-hero-text" },
+      h("span", { class: "lp-kicker" }, t("lp_kicker")),
+      h("h1", {}, t("hero_title")), h("p", { class: "lead" }, t("hero_lead")),
+      h("div", { class: "lp-cta" },
+        h("button", { class: "btn gold lg", type: "button", onClick: () => go("lp-contact") }, t("lp_cta_demo")),
+        h("button", { class: "btn ghost lg", type: "button", onClick: () => { go("login-card"); id.focus({ preventScroll: true }); } }, t("lp_cta_signin"))),
+      h("ul", { class: "points" }, [["timesheet", "hero_p1"], ["chart", "hero_p2"], ["shield", "hero_p3"], ["spark", "hero_p4"]].map(([ic, k]) => h("li", {}, icon(ic), h("span", {}, t(k))))),
+      h("p", { class: "lp-trust" }, t("lp_trust"))),
+    h("div", { class: "lp-login", id: "login-card" }, sso, h("p", { class: "muted small lp-login-lead" }, t("lp_signin_lead")), form, starting, quick));
+
+  const FEATS = [["timesheet", "f1"], ["chart", "f2"], ["alerts", "f3"], ["approvals", "f4"], ["spark", "f5"], ["shield", "f6"]];
+  const features = h("section", { class: "lp-sec", id: "lp-features" },
+    h("h2", { class: "lp-h" }, t("lp_feat_title")), h("p", { class: "lp-sub" }, t("lp_feat_lead")),
+    h("div", { class: "lp-grid" }, FEATS.map(([ic, k]) => h("div", { class: "lp-feat" }, h("span", { class: "lp-ic" }, icon(ic)), h("h3", {}, t(`lp_${k}_t`)), h("p", {}, t(`lp_${k}_d`))))));
+  const how = h("section", { class: "lp-sec alt", id: "lp-how" },
+    h("h2", { class: "lp-h" }, t("lp_how_title")),
+    h("ol", { class: "lp-steps" }, ["s1", "s2", "s3"].map((k, i) => h("li", {}, h("span", { class: "lp-num" }, String(i + 1)), h("h3", {}, t(`lp_${k}_t`)), h("p", {}, t(`lp_${k}_d`))))));
+  const contact = h("section", { class: "lp-sec", id: "lp-contact" }, h("div", { class: "lp-contact" },
+    h("div", {}, h("h2", { class: "lp-h" }, t("lp_form_title")), h("p", { class: "lp-sub" }, t("lp_form_lead")), h("p", { class: "muted small" }, t("lp_privacy"))),
+    consultForm()));
+
+  mount(root, h("div", { class: "lp" }, nav, hero, features, how, contact, h("div", { class: "timeline-wrap" }, board), h("footer", { class: "lp-foot" }, t("lp_footer"))));
   timeline(board);
   id.focus();
   // Demo quick login: the server only answers when PROPERM_DEMO_LOGIN=1, otherwise this stays hidden.
@@ -97,4 +124,38 @@ function render(board, data) {
       return h("details", { class: "ms", open: st === "progress" }, h("summary", {}, light(st), h("span", { class: "ms-name" }, `${i + 1}. ${name(m)}`), h("span", { class: "muted small" }, `${d}/${m.subs.length}`)),
         h("ul", {}, m.subs.map(s => h("li", {}, light(s.s), ` ${name(s)}`))));
     }));
+}
+
+// Request a demo or consultation. Public: no sign-in; the platform owner reads the requests in Admin.
+function consultForm() {
+  const f = (name, extra = {}) => h("input", { name, ...extra });
+  const name = f("name", { autocomplete: "name", required: true, maxlength: 120 });
+  const org = f("organization", { autocomplete: "organization", required: true, maxlength: 160 });
+  const job = f("job_title", { autocomplete: "organization-title", maxlength: 120 });
+  const email = f("email", { type: "email", autocomplete: "email", required: true, maxlength: 200, dir: "ltr" });
+  const phone = f("phone", { type: "tel", autocomplete: "tel", maxlength: 40, dir: "ltr" });
+  const size = h("select", { name: "team_size" }, h("option", { value: "" }, t("lp_size_pick")), ["1-10", "11-50", "51-200", "200+"].map(v => h("option", { value: v }, v)));
+  const msg = h("textarea", { name: "message", rows: 3, maxlength: 2000 });
+  const trap = h("input", { name: "website", tabindex: "-1", autocomplete: "off", "aria-hidden": "true" });       // honeypot
+  const kind = (v, label, on) => h("label", { class: "lp-radio" }, h("input", { type: "radio", name: "interest", value: v, checked: on }), h("span", {}, label));
+  const out = h("div"), box = h("div");
+  const btn = h("button", { class: "btn gold lg", type: "submit", style: "width:100%" }, t("lp_send"));
+  const form = h("form", { class: "card lp-form", novalidate: true, onSubmit: guarded(btn, async (ev) => {
+    ev.preventDefault();
+    mount(out);
+    if (name.value.trim().length < 2 || org.value.trim().length < 2 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.value.trim())) { mount(out, h("p", { class: "err", role: "alert" }, t("lp_req_err"))); return; }
+    try {
+      await api("POST", "/public/consultation", { name: name.value.trim(), organization: org.value.trim(), job_title: job.value.trim() || null, email: email.value.trim(), phone: phone.value.trim() || null,
+        team_size: size.value || null, interest: form.elements.interest.value, message: msg.value.trim() || null, lang: getLang(), website: trap.value });
+      const again = h("button", { class: "btn secondary", type: "button", onClick: () => { form.reset(); mount(box, form); } }, t("lp_another"));
+      mount(box, h("div", { class: "card lp-done", role: "status" }, h("span", { class: "lp-tick" }, "✓"), h("h2", {}, t("lp_done_t")), h("p", { class: "muted" }, t("lp_done_d").replace("{email}", email.value.trim())), again));
+    } catch (e) { mount(out, errorBox(e)); }
+  }) },
+    h("div", { class: "lp-radios", role: "radiogroup", "aria-label": t("lp_interest") }, kind("demo", t("lp_int_demo"), true), kind("consultation", t("lp_int_consult"), false)),
+    h("div", { class: "lp-two" }, field(t("lp_name") + " *", name), field(t("lp_org") + " *", org)),
+    h("div", { class: "lp-two" }, field(t("lp_job"), job), field(t("lp_size"), size)),
+    h("div", { class: "lp-two" }, field(t("lp_email") + " *", email), field(t("lp_phone"), phone)),
+    field(t("lp_msg"), msg), h("div", { class: "lp-trap", "aria-hidden": "true" }, field("Website", trap)), out, btn);
+  mount(box, form);
+  return box;
 }
