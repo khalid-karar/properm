@@ -36,7 +36,7 @@ export default async function (root, { me }) {
     mount(root,
       h("h1", {}, t("nav_timesheet")),
       h("p", {}, h("button", { class: "btn secondary small", type: "button", onClick: guarded(null, () => downloadCsv("/export/timesheets.csv", "timesheets.csv")) }, t("export_csv")), xlsxBtn("/export/timesheets.xlsx", "timesheets.xlsx")),
-      h("div", { class: "row", style: "margin-bottom:12px" },
+      h("div", { class: "row weeknav", style: "margin-bottom:12px" },
         h("button", { class: "btn secondary small", onClick: () => { S.week = addDays(S.week, -7); render(); } }, t("prev")),
         h("strong", {}, `${t("week_of")} ${wk}`),
         h("button", { class: "btn secondary small", onClick: () => { S.week = addDays(S.week, 7); render(); } }, t("next")),
@@ -146,9 +146,9 @@ export default async function (root, { me }) {
       });
     }
 
-    const btn = h("button", { class: "btn", type: "button" }, ed ? t("save") : t("submit"));
+    const btn = h("button", { class: "btn ts-submit", type: "button", id: "ts-submit" }, ed ? t("save") : t("submit"));
     btn.addEventListener("click", guarded(btn, async () => { mount(err); await send(); }));
-    return h("div", { class: "card" }, h("h2", {}, ed ? t("edit_entry") : t("new_entry")),
+    return h("div", { class: "card ts-form", id: "ts-form" }, h("h2", {}, ed ? t("edit_entry") : t("new_entry")),
       h("div", { class: "row" }, field("", kind), projWrap, codeWrap, field(t("date"), date), field(t("hours"), hours), h("div", { class: "grow" }, field(t("description"), desc)), btn,
         ed ? h("button", { class: "btn secondary", type: "button", onClick: () => { S.editing = null; render(); } }, t("cancel")) : null),
       hint, err);

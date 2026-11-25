@@ -27,7 +27,11 @@ def reset_scope(token) -> None:
 
 
 def _active(session) -> object:
-    return UNSCOPED if session.info.get("unscoped") else scope.get()
+    if session.info.get("unscoped"):
+        return UNSCOPED
+    if "scope" in session.info:          # set for one request by the API-key check (no bearer token to read the tenant from)
+        return session.info["scope"]
+    return scope.get()
 
 
 @event.listens_for(Session, "do_orm_execute")
