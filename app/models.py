@@ -1266,3 +1266,20 @@ class AiUsage(Scoped, Base):
     chars_out: Mapped[int] = mapped_column(default=0)
     ok: Mapped[bool] = mapped_column(default=True)
     ms: Mapped[int] = mapped_column(default=0)
+
+
+class ConsultationRequest(Base):
+    """A visitor's request for a consultation or demo, sent from the public landing page. Not tenant data: only the platform owner sees it."""
+    __tablename__ = "consultation_requests"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    organization: Mapped[str] = mapped_column(String(160))
+    job_title: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    email: Mapped[str] = mapped_column(String(200))
+    phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    team_size: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    interest: Mapped[str] = mapped_column(String(20), default="demo")    # demo | consultation
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lang: Mapped[str] = mapped_column(String(5), default="en")
+    status: Mapped[str] = mapped_column(String(20), default="new", index=True)   # new | contacted | closed

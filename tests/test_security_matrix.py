@@ -4,7 +4,7 @@ import re
 from tests.test_flow import TODAY, app, c, world  # noqa: F401
 from tests.test_gates import mk
 
-PUBLIC = {"/auth/login", "/health", "/build-progress", "/build-progress/enabled", "/ai/status", "/auth/demo-login", "/auth/demo-users", "/config", "/auth/sso/config", "/auth/sso/login", "/auth/sso/callback", "/auth/sso/exchange", "/build-progress", "/build-progress/enabled"}   # the last two are gated by the owner password (PROPERM_BUILD_PASSWORD), off when unset
+PUBLIC = {"/public/consultation", "/auth/login", "/health", "/build-progress", "/build-progress/enabled", "/ai/status", "/auth/demo-login", "/auth/demo-users", "/config", "/auth/sso/config", "/auth/sso/login", "/auth/sso/callback", "/auth/sso/exchange", "/build-progress", "/build-progress/enabled"}   # the last two are gated by the owner password (PROPERM_BUILD_PASSWORD), off when unset
 
 
 def fill(path, ids):
